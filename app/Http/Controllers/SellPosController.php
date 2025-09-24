@@ -63,6 +63,8 @@ use Stripe\Charge;
 use Stripe\Stripe;
 use Yajra\DataTables\Facades\DataTables;
 use App\Events\SellCreatedOrModified;
+use Modules\ExchangeCurrency\Entities\ExchangeCurrency; 
+
 
 class SellPosController extends Controller
 {
@@ -261,8 +263,10 @@ class SellPosController extends Controller
         //Added check because $users is of no use if enable_contact_assign if false
         $users = config('constants.enable_contact_assign') ? User::forDropdown($business_id, false, false, false, true) : [];
 
+        $currency_exchange = ExchangeCurrency::where(ExchangeCurrency::BUSINESS_ID,$business_id)->where(ExchangeCurrency::IS_USE,1)->get();
         return view('sale_pos.create')
             ->with(compact(
+                'currency_exchange',
                 'edit_discount',
                 'edit_price',
                 'business_locations',
@@ -761,8 +765,13 @@ class SellPosController extends Controller
         ];
         $receipt_details->currency = $currency_details;
 
+        $business_id = auth()->user()->business_id;
+        $currency_exchange = ExchangeCurrency::where(ExchangeCurrency::BUSINESS_ID,$business_id)
+        ->where(ExchangeCurrency::IS_USE,1)->get();
+
         if ($is_package_slip) {
-            $output['html_content'] = view('sale_pos.receipts.packing_slip', compact('receipt_details'))->render();
+            // $output['html_content'] = view('sale_pos.receipts.packing_slip', compact('receipt_details'))->render();
+            $output['html_content'] = view($layout, compact('receipt_details',"currency_exchange"))->render();
 
             return $output;
         }
@@ -1092,10 +1101,12 @@ class SellPosController extends Controller
 
         //Added check because $users is of no use if enable_contact_assign if false
         $users = config('constants.enable_contact_assign') ? User::forDropdown($business_id, false, false, false, true) : [];
+        $currency_exchange = ExchangeCurrency::where(ExchangeCurrency::BUSINESS_ID,$business_id)->where(ExchangeCurrency::IS_USE,1)->get();
+
         $only_payment = request()->segment(2) == 'payment';
 
         return view('sale_pos.edit')
-            ->with(compact('business_details', 'taxes', 'payment_types', 'walk_in_customer',
+            ->with(compact('business_details',"currency_exchange", 'taxes', 'payment_types', 'walk_in_customer',
                 'sell_details', 'transaction', 'payment_lines', 'location_printer_type', 'shortcuts',
                 'commission_agent', 'categories', 'pos_settings', 'change_return', 'types', 'customer_groups',
                 'brands', 'accounts', 'waiters', 'redeem_details', 'edit_price', 'edit_discount',

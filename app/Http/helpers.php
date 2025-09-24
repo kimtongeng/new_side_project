@@ -1,4 +1,11 @@
 <?php
+if (!function_exists('format_converted_currency')) {
+ function format_converted_currency($symbol, $exchange_rate, $line_total, $decimals = 2) {
+ $clean_total = (float) str_replace(',', '', $line_total);
+ $converted = $exchange_rate * $clean_total;
+ return $symbol . ' ' . number_format($converted, $decimals);
+ }
+}
 
 /**
  * boots pos.

@@ -1,0 +1,23 @@
+{
+    "name": "nwidart/exchangecurrency",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": ["Modules\\ExchangeCurrency\\Providers\\ExchangeCurrencyServiceProvider"],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\ExchangeCurrency\\": ""
+        }
+    }
+}

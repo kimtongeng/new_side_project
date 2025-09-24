@@ -15,6 +15,7 @@
                     </div>
                     <input type="hidden" name="final_total" id="final_total_input" value="0.00">
                     <span id="total_payable" class="tw-text-green-900 tw-font-bold tw-text-sm number">0.00</span>
+                    @include("sale_pos.partials.exchange_currency",['big'=>false])
                 </div>
             </div>
 
@@ -130,6 +131,7 @@
                         <input type="hidden" name="final_total" id="final_total_input" value="0.00">
                         <span id="total_payable"
                             class="tw-text-green-900 tw-font-bold tw-text-base md:tw-text-2xl number">0.00</span>
+                            @include("sale_pos.partials.exchange_currency",['big' => true])
                     </div>
                 @endif
             </div>

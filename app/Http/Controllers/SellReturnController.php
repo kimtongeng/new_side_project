@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\BusinessLocation;
 use App\Contact;
 use App\Events\TransactionPaymentDeleted;
+use App\Notifications\TelegramNotification;
 use App\Transaction;
 use App\TransactionSellLine;
 use App\User;
@@ -590,9 +591,10 @@ class SellReturnController extends Controller
 
             //Check if printer setting is provided.
             $receipt_printer_type = is_null($printer_type) ? $location_details->receipt_printer_type : $printer_type;
-
+            
             $receipt_details = $this->transactionUtil->getReceiptDetails($transaction_id, $location_id, $invoice_layout, $business_details, $location_details, $receipt_printer_type);
-
+            
+            TelegramNotification::returnSell($receipt_details,"sell",$location_details->location_id ?? "BLO1");
             //If print type browser - return the content, printer - return printer config data, and invoice format config
             $output['print_title'] = $receipt_details->invoice_no;
             if ($receipt_printer_type == 'printer') {

@@ -156,8 +156,9 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 
     Route::resource('variation-templates', VariationTemplateController::class);
 
+    Route::get('/products/edit_product_image/{id}', [ProductController::class, 'edit_product_image']);
     Route::get('/products/download-excel', [ProductController::class, 'downloadExcel']);
-
+    Route::post("/product/update_image/{id}", [ProductController::class, 'update_image']);
     Route::get('/products/stock-history/{id}', [ProductController::class, 'productStockHistory']);
     Route::get('/delete-media/{media_id}', [ProductController::class, 'deleteMedia']);
     Route::post('/products/mass-deactivate', [ProductController::class, 'massDeactivate']);

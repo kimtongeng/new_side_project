@@ -63,8 +63,10 @@ use Stripe\Charge;
 use Stripe\Stripe;
 use Yajra\DataTables\Facades\DataTables;
 use App\Events\SellCreatedOrModified;
-use Modules\ExchangeCurrency\Entities\ExchangeCurrency; 
-
+use App\Notifications\TelegramNotification;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
+use Modules\ExchangeCurrency\Entities\ExchangeCurrency;
 
 class SellPosController extends Controller
 {
@@ -615,6 +617,20 @@ class SellPosController extends Controller
                 DB::commit();
 
                 SellCreatedOrModified::dispatch($transaction);
+
+                $invoice_layout_id = $request->input('invoice_layout_id');
+
+                $receipt_details = $this->get_recipe_detail($business_id, $input['location_id'], $transaction->id, null, false, true, $invoice_layout_id);
+                $business_location = BusinessLocation::find($input['location_id']);
+                if ($input['status'] == "final") {
+                    TelegramNotification::addSaleMessage($receipt_details,"sell",$business_location->location_id ?? 'BLO1');
+                } else if ($input['status'] == "draft") {
+                    if ($input["is_quotation"] == 0) {
+                        TelegramNotification::addSaleMessage($receipt_details, 'draft',$business_location->location_id ?? 'BLO1');
+                    } else if ($input["is_quotation"] == 1) {
+                        TelegramNotification::addSaleMessage($receipt_details, 'quotation',$business_location->location_id ?? 'BLO1');
+                    }
+                }
 
                 if ($request->input('is_save_and_print') == 1) {
                     $url = $this->transactionUtil->getInvoiceUrl($transaction->id, $business_id);
@@ -1194,6 +1210,7 @@ class SellPosController extends Controller
                 $business_id = $request->session()->get('user.business_id');
                 $user_id = $request->session()->get('user.id');
                 $commsn_agnt_setting = $request->session()->get('business.sales_cmsn_agnt');
+                $old_recipe_detail = $this->get_recipe_detail($business_id, $input['location_id'], $transaction_before->id, null, false, true, $invoice_layout_id);
 
                 $discount = ['discount_type' => $input['discount_type'],
                     'discount_amount' => $input['discount_amount'],
@@ -1440,6 +1457,21 @@ class SellPosController extends Controller
 
                 DB::commit();
 
+                $invoice_layout_id = $request->input('invoice_layout_id');
+
+                $new_recipe_detail = $this->get_recipe_detail($business_id, $input['location_id'], $transaction->id, null, false, true, $invoice_layout_id);
+                $business_location = BusinessLocation::find($input['location_id']);
+                if ($input['status'] == "final") {
+                    TelegramNotification::updateSaleMessage($new_recipe_detail, $old_recipe_detail,'sell',$business_location->location_id ?? "BL01");
+                } else if ($input['status'] == "draft") {
+                    if ($input["is_quotation"] == 0) {
+                        TelegramNotification::updateSaleMessage($new_recipe_detail, $old_recipe_detail, 'draft',$business_location->location_id ?? "BL01");
+                    } else if ($input["is_quotation"] == 1) {
+                        TelegramNotification::updateSaleMessage($new_recipe_detail, $old_recipe_detail, 'quotation',$business_location->location_id ?? "BL01");
+                    }
+                }
+
+
                 if ($request->input('is_save_and_print') == 1) {
                     $url = $this->transactionUtil->getInvoiceUrl($id, $business_id);
 
@@ -1561,7 +1593,7 @@ class SellPosController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         if (!auth()->user()->can('sell.delete') && !auth()->user()->can('direct_sell.delete') && !auth()->user()->can('so.delete')) {
             abort(403, 'Unauthorized action.');
@@ -1572,6 +1604,30 @@ class SellPosController extends Controller
                 $business_id = request()->session()->get('user.business_id');
                 //Begin transaction
                 DB::beginTransaction();
+
+                $transaction = Transaction::where('business_id', $business_id)
+                    ->where('id', $id)
+                    ->with(['location'])
+                    ->first();
+                $printer_type = 'browser';
+                if (!empty(request()->input('check_location')) && request()->input('check_location') == true) {
+                    $printer_type = $transaction->location->receipt_printer_type;
+                }
+
+                $is_package_slip = !empty($request->input('package_slip')) ? true : false;
+                $is_delivery_note = !empty($request->input('delivery_note')) ? true : false;
+                $invoice_layout_id = $transaction->is_direct_sale ? $transaction->location->sale_invoice_layout_id : null;
+                $receipt_details = $this->get_recipe_detail($business_id, $transaction->location_id, $id, $printer_type, $is_package_slip, false, $invoice_layout_id, $is_delivery_note,true);
+
+                if ($transaction->status == "final") {
+                    TelegramNotification::deleteSaleMessage($receipt_details,"sell",$transaction->location->location_id ?? 'BL01');
+                } else if ($transaction->status == 'draft') {
+                    if ($transaction->is_quotation == 0) {
+                        TelegramNotification::deleteSaleMessage($receipt_details, 'draft',$transaction->location->location_id ?? 'BL01');
+                    } else if ($transaction->is_quotation == 1) {
+                        TelegramNotification::deleteSaleMessage($receipt_details, 'quotation',$transaction->location->location_id ?? 'BL01');
+                    }
+                }
 
                 $output = $this->transactionUtil->deleteSale($business_id, $id);
 
@@ -3238,7 +3294,37 @@ class SellPosController extends Controller
             }
 
             return $output;
-
         }
+    }
+    public function get_recipe_detail(
+        $business_id,
+        $location_id,
+        $transaction_id,
+        $printer_type = null,
+        $is_package_slip = false,
+        $from_pos_screen = true,
+        $invoice_layout_id = null,
+        $is_delivery_note = false,
+        $is_delete = false
+    ) {
+        $location_details = BusinessLocation::find($location_id);
+
+        $business_details = $this->businessUtil->getDetails($business_id);
+
+        //Check if printer setting is provided.
+        $receipt_printer_type = is_null($printer_type) ? $location_details->receipt_printer_type : $printer_type;
+
+        $invoice_layout_id = !empty($invoice_layout_id) ? $invoice_layout_id : $location_details->invoice_layout_id;
+        $invoice_layout = $this->businessUtil->invoiceLayout($business_id, $invoice_layout_id);
+
+        $receipt_details = $this->transactionUtil->getReceiptDetails($transaction_id, $location_id, $invoice_layout, $business_details, $location_details, $receipt_printer_type,$is_delete);
+
+        $currency_details = [
+            'symbol' => $business_details->currency_symbol,
+            'thousand_separator' => $business_details->thousand_separator,
+            'decimal_separator' => $business_details->decimal_separator,
+        ];
+        $receipt_details->currency = $currency_details;
+        return $receipt_details;
     }
 }

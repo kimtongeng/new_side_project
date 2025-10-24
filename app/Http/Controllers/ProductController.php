@@ -213,7 +213,10 @@ class ProductController extends Controller
                             $html .=
                             '<li><a href="'.action([\App\Http\Controllers\ProductController::class, 'edit'], [$row->id]).'"><i class="glyphicon glyphicon-edit"></i> '.__('messages.edit').'</a></li>';
                         }
-
+                        if (auth()->user()->can('product.upload_image')) {
+                            $html .=
+                                '<li><a href="' . action([\App\Http\Controllers\ProductController::class, 'edit_product_image'], [$row->id]) . '" class="edit_image"><i class="glyphicon glyphicon-picture"></i>Edit product image</a></li>';
+                        }
                         if (auth()->user()->can('product.delete')) {
                             $html .=
                             '<li><a href="'.action([\App\Http\Controllers\ProductController::class, 'destroy'], [$row->id]).'" class="delete-product"><i class="fa fa-trash"></i> '.__('messages.delete').'</a></li>';
@@ -2385,5 +2388,95 @@ class ProductController extends Controller
         $filename = 'products-export-'.\Carbon::now()->format('Y-m-d').'.xlsx';
 
         return Excel::download(new ProductsExport, $filename);
+    }
+    public function update_image(Request $request, $id)
+    {
+        if (! auth()->user()->can('product.upload_image')) {
+            abort(403, 'Unauthorized action.');
+        }
+        try {
+        
+
+            // dd($request->all());
+            $product = Product::find($id);
+            $old_image = $request->input('old_image_1');
+            $uploaded_file_name = null;
+
+            // Handle product image (image_1)
+            if ($request->hasFile('image_1') && $request->file('image_1')->isValid()) {
+                if (strpos($request->image_1->getClientMimeType(), 'image/') === false) {
+                    throw new \Exception('Invalid image file type for image_1.');
+                }
+
+                if ($request->image_1->getSize() <= config('constants.document_size_limit')) {
+                    $new_file_name = time() . '_' . $request->image_1->getClientOriginalName();
+                    if ($request->image_1->storeAs(config('constants.product_img_path'), $new_file_name)) {
+                        $uploaded_file_name = $new_file_name;
+                    }
+                }
+            }
+
+            if (!$uploaded_file_name && !empty($old_image)) {
+                $uploaded_file_name = $old_image;
+            }
+
+            $product->image = $uploaded_file_name ?: null;
+            $product->save();
+
+            // Delete selected media images (works for all variations)
+            $deletedIds = explode(',', $request->input('deleted_media_ids', ''));
+            foreach ($deletedIds as $mediaId) {
+                if (!empty($mediaId)) {
+                    Media::deleteMedia($product->business_id, $mediaId);
+                }
+            }
+            
+
+            // Handle new uploads for ALL variations
+            if ($request->has('variation_images')) {
+                foreach ($request->file('variation_images', []) as $variation_id => $files) {
+                    $variation = Variation::find($variation_id);
+                    if ($variation && is_array($files)) {
+                        foreach ($files as $image) {
+                            if ($image->isValid() && strpos($image->getClientMimeType(), 'image/') !== false) {
+                                // Save the uploaded file
+                                $new_file_name = time() . '_' . $image->getClientOriginalName();
+                                $image->storeAs('media', $new_file_name);
+
+                                // Save record to Media table (Polymorphic relation)
+                                Media::create([
+                                    'file_name'        => $new_file_name,
+                                    'business_id'      => $product->business_id,
+                                    'model_type'       => get_class($variation), // or 'App\\Variation'
+                                    'model_id'         => $variation->id,
+                                    // add other columns if needed
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
+
+
+            return redirect()->to("products");
+        } catch (\Exception $e) {
+            // $this->error_notification("Product ID: {$id}\nError: " . $e->getMessage());
+            return redirect()->back()->with('status', 'An error occurred while updating the image.');
+        }
+    }
+    public function edit_product_image($id)
+    {
+        $product = Product::findOrFail($id);
+
+        // Get all variations with their media (images)
+        $variations = Variation::with('media')
+            ->where('product_id', $product->id)
+            ->get();
+
+        // Main product image (for the left-hand side uploader)
+        $product_image = $product->image;
+
+        return view('product.edit-image-modal')->with(compact('product', 'variations', 'product_image'));
     }
 }

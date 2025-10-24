@@ -356,6 +356,13 @@
             </div>
           </div>
           <div class="col-md-12">
+                        <div class="checkbox">
+                            <label>
+                                {!! Form::checkbox('permissions[]', 'product.upload_image', in_array('product.upload_image', $role_permissions), ['class' => 'input-icheck']) !!} {{ 'Upload image' }}
+                            </label>
+                        </div>
+                    </div>
+          <div class="col-md-12">
             <div class="checkbox">
               <label>
                 {!! Form::checkbox('permissions[]', 'product.opening_stock', in_array('product.opening_stock', $role_permissions), 

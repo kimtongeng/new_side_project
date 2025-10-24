@@ -207,7 +207,9 @@
         <div class="modal fade" id="view_product_modal" tabindex="-1" role="dialog"
             aria-labelledby="gridSystemModalLabel">
         </div>
-
+         <div class="modal fade" id="edit_image" tabindex="-1" role="dialog"
+            aria-labelledby="gridSystemModalLabel">
+        </div>
         <div class="modal fade" id="opening_stock_modal" tabindex="-1" role="dialog"
             aria-labelledby="gridSystemModalLabel">
         </div>
@@ -261,7 +263,7 @@
                     }
                 },
                 columnDefs: [{
-                    "targets": [0, 1, 2],
+                    "targets": [0,2],
                     "orderable": false,
                     "searchable": false
                 }],

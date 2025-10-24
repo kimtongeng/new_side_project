@@ -958,7 +958,7 @@ class TransactionUtil extends Util
      * @param  string  $receipt_printer_type
      * @return array
      */
-    public function getReceiptDetails($transaction_id, $location_id, $invoice_layout, $business_details, $location_details, $receipt_printer_type)
+    public function getReceiptDetails($transaction_id, $location_id, $invoice_layout, $business_details, $location_details, $receipt_printer_type,$is_delete=false)
     {
         $il = $invoice_layout;
 
@@ -1304,7 +1304,7 @@ class TransactionUtil extends Util
             $output['show_base_unit_details'] = ! empty($il->common_settings['show_base_unit_details']);
 
             $output['tax_summary_label'] = $il->common_settings['tax_summary_label'] ?? '';
-            $details = $this->_receiptDetailsSellLines($lines, $il, $business_details);
+            $details = $this->_receiptDetailsSellLines($lines, $il, $business_details,$is_delete);
 
             $output['lines'] = $details['lines'];
             $output['taxes'] = [];
@@ -1581,7 +1581,7 @@ class TransactionUtil extends Util
 
         //Barcode related information.
         $output['show_barcode'] = ! empty($il->show_barcode) ? true : false;
-
+        $qr_code_text = '';
         if (in_array($transaction_type, ['sell', 'sales_order'])) {
             //Qr code related information.
             $output['show_qr_code'] = ! empty($il->show_qr_code) ? true : false;
@@ -1989,7 +1989,7 @@ class TransactionUtil extends Util
      *
      * @return array
      */
-    protected function _receiptDetailsSellLines($lines, $il, $business_details)
+    protected function _receiptDetailsSellLines($lines, $il, $business_details,$is_delete = false)
     {
         $is_lot_number_enabled = $business_details->enable_lot_number;
         $is_product_expiry_enabled = $business_details->enable_product_expiry;
@@ -2004,6 +2004,8 @@ class TransactionUtil extends Util
             $product = $line->product;
             $variation = $line->variations;
             $product_variation = $line->variations->product_variation;
+            $stock = $this->getStock($product_variation->id);
+            
             $unit = $line->product->unit;
             $brand = $line->product->brand;
             $cat = $line->product->category;
@@ -2018,8 +2020,14 @@ class TransactionUtil extends Util
             $base_unit_price = $line->unit_price_inc_tax / $base_unit_multiplier;
 
             $show_product_description = $il->common_settings['show_product_description'] ?? null;
+            
+            if($is_delete){
+                $stock = $stock + $line->quantity;
+            }
+
             $line_array = [
                 //Field for 1st column
+                "remain_stock"=>$stock,
                 'name' => $product->name,
                 'product_description' => ! empty($show_product_description) ? $product->product_description : null,
                 'variation' => (empty($variation->name) || $variation->name == 'DUMMY') ? '' : $variation->name,
@@ -2240,7 +2248,7 @@ class TransactionUtil extends Util
             $unit = $line->product->unit;
             $brand = $line->product->brand;
             $cat = $line->product->category;
-
+            $stock = $this->getStock($variation->id);
             $unit_name = ! empty($unit->short_name) ? $unit->short_name : '';
             if (! empty($line->sub_unit->short_name)) {
                 $unit_name = $line->sub_unit->short_name;
@@ -2248,6 +2256,7 @@ class TransactionUtil extends Util
 
             $line_array = [
                 //Field for 1st column
+                "remain_stock" => $stock,
                 'name' => $product->name,
                 'variation' => (empty($variation->name) || $variation->name == 'DUMMY') ? '' : $variation->name,
                 //Field for 2nd column
@@ -6493,5 +6502,9 @@ class TransactionUtil extends Util
         }
 
         return $discount_amount;
+    }
+    public function getStock($variation_id){
+        return DB::table('variation_location_details')
+        ->where("variation_id",$variation_id)->value("qty_available");
     }
 }

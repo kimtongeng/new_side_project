@@ -129,6 +129,7 @@ class JobSheet extends Model
                 $parts[$variation->id]['unit'] = $variation->product->unit->short_name;
                 $parts[$variation->id]['unit_id'] = $variation->product->unit->id;
                 $parts[$variation->id]['quantity'] = $job_sheet_parts[$variation->id]['quantity'];
+                $parts[$variation->id]['status'] = $job_sheet_parts[$variation->id]['status'];
             }
         }
 

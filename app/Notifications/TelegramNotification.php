@@ -10,7 +10,7 @@ class TelegramNotification
 
     private const BOT = [
         'token' => '8152281759:AAFEN2PObxW-S8Jck251--mxQEEuNJYCanQ',
-        "group_bl01" => [
+        "group_pt1001" => [
             "sell" => [
                 "id" => '-1002658900346',
                 "title" => 'sell',
@@ -30,7 +30,7 @@ class TelegramNotification
                 "topic" => []
             ]
         ],
-        "group_bl02" => [
+        "group_pt1002" => [
             "sell" => [
                 "id" => '-1002884292516',
                 "title" => 'sell',
@@ -50,7 +50,7 @@ class TelegramNotification
                 "topic" => []
             ]
         ],
-        "group_bl03" => [
+        "group_pt1003" => [
             "sell" => [
                 "id" => '-1003146868305',
                 "title" => 'sell',
@@ -72,18 +72,19 @@ class TelegramNotification
         ]
     ];
 
-    public static function sendMessage(string $message, string $to = self::BOT["group_bl01"]["sell"]["key"], $location_id = "BL01"): void
+    public static function sendMessage(string $message, string $to = self::BOT["group_bl01"]["sell"]["key"], $location_id = "PT1001"): void
     {
+        // return;
         $botToken = self::BOT["token"];
-        $group = "group_bl01";
-        if($location_id == 'BL01'){
-            $group = "group_bl01";
+        $group = "group_pt1001";
+        if($location_id == 'PT1001'){
+            $group = "group_pt1001";
         }
-        else if($location_id == 'BL02'){
-            $group = "group_bl02";
+        else if($location_id == 'PT1002'){
+            $group = "group_pt1002";
         }
-        else if($location_id == 'BL03'){
-            $group = "group_bl03";
+        else if($location_id == 'PT1003'){
+            $group = "group_pt1003";
         }
 
 

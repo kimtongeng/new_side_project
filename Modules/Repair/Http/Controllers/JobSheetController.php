@@ -175,6 +175,13 @@ class JobSheetController extends Controller
                                 </a>
                                 </li>';
                     }
+                    if (auth()->user()->can('repair.view_part') || auth()->user()->can('job_sheet.view_all') || auth()->user()->can('job_sheet.create')) {
+                        $html .= '<li>
+                                    <a data-href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'view_parts'], [$row->id]).'" class="cursor-pointer view_part_sheet">
+                                        <i class="fas fa-tasks"></i> View Parts
+                                    </a>
+                                </li>';
+                    }
 
                     if (auth()->user()->can('repair.create')) {
                         $html .= '<li>
@@ -685,6 +692,32 @@ class JobSheetController extends Controller
         }
     }
 
+    public function view_parts($id)
+    {
+        
+        $business_id = request()->session()->get('user.business_id');
+
+        if (! (auth()->user()->can('superadmin') || auth()->user()->can('repair.view_part') || auth()->user()->can('job_sheet.view_all') || auth()->user()->can('job_sheet.create'))) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $job_sheet = JobSheet::find($id);
+        
+        dd($job_sheet->parts);
+        $parts = json_decode($job_sheet->parts,true);
+        dd($parts);
+
+
+        // dd($id);
+        if (request()->ajax()) {
+            return view('repair::job_sheet.partials.view_parts');
+        }
+    }
+
+    public function updatePartsStatus(Request $request, $id){
+        dd($id);
+    }
+
     private function updateJobsheetStatus($input, $jobsheet_id)
     {
         $job_sheet = JobSheet::where('business_id', $input['business_id'])->findOrFail($jobsheet_id);
@@ -801,6 +834,7 @@ class JobSheetController extends Controller
 
     public function addParts($id)
     {
+        
         $business_id = request()->session()->get('user.business_id');
 
         if (! (auth()->user()->can('superadmin') || ($this->moduleUtil->hasThePermissionInSubscription($business_id, 'repair_module') && (auth()->user()->can('job_sheet.create') || auth()->user()->can('job_sheet.edit'))))) {
@@ -822,7 +856,6 @@ class JobSheetController extends Controller
 
     public function saveParts(Request $request, $id)
     {
-        dd($request->all());
         $business_id = request()->session()->get('user.business_id');
 
         if (! (auth()->user()->can('superadmin') || ($this->moduleUtil->hasThePermissionInSubscription($business_id, 'repair_module') && (auth()->user()->can('job_sheet.create') || auth()->user()->can('job_sheet.edit'))))) {
@@ -1063,4 +1096,5 @@ class JobSheetController extends Controller
             ->with('status', ['success' => true,
                 'msg' => __('lang_v1.success'), ]);
     }
+    
 }

@@ -38,7 +38,7 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="license_code">License Code:*</label>
-                            <input type="text" name="license_code" required class="form-control" id="license_code">
+                            <input type="text" name="license_code"  class="form-control" id="license_code">
 
                             @if($intruction_type == 'uf')
                                 <p class="help-block"><a href="https://ultimatefosters.com/docs/ultimate-fosters-shop/license-key/#Getting-License-Details-for-products-purchased-from-ultimatefosterscom" target="_blank">Where is my License Key?</a></p>
@@ -53,7 +53,7 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="login_username">Login Username:*</label>
-                            <input type="text" name="login_username" required class="form-control" id="login_username">
+                            <input type="text" name="login_username"  class="form-control" id="login_username">
 
                             @if($intruction_type == 'uf')
                                 <p class="help-block"><a href="https://ultimatefosters.com/docs/ultimate-fosters-shop/user-name/#Steps-to-get-your-username-for-all-products-purchased-from-UltimateFosters" target="_blank" class="text-success">Where is my Username?</a></p>

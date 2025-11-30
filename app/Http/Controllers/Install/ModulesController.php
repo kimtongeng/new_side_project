@@ -206,6 +206,7 @@ class ModulesController extends Controller
      */
     public function destroy($module_name)
     {
+        
         if (! auth()->user()->can('manage_modules')) {
             abort(403, 'Unauthorized action.');
         }

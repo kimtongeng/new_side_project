@@ -196,6 +196,7 @@
         </div>
     </div>
     <div class="modal fade" id="status_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel"></div>
+    <div class="modal fade" id="view_part_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel"></div>
 </section>
 <!-- /.content -->
 @stop
@@ -405,6 +406,21 @@
                         dataType: 'html',
                         success: function(result) {
                             $('#status_modal').html(result).modal('show');
+                        }
+                    });
+                });
+            @endif
+
+            @if(auth()->user()->can('repair.view_part') || auth()->user()->can('job_sheet.view_all') || auth()->user()->can('job_sheet.create'))
+                $(document).on('click', '.view_part_sheet', function () {
+                    
+                    var url = $(this).data('href');
+                    $.ajax({
+                        method: 'GET',
+                        url: url,
+                        dataType: 'html',
+                        success: function(result) {
+                            $('#view_part_modal').html(result).modal('show');
                         }
                     });
                 });

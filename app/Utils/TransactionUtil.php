@@ -1304,7 +1304,7 @@ class TransactionUtil extends Util
             $output['show_base_unit_details'] = ! empty($il->common_settings['show_base_unit_details']);
 
             $output['tax_summary_label'] = $il->common_settings['tax_summary_label'] ?? '';
-            $details = $this->_receiptDetailsSellLines($lines, $il, $business_details,$is_delete);
+            $details = $this->_receiptDetailsSellLines($lines, $il, $business_details,$is_delete,location_id:$location_id);
 
             $output['lines'] = $details['lines'];
             $output['taxes'] = [];
@@ -1365,7 +1365,7 @@ class TransactionUtil extends Util
                 }
             }
 
-            $details = $this->_receiptDetailsSellReturnLines($lines, $il, $business_details);
+            $details = $this->_receiptDetailsSellReturnLines($lines, $il, $business_details,location_id:$location_id);
             $output['lines'] = $details['lines'];
 
             $output['taxes'] = [];
@@ -1989,7 +1989,7 @@ class TransactionUtil extends Util
      *
      * @return array
      */
-    protected function _receiptDetailsSellLines($lines, $il, $business_details,$is_delete = false)
+    protected function _receiptDetailsSellLines($lines, $il, $business_details,$is_delete = false,$location_id=null)
     {
         $is_lot_number_enabled = $business_details->enable_lot_number;
         $is_product_expiry_enabled = $business_details->enable_product_expiry;
@@ -2004,7 +2004,7 @@ class TransactionUtil extends Util
             $product = $line->product;
             $variation = $line->variations;
             $product_variation = $line->variations->product_variation;
-            $stock = $this->getStock($product_variation->id);
+            $stock = $this->getStock($variation->id,$location_id);
             
             $unit = $line->product->unit;
             $brand = $line->product->brand;
@@ -2215,7 +2215,7 @@ class TransactionUtil extends Util
      *
      * @return array
      */
-    protected function _receiptDetailsSellReturnLines($lines, $il, $business_details)
+    protected function _receiptDetailsSellReturnLines($lines, $il, $business_details,$location_id=null)
     {
         $is_lot_number_enabled = $business_details->enable_lot_number;
         $is_product_expiry_enabled = $business_details->enable_product_expiry;
@@ -2248,7 +2248,7 @@ class TransactionUtil extends Util
             $unit = $line->product->unit;
             $brand = $line->product->brand;
             $cat = $line->product->category;
-            $stock = $this->getStock($variation->id);
+            $stock = $this->getStock($variation->id,$location_id);
             $unit_name = ! empty($unit->short_name) ? $unit->short_name : '';
             if (! empty($line->sub_unit->short_name)) {
                 $unit_name = $line->sub_unit->short_name;
@@ -6503,8 +6503,11 @@ class TransactionUtil extends Util
 
         return $discount_amount;
     }
-    public function getStock($variation_id){
+    public function getStock($variation_id,$location_id = null){
         return DB::table('variation_location_details')
+        ->when($location_id,function($query) use ($location_id){
+            $query->where("location_id", $location_id);
+        })
         ->where("variation_id",$variation_id)->value("qty_available");
     }
 }

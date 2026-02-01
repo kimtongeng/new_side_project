@@ -2,12 +2,37 @@
 
 namespace App\Notifications;
 
+use App\AccountTransaction;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Modules\ExchangeCurrency\Entities\ExchangeCurrency;
 
 class TelegramNotification
 {
 
+    // private const BOT = [
+    //     'token' => '7830977137:AAHF4T7P7B7rwm58je71F1pol0FKXn_O7zY',
+    //     "group_pt1001" => [
+    //         "sell" => [
+    //             "id" => '-4868742952',
+    //             "title" => 'sell',
+    //             "key" => 'sell',
+    //             "topic" => []
+    //         ],
+    //         "draft" => [
+    //             "id" => '-4884958224',
+    //             "title" => 'draft',
+    //             "key" => 'draft',
+    //             "topic" => []
+    //         ],
+    //         "quotation" => [
+    //             "id" => '-4983142854',
+    //             "title" => 'quotation',
+    //             "key" => 'quotation',
+    //             "topic" => []
+    //         ]
+    //     ],
+    // ];
     private const BOT = [
         'token' => '8152281759:AAFEN2PObxW-S8Jck251--mxQEEuNJYCanQ',
         "group_pt1001" => [
@@ -74,19 +99,15 @@ class TelegramNotification
 
     public static function sendMessage(string $message, string $to = self::BOT["group_bl01"]["sell"]["key"], $location_id = "PT1001"): void
     {
-        // return;
         $botToken = self::BOT["token"];
         $group = "group_pt1001";
-        if($location_id == 'PT1001'){
+        if ($location_id == 'PT1001') {
             $group = "group_pt1001";
-        }
-        else if($location_id == 'PT1002'){
+        } else if ($location_id == 'PT1002') {
             $group = "group_pt1002";
-        }
-        else if($location_id == 'PT1003'){
+        } else if ($location_id == 'PT1003') {
             $group = "group_pt1003";
         }
-
 
         if ($to == self::BOT[$group]["sell"]["key"]) {
             $chatId = self::BOT[$group]["sell"]["id"];
@@ -95,7 +116,6 @@ class TelegramNotification
         } elseif ($to == self::BOT[$group]["quotation"]["key"]) {
             $chatId = self::BOT[$group]["quotation"]["id"];
         }
-
         if (empty($chatId)) {
             throw new \Exception("Chat ID not found for key: {$to}");
         }
@@ -137,12 +157,19 @@ class TelegramNotification
 
     public static function addSaleMessage($receipt, string $to = self::BOT["group_bl01"]["sell"]["key"], $location_id = 'BL01')
     {
+        // dd($receipt);
         if (empty($receipt))
             return;
 
         // Shop info
-        $msg = "<b>🏪 Shop:</b> {$receipt->display_name}\n" .
-            "<b>📍 Address:</b> {$receipt->address}\n" .
+
+        $msg = "<b>🏪 Shop:</b> {$receipt->display_name} ";
+
+        if ($receipt->none_payment_account) {
+            $msg .= "⚠️ <b>{$receipt->none_payment_account}</b>";
+        }
+
+        $msg .= "\n<b>📍 Address:</b> {$receipt->address}\n" .
             "<b>📱 Mobile:</b> {$receipt->contact}\n";
         if (isset($receipt->tax_info1)) {
             $msg .= "<b>🧾 VAT:</b> {$receipt->tax_info1}\n\n";
@@ -159,7 +186,7 @@ class TelegramNotification
         $total_base = 0;
         foreach ($receipt->lines as $p) {
             $total_base += $p['line_total_uf'];
-            $product_lines .= "<b>• {$p['name']}, {$p['sub_sku']}</b>\n" .
+            $product_lines .= "<b>• {$p['name']} {$p['product_variation']} {$p['variation']}, {$p['sub_sku']}</b>\n" .
                 "Remain stock: " . number_format($p['remain_stock'], 2) . " Pc(s)\n" .
                 "Qty: {$p['quantity']} {$p['units']}\n" .
                 "Unit: \${$p['unit_price_before_discount']}\n" .
@@ -206,6 +233,27 @@ class TelegramNotification
             $msg .= "<b>✅ Paid:</b> {$receipt->total_paid}\n";
         }
 
+        $msg .= "🧾<b>PAYMENT ACCOUNT:</b>\n";
+
+        if ($receipt->none_payment_account) {
+            $msg .= "None : <b>{$receipt->none_payment_account}</b> \n";
+        }
+
+        if (filled($receipt->payment_account)) {
+
+            foreach ($receipt->payment_account as $account) {
+                $msg .= "{$account['name']}: {$account['balance']}\n";
+            }
+        }
+
+        if (filled($receipt->all_account)) {
+            $msg .= "🧾<b>LIST ACCOUNT:</b>\n";
+
+            foreach ($receipt->all_account as $account) {
+                $msg .= "{$account['name']}: {$account['balance']}\n";
+            }
+        }
+
         self::sendMessage($msg, $to, $location_id);
     }
     public static function updateSaleMessage($receipt, $old_receipt, string $to = self::BOT["group_bl01"]["sell"]["key"], $location_id = 'BL01')
@@ -216,12 +264,17 @@ class TelegramNotification
         $msg = "🔄 <b>Updated</b>\n\n";
 
         // 🧾 Basic Info
-        $msg .= "<b>🏪 Shop:</b> {$receipt->display_name}\n";
-        $msg .= "<b>🧾 Invoice No:</b> <s>{$old_receipt->invoice_no}</s> → {$receipt->invoice_no}\n";
-        $msg .= "<b>🕒 Date:</b> <s>{$old_receipt->invoice_date}</s> → {$receipt->invoice_date}\n\n";
+        $msg .= "<b>🏪 Shop:</b> {$receipt->display_name} ";
+        if ($old_receipt->none_payment_account || $receipt->none_payment_account) {
+            $msg = "⚠️ <s><b>{$old_receipt->none_payment_account}</b></s> →  <b>{$receipt->none_payment_account}</b>";
+        }
 
-        $msg .= "<b>👤 Customer:</b> <s>{$old_receipt->customer_name}</s> → {$receipt->customer_name}\n";
-        $msg .= "<b>📞 Mobile:</b> <s>{$old_receipt->customer_mobile}</s> → {$receipt->customer_mobile}\n\n";
+        $msg .= "\n <b>🧾 Invoice No:</b> " . self::diff($old_receipt->invoice_no, $receipt->invoice_no) . "\n";
+        $msg .= "<b>🕒 Date:</b> " . self::diff($old_receipt->invoice_date, $receipt->invoice_date) . "\n\n";
+
+
+        $msg .= "<b>👤 Customer:</b> " . self::diff($old_receipt->customer_name, $receipt->customer_name) . "\n";
+        $msg .= "<b>📞 Mobile:</b> " . self::diff($old_receipt->customer_mobile, $receipt->customer_mobile) . "\n\n";
 
         // 🛒 Product comparison
         $msg .= "<b>🛒 Products:</b>\n";
@@ -230,27 +283,27 @@ class TelegramNotification
         $old_products = collect($old_receipt->lines)->keyBy('sub_sku');
         $new_products = collect($receipt->lines)->keyBy('sub_sku');
 
-        // dd($old_products, $new_products);
+
         foreach ($new_products as $sku => $new) {
             $old = $old_products->get($sku);
 
             if ($old) {
-                $msg .= "<b>• {$new['name']}, {$new['sub_sku']}</b>\n";
+                $msg .= "<b>• {$new['name']} {$new['product_variation']} {$new['variation']}, {$new['sub_sku']}</b>\n";
                 $msg .= "Remain stock: <s>" . number_format($old['remain_stock'], 2) . " Pc(s)</s> → " . number_format($new['remain_stock'], 2) . " Pc(s)\n";
                 $msg .= "Qty: <s>{$old['quantity']}</s> → {$new['quantity']} {$new['units']}\n";
-                $msg .= "Unit Price: <s>\${$old['unit_price_before_discount']}</s> → \${$new['unit_price_before_discount']}\n";
-                $msg .= "Discount : <s>{$old['line_discount']}</s> → {$new['line_discount']}\n";
+                $msg .= "Unit Price: " . self::money($old['unit_price_before_discount'], $new['unit_price_before_discount']) . "\n";
+                $msg .= "Discount : " . self::diff($old['line_discount'], $new['line_discount']) . "\n";
 
                 if ($old['line_discount'] != '0.00' || $new['line_discount'] != '0.00') {
                     $old_subtotal = $old['line_total_uf'] + $old['total_line_discount'];
                     $new_subtotal = $new['line_total_uf'] + $new['total_line_discount'];
-                    $msg .= "Subtotal: <s>\${$old_subtotal}</s> → \${$new_subtotal}\n";
+                    $msg .= "Subtotal: " . self::money($old_subtotal, $new_subtotal) . "\n";
                 }
 
-                $msg .= "Total: <s>\${$old['line_total']}</s> → \${$new['line_total']}\n\n";
+                $msg .= "Total: " . self::money($old['line_total'], $new['line_total']) . "\n\n";
             } else {
                 // 🆕 New Product
-                $msg .= "<b>• {$new['name']}, {$new['sub_sku']}</b>\n";
+                $msg .= "<b>• {$new['name']} {$new['product_variation']} {$new['variation']}, {$new['sub_sku']}</b>\n";
                 $msg .= "Remain stock: " . number_format($new['remain_stock'], 2) . " Pc(s)\n";
                 $msg .= "Qty: {$new['quantity']} {$new['units']}\n";
                 $msg .= "Unit Price: \${$new['unit_price_before_discount']}\n";
@@ -264,11 +317,10 @@ class TelegramNotification
                 $msg .= "Total: \${$new['line_total']}\n\n";
             }
         }
-
         // ❌ Removed products
         foreach ($old_products as $sku => $old) {
             if (!$new_products->has($sku)) {
-                $msg .= "<b>•<s> {$old['name']}, {$old['sub_sku']}</s></b>\n";
+                $msg .= "<b>•<s> {$old['name']} {$old['product_variation']} {$old['variation']}, {$old['sub_sku']}</s></b>\n";
                 $msg .= "Remain stock: " . number_format($old['remain_stock'], 2) . " Pc(s)\n";
                 $msg .= "Qty:<s> {$old['quantity']} {$old['units']}</s>\n";
                 $msg .= "Unit Price:<s> \${$old['unit_price_before_discount']}</s>\n";
@@ -283,10 +335,10 @@ class TelegramNotification
             }
         }
 
-        // 💵 Totals
-        $msg .= "<b>🧾 Subtotal:</b> <s>{$old_receipt->subtotal}</s> → {$receipt->subtotal}\n";
-        $msg .= "<b>🔻 Discount:</b> <s>{$old_receipt->total_line_discount}</s> → {$receipt->total_line_discount}\n";
-        $msg .= "<b>Total:</b> <s>{$old_receipt->total}</s> → {$receipt->total}\n";
+        // 💵 Totals`
+        $msg .= "<b>🧾 Subtotal:</b> ".self::diff($old_receipt->subtotal, $receipt->subtotal)."\n";
+        $msg .= "<b>🔻 Discount:</b> ".self::diff($old_receipt->total_line_discount,$receipt->total_line_discount)."\n";
+        $msg .= "<b>Total:</b> ".self::diff($old_receipt->total,$receipt->total)."\n";
 
         // 🌍 Exchange Currency Comparison
         $business_id = auth()->user()->business_id;
@@ -312,9 +364,9 @@ class TelegramNotification
             foreach ($receipt->payments as $i => $pay) {
                 $old = $old_receipt->payments[$i] ?? null;
                 if ($old) {
-                    $msg .= "Method: <s>{$old['method']}</s> → {$pay['method']}\n";
-                    $msg .= "Amount: <s>{$old['amount']}</s> → {$pay['amount']}\n";
-                    $msg .= "Date: <s>{$old['date']}</s> → {$pay['date']}\n\n";
+                    $msg .= "Method: ".self::diff($old['method'], $pay['method'])."\n";
+                    $msg .= "Amount: ".self::diff($old['amount'], $pay['amount'])."\n";
+                    $msg .= "Date: ".self::diff($old['date'], $pay['date'])."\n\n"; 
                 } else {
                     $msg .= "🆕 {$pay['method']} - {$pay['amount']} on {$pay['date']}\n\n";
                 }
@@ -325,10 +377,34 @@ class TelegramNotification
         if (isset($old_receipt->total_paid) || isset($receipt->total_paid)) {
             $old_paid = $old_receipt->total_paid ?? 0;
             $new_paid = $receipt->total_paid ?? 0;
-            $msg .= "<b>✅ Paid:</b> <s>{$old_paid}</s> → {$new_paid}\n";
+            $msg .= "<b>✅ Paid:</b> ".self::diff($old_paid, $new_paid)."\n";
         }
 
-        self::sendMessage($msg, $to,$location_id);
+        $msg .= "🧾<b>PAYMENT ACCOUNT:</b>\n";
+
+        if ($old_receipt->none_payment_account || $receipt->none_payment_account) {
+            $msg .= "None : <s>{$old_receipt->none_payment_account}</s> → <b>{$receipt->none_payment_account}</b>";
+            $msg .= "None : <s>{$old_receipt->none_payment_account}</s> → <b>{$receipt->none_payment_account}</b>";
+        }
+
+
+        if (filled($receipt->payment_account) || filled($old_receipt->payment_account)) {
+            foreach ($old_receipt->payment_account as $index => $account) {
+                $msg .= "{$account['name']}: <s>{$account['balance']}</s> → {$receipt->payment_account[$index]["balance"]}\n";
+            }
+        }
+
+        // dd($receipt->all_account);
+
+        if (filled($receipt->all_account) || filled($old_receipt->all_account)) {
+            $msg .= "\n🧾<b>LIST ACCOUNT:</b>\n";
+
+            foreach ($old_receipt->all_account as $index => $account) {
+                $msg .= "{$account['name']}: <s>{$account['balance']}</s> → {$receipt->all_account[$index]["balance"]}\n";
+            }
+        }
+
+        self::sendMessage($msg, $to, $location_id);
     }
     public static function deleteSaleMessage($receipt, string $to = self::BOT["group_bl01"]["sell"]["key"], $location_id = 'BL01')
     {
@@ -338,8 +414,12 @@ class TelegramNotification
         $msg = "❌ <b>Deleted</b>\n\n";
 
         // Shop info
-        $msg .= "<b>🏪 Shop:</b> {$receipt->display_name}\n" .
-            "<b>📍 Address:</b> {$receipt->address}\n" .
+        $msg .= "<b>🏪 Shop:</b> {$receipt->display_name} ";
+        if ($receipt->none_payment_account) {
+            $msg .= "⚠️ <b>{$receipt->none_payment_account}</b>";
+        }
+
+        $msg .= "\n<b>📍 Address:</b> {$receipt->address}\n" .
             "<b>📱 Mobile:</b> {$receipt->contact}\n";
         if (isset($receipt->tax_info1)) {
             $msg .= "<b>🧾 VAT:</b> {$receipt->tax_info1}\n\n";
@@ -357,7 +437,7 @@ class TelegramNotification
         $total_base = 0;
         foreach ($receipt->lines as $p) {
             $total_base += $p['line_total_uf'];
-            $product_lines .= "<b>• {$p['name']}, {$p['sub_sku']}</b>\n" .
+            $product_lines .= "<b>• {$p['name']} {$p['product_variation']} {$p['variation']}, {$p['sub_sku']}</b>\n" .
                 "Remain stock: " . number_format($p['remain_stock'], 2) . " Pc(s)\n" .
                 "Qty: {$p['quantity']} {$p['units']}\n" .
                 "Unit: \${$p['unit_price_before_discount']}\n" .
@@ -404,13 +484,55 @@ class TelegramNotification
             $msg .= "<b>✅ Paid:</b> {$receipt->total_paid}\n";
         }
 
-        self::sendMessage($msg, $to,$location_id);
+
+        $msg .= "🧾<b>PAYMENT ACCOUNT:</b>\n";
+
+        if ($receipt->none_payment_account) {
+            $msg .= "None : <b>{$receipt->none_payment_account}</b> \n";
+        }
+
+        if (filled($receipt->payment_account)) {
+
+            foreach ($receipt->payment_account as $account) {
+                $msg .= "{$account['name']}: {$account['balance']}\n";
+            }
+        }
+
+        if (filled($receipt->all_account)) {
+            $msg .= "🧾<b>LIST ACCOUNT:</b>\n";
+
+            foreach ($receipt->all_account as $account) {
+                $msg .= "{$account['name']}: {$account['balance']}\n";
+            }
+        }
+
+
+        self::sendMessage($msg, $to, $location_id);
     }
 
-    public static function returnSell($receipt, string$to = self::BOT["group_bl01"]["sell"]["key"], $location_id = 'BL01')
+    public static function returnSell($receipt, $transaction_id, string $to = self::BOT["group_bl01"]["sell"]["key"], $location_id = 'BL01')
     {
+
+        //get payment account
+        $account = AccountTransaction::join('accounts', 'account_transactions.account_id', '=', 'accounts.id')
+            ->where('transaction_id', $transaction_id)
+            ->select('accounts.name', 'accounts.id', DB::raw("(SELECT SUM( IF(account_transactions.type='credit', amount, -1*amount) ) as balance from account_transactions where account_transactions.account_id = accounts.id AND deleted_at is NULL) as balance"))
+            ->get();
+
+
         if (empty($receipt))
             return;
+        if ($account->isNotEmpty()) {
+            $receipt->payment_account = $account->map(function ($item) {
+                return [
+                    'name' => $item->name,
+                    'id' => $item->id,
+                    'balance' => $this->num_f($item->balance, true),
+                ];
+            })->toArray();
+        } else {
+            $receipt->payment_account = null;
+        }
 
         // Shop Info
         $msg = "<b>♻️ RETURN RECEIPT</b>\n\n";
@@ -434,7 +556,7 @@ class TelegramNotification
 
         foreach ($receipt->lines as $p) {
             // $total_base += $p['line_total'];
-            $product_lines .= "<b>• {$p['name']}, {$p['sub_sku']}</b>\n" .
+            $product_lines .= "<b>• {$p['name']} {$p['product_variation']} {$p['variation']}, {$p['sub_sku']}</b>\n" .
                 "Remain stock: " . number_format($p['remain_stock'], 2) . " Pc(s)\n" .
                 "Qty: {$p['quantity']} {$p['units']}\n" .
                 "Unit: \${$p['unit_price']}\n";
@@ -490,6 +612,63 @@ class TelegramNotification
         if (!empty($receipt->total_paid)) {
             $msg .= "<b>✅ Refunded:</b> {$receipt->total_paid}\n";
         }
-        self::sendMessage($msg, $to,$location_id);
+
+        if (!empty($receipt->payment_account)) {
+            $msg .= "🧾<b>PAYMENT ACCOUNT:</b>\n";
+
+            foreach ($receipt->payment_account as $account) {
+                $msg .= "{$account['name']}: {$account['balance']}\n";
+            }
+        }
+
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public function num_f($input_number, $add_symbol = false, $business_details = null, $is_quantity = false)
+    {
+        $thousand_separator = ! empty($business_details) ? $business_details->thousand_separator : session('currency')['thousand_separator'];
+        $decimal_separator = ! empty($business_details) ? $business_details->decimal_separator : session('currency')['decimal_separator'];
+
+        $currency_precision = ! empty($business_details) ? $business_details->currency_precision : session('business.currency_precision', 2);
+
+        if ($is_quantity) {
+            $currency_precision = ! empty($business_details) ? $business_details->quantity_precision : session('business.quantity_precision', 2);
+        }
+
+        $formatted = number_format($input_number, $currency_precision, $decimal_separator, $thousand_separator);
+
+        if ($add_symbol) {
+            $currency_symbol_placement = ! empty($business_details) ? $business_details->currency_symbol_placement : session('business.currency_symbol_placement');
+            $symbol = ! empty($business_details) ? $business_details->currency_symbol : session('currency')['symbol'];
+
+            if ($currency_symbol_placement == 'after') {
+                $formatted = $formatted . ' ' . $symbol;
+            } else {
+                $formatted = $symbol . ' ' . $formatted;
+            }
+        }
+
+        return $formatted;
+    }
+    private static function diff($old, $new, $suffix = '')
+    {
+        if ((string)$old === (string)$new) {
+            return $new . $suffix;
+        }
+        return "<s>{$old}</s> → {$new}{$suffix}";
+    }
+
+    private static function money($old, $new)
+    {
+        $o = number_format(self::num($old), 2);
+        $n = number_format(self::num($new), 2);
+
+        if ($o === $n) return "\${$n}";
+        return "<s>\${$o}</s> → \${$n}";
+    }
+    private static function num($v)
+    {
+        if ($v === null || $v === '') return 0;
+        return (float) str_replace(',', '', $v);
     }
 }

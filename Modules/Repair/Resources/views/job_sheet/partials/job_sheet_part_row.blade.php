@@ -7,22 +7,25 @@
         {{ $unit }}
 
         {{-- Hidden input for status --}}
-        <input type="hidden" name="parts[{{ $variation_id }}][status]" value="{{ $status ?? 'request' }}">
+        @can('repair.request_and_save')
+            <input type="hidden" name="parts[{{ $variation_id }}][status]" value="{{ $status ?? 'request' }}">
+            {{-- Status badge --}}
+            @php
+                $statusClass = match ($status ?? 'request') {
+                    'request' => 'bg-info text-dark',
+                    'confirm' => 'bg-success text-white',
+                    'reject' => 'bg-danger text-white',
+                    default => 'bg-secondary text-white',
+                };
+                $statusText = ucfirst($status ?? 'Request');
+            @endphp
 
-        {{-- Status badge --}}
-        @php
-            $statusClass = match ($status ?? 'request') {
-                'request' => 'bg-info text-dark',
-                'complete' => 'bg-success text-white',
-                'reject' => 'bg-danger text-white',
-                default => 'bg-secondary text-white',
-            };
-            $statusText = ucfirst($status ?? 'Request');
-        @endphp
 
-        <span class="badge {{ $statusClass }} d-inline-block px-3 py-2">
-            {{ $statusText }}
-        </span>
+            <span class="badge {{ $statusClass }} d-inline-block px-3 py-2">
+                {{ $statusText }}
+            </span>
+        @endcan
+
     </td>
 
     <td class="text-center">

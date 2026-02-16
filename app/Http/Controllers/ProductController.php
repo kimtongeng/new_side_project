@@ -1247,7 +1247,7 @@ class ProductController extends Controller
         if (request()->ajax()) {
             $search_term = request()->input('term', '');
             $location_id = request()->input('location_id', null);
-            $check_qty = request()->input('check_qty', false);
+            $check_qty = request()->boolean('check_qty', false);
             $price_group_id = request()->input('price_group', null);
             $business_id = request()->session()->get('user.business_id');
             $not_for_selling = request()->get('not_for_selling', null);

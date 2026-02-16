@@ -155,6 +155,11 @@ class DataController extends Controller
                 'label' => "Show only available part",
                 'default' => false,
             ],
+            [
+                'value' => 'repair.view_part',
+                'label' => "View part",
+                'default' => false,
+            ],
             
 
 

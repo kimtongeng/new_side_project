@@ -52,7 +52,7 @@
 
                             @can('repair.show_only_available_part')
                                 <span class="input-group-addon">
-                                    <input type="checkbox" id="available_part">
+                                    <input type="checkbox" id="available_part" name="only_available">
                                 </span>
                             @endcan
 

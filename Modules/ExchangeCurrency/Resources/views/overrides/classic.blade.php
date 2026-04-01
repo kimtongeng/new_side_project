@@ -645,7 +645,7 @@
                                 {{ $receipt_details->total_label }} ({{ $val->symbol }})
                             </th>
                             <td class="text-right">
-                                {{ format_converted_currency($val->symbol, $val->exchange_rate, $receipt_details->lines[0]['line_total']) }}
+                                {{ format_converted_currency($val->symbol, $val->exchange_rate, $receipt_details->total_unformatted) }}
                             </td>
                         </tr>
                     @endforeach

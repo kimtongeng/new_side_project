@@ -45,14 +45,9 @@ class JobSheetController extends Controller
      *
      * @return void
      */
-    public function __construct(
-        RepairUtil $repairUtil,
-        Util $commonUtil,
-        CashRegisterUtil $cashRegisterUtil,
-        ModuleUtil $moduleUtil,
-        ContactUtil $contactUtil,
-        ProductUtil $productUtil
-    ) {
+    public function __construct(RepairUtil $repairUtil, Util $commonUtil, CashRegisterUtil $cashRegisterUtil, ModuleUtil $moduleUtil,
+        ContactUtil $contactUtil, ProductUtil $productUtil)
+    {
         $this->repairUtil = $repairUtil;
         $this->commonUtil = $commonUtil;
         $this->cashRegisterUtil = $cashRegisterUtil;
@@ -78,41 +73,41 @@ class JobSheetController extends Controller
 
         if (request()->ajax()) {
             $job_sheets = JobSheet::with('invoices')
-                ->leftJoin('contacts', 'repair_job_sheets.contact_id', '=', 'contacts.id')
-                ->leftJoin(
-                    'repair_statuses AS rs',
-                    'repair_job_sheets.status_id',
-                    '=',
-                    'rs.id'
-                )
-                ->leftJoin('users as technecian', 'repair_job_sheets.service_staff', '=', 'technecian.id')
-                ->leftJoin(
-                    'repair_device_models as rdm',
-                    'rdm.id',
-                    '=',
-                    'repair_job_sheets.device_model_id'
-                )
-                ->leftJoin(
-                    'brands AS b',
-                    'repair_job_sheets.brand_id',
-                    '=',
-                    'b.id'
-                )
-                ->leftJoin(
-                    'business_locations AS bl',
-                    'repair_job_sheets.location_id',
-                    '=',
-                    'bl.id'
-                )
-                ->leftJoin(
-                    'categories as device',
-                    'device.id',
-                    '=',
-                    'repair_job_sheets.device_id'
-                )
-                ->leftJoin('users', 'repair_job_sheets.created_by', '=', 'users.id')
-                ->where('repair_job_sheets.business_id', $business_id)
-                ->select('delivery_date', 'job_sheet_no', DB::raw("CONCAT(COALESCE(technecian.surname, ''),' ',COALESCE(technecian.first_name, ''),' ',COALESCE(technecian.last_name,'')) as technecian"), DB::raw("CONCAT(COALESCE(users.surname, ''),' ',COALESCE(users.first_name, ''),' ',COALESCE(users.last_name,'')) as added_by"), 'contacts.name as customer', 'b.name as brand', 'rdm.name as device_model', 'serial_no', 'estimated_cost', 'rs.name as status', 'repair_job_sheets.id as id', 'repair_job_sheets.created_at as created_at', 'service_type', 'rs.color as status_color', 'bl.name as location', 'rs.is_completed_status', 'device.name as device', 'repair_job_sheets.custom_field_1', 'repair_job_sheets.custom_field_2', 'repair_job_sheets.custom_field_3', 'repair_job_sheets.custom_field_4', 'repair_job_sheets.custom_field_5');
+                    ->leftJoin('contacts', 'repair_job_sheets.contact_id', '=', 'contacts.id')
+                    ->leftJoin(
+                        'repair_statuses AS rs',
+                        'repair_job_sheets.status_id',
+                        '=',
+                        'rs.id'
+                    )
+                    ->leftJoin('users as technecian', 'repair_job_sheets.service_staff', '=', 'technecian.id')
+                    ->leftJoin(
+                        'repair_device_models as rdm',
+                        'rdm.id',
+                        '=',
+                        'repair_job_sheets.device_model_id'
+                    )
+                    ->leftJoin(
+                        'brands AS b',
+                        'repair_job_sheets.brand_id',
+                        '=',
+                        'b.id'
+                    )
+                    ->leftJoin(
+                        'business_locations AS bl',
+                        'repair_job_sheets.location_id',
+                        '=',
+                        'bl.id'
+                    )
+                    ->leftJoin(
+                        'categories as device',
+                        'device.id',
+                        '=',
+                        'repair_job_sheets.device_id'
+                    )
+                    ->leftJoin('users', 'repair_job_sheets.created_by', '=', 'users.id')
+                    ->where('repair_job_sheets.business_id', $business_id)
+                    ->select('delivery_date', 'job_sheet_no', DB::raw("CONCAT(COALESCE(technecian.surname, ''),' ',COALESCE(technecian.first_name, ''),' ',COALESCE(technecian.last_name,'')) as technecian"), DB::raw("CONCAT(COALESCE(users.surname, ''),' ',COALESCE(users.first_name, ''),' ',COALESCE(users.last_name,'')) as added_by"), 'contacts.name as customer', 'b.name as brand', 'rdm.name as device_model', 'serial_no', 'estimated_cost', 'rs.name as status', 'repair_job_sheets.id as id', 'repair_job_sheets.created_at as created_at', 'service_type', 'rs.color as status_color', 'bl.name as location', 'rs.is_completed_status', 'device.name as device', 'repair_job_sheets.custom_field_1', 'repair_job_sheets.custom_field_2', 'repair_job_sheets.custom_field_3', 'repair_job_sheets.custom_field_4', 'repair_job_sheets.custom_field_5');
 
             //if user is not admin get only assgined/created_by job sheet
             if (! auth()->user()->can('job_sheet.view_all')) {
@@ -165,10 +160,10 @@ class JobSheetController extends Controller
                 ->addColumn('action', function ($row) {
                     $html = '<div class="btn-group">
                                 <button class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-info tw-w-max dropdown-toggle" type="button"  data-toggle="dropdown" aria-expanded="false">
-                                    ' . __('messages.action') . '
+                                    '.__('messages.action').'
                                     <span class="caret"></span>
                                     <span class="sr-only">
-                                    ' . __('messages.action') . '
+                                    '.__('messages.action').'
                                     </span>
                                 </button>';
 
@@ -176,65 +171,58 @@ class JobSheetController extends Controller
 
                     if (auth()->user()->can('job_sheet.view_assigned') || auth()->user()->can('job_sheet.view_all') || auth()->user()->can('job_sheet.create')) {
                         $html .= '<li>
-                                <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'show'], [$row->id]) . '" class="cursor-pointer"><i class="fa fa-eye"></i> ' . __('messages.view') . '
+                                <a href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'show'], [$row->id]).'" class="cursor-pointer"><i class="fa fa-eye"></i> '.__('messages.view').'
                                 </a>
-                                </li>';
-                    }
-                    if (auth()->user()->can('repair.view_part')) {
-                        $html .= '<li>
-                                    <a data-href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'view_parts'], [$row->id]) . '" class="cursor-pointer view_part_sheet">
-                                        <i class="fas fa-tasks"></i> View Parts
-                                    </a>
                                 </li>';
                     }
 
                     if (auth()->user()->can('repair.create')) {
                         $html .= '<li>
-                                    <a href="' . action([\App\Http\Controllers\SellPosController::class, 'create']) . '?sub_type=repair&job_sheet_id=' . $row->id . '" class="cursor-pointer"><i class="fas fa-plus-circle"></i> ' . __('repair::lang.add_invoice') . '
+                                    <a href="'.action([\App\Http\Controllers\SellPosController::class, 'create']).'?sub_type=repair&job_sheet_id='.$row->id.'" class="cursor-pointer"><i class="fas fa-plus-circle"></i> '.__('repair::lang.add_invoice').'
                                     </a>
                                 </li>';
                     }
 
                     if (auth()->user()->can('job_sheet.edit')) {
                         $html .= '<li>
-                                    <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'edit'], [$row->id]) . '" class="cursor-pointer edit_job_sheet"><i class="fa fa-edit"></i> ' . __('messages.edit') . '
+                                    <a href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'edit'], [$row->id]).'" class="cursor-pointer edit_job_sheet"><i class="fa fa-edit"></i> '.__('messages.edit').'
                                     </a>
                                 </li>';
 
                         $html .= '<li>
-                                    <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'addParts'], [$row->id]) . '" class="cursor-pointer">
+                                    <a href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'addParts'], [$row->id]).'" class="cursor-pointer">
                                         <i class="fas fa-toolbox"></i>
-                                        ' . __('repair::lang.add_parts') . '
+                                        '.__('repair::lang.add_parts').'
                                     </a>
                                 </li>';
 
                         $html .= '<li>
-                                    <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'getUploadDocs'], [$row->id]) . '" class="cursor-pointer">
+                                    <a href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'getUploadDocs'], [$row->id]).'" class="cursor-pointer">
                                         <i class="fas fa-file-alt"></i>
-                                        ' . __('repair::lang.upload_docs') . '
+                                        '.__('repair::lang.upload_docs').'
                                     </a>
                                 </li>';
                     }
 
                     $html .= '<li>
-                                    <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'print'], [$row->id]) . '" target="_blank"><i class="fa fa-print"></i> ' . __('messages.print') . '
+                                    <a href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'print'], [$row->id]).'" target="_blank"><i class="fa fa-print"></i> '.__('messages.print').'
                                     </a>
                                 </li>';
 
                     if (auth()->user()->can('job_sheet.create') || auth()->user()->can('job_sheet.edit')) {
                         $html .= '<li>
-                                    <a data-href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'editStatus'], [$row->id]) . '" class="cursor-pointer edit_job_sheet_status">
+                                    <a data-href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'editStatus'], [$row->id]).'" class="cursor-pointer edit_job_sheet_status">
                                         <i class="fa fa-edit"></i>
-                                        ' . __('repair::lang.change_status') . '
+                                        '.__('repair::lang.change_status').'
                                     </a>
                                 </li>';
                     }
 
                     if (auth()->user()->can('job_sheet.delete')) {
                         $html .= '<li>
-                                    <a data-href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'destroy'], [$row->id]) . '"  id="delete_job_sheet" class="cursor-pointer">
+                                    <a data-href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'destroy'], [$row->id]).'"  id="delete_job_sheet" class="cursor-pointer">
                                         <i class="fas fa-trash"></i>
-                                        ' . __('messages.delete') . '
+                                        '.__('messages.delete').'
                                     </a>
                                 </li>';
                     }
@@ -244,25 +232,23 @@ class JobSheetController extends Controller
 
                     return $html;
                 })
-                ->editColumn(
-                    'delivery_date',
+                ->editColumn('delivery_date',
                     '
                         @if($delivery_date)
                             {{@format_datetime($delivery_date)}}
                         @endif
                     '
                 )
-                ->editColumn(
-                    'created_at',
+                ->editColumn('created_at',
                     '
                     {{@format_datetime($created_at)}}
                     '
                 )
                 ->editColumn('service_type', function ($row) {
-                    return __('repair::lang.' . $row->service_type);
+                    return __('repair::lang.'.$row->service_type);
                 })
                 ->editColumn('estimated_cost', function ($row) {
-                    $cost = '<span class="display_currency total-discount" data-currency_symbol="true" data-orig-value="' . $row->estimated_cost . '">' . $row->estimated_cost . '</span>';
+                    $cost = '<span class="display_currency total-discount" data-currency_symbol="true" data-orig-value="'.$row->estimated_cost.'">'.$row->estimated_cost.'</span>';
 
                     return $cost;
                 })
@@ -276,17 +262,17 @@ class JobSheetController extends Controller
 
                     $add_invoice = '';
                     if (auth()->user()->can('repair.create')) {
-                        $add_invoice = '<br><a href="' . action([\App\Http\Controllers\SellPosController::class, 'create']) . '?sub_type=repair&job_sheet_id=' . $row->id . '" class="cursor-pointer" data-toggle="tooltip" title="' . __('repair::lang.add_invoice') . '">
+                        $add_invoice = '<br><a href="'.action([\App\Http\Controllers\SellPosController::class, 'create']).'?sub_type=repair&job_sheet_id='.$row->id.'" class="cursor-pointer" data-toggle="tooltip" title="'.__('repair::lang.add_invoice').'">
                                 <i class="fas fa-plus-circle"></i>
                             </a>';
                     }
 
-                    return implode(', ', $invoice_no) . $add_invoice;
+                    return implode(', ', $invoice_no).$add_invoice;
                 })
                 ->editColumn('status', function ($row) {
-                    $html = '<a data-href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'editStatus'], [$row->id]) . '" class="edit_job_sheet_status cursor-pointer" data-orig-value="' . $row->status . '" data-status-name="' . $row->status . '">
-                                <span class="label " style="background-color:' . $row->status_color . ';" >
-                                    ' . $row->status . '
+                    $html = '<a data-href="'.action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'editStatus'], [$row->id]).'" class="edit_job_sheet_status cursor-pointer" data-orig-value="'.$row->status.'" data-status-name="'.$row->status.'">
+                                <span class="label " style="background-color:'.$row->status_color.';" >
+                                    '.$row->status.'
                                 </span>
                             </a>
                         ';
@@ -304,9 +290,9 @@ class JobSheetController extends Controller
         $service_staffs = $this->commonUtil->serviceStaffDropdown($business_id);
 
         $user_role_as_service_staff = auth()->user()->roles()
-            ->where('is_service_staff', 1)
-            ->get()
-            ->toArray();
+                            ->where('is_service_staff', 1)
+                            ->get()
+                            ->toArray();
         $is_user_service_staff = false;
         if (! empty($user_role_as_service_staff) && ! $is_user_admin) {
             $is_user_service_staff = true;
@@ -408,7 +394,7 @@ class JobSheetController extends Controller
 
             if (! empty($request->input('send_notification')) && in_array('sms', $request->input('send_notification'))) {
                 $status = RepairStatus::where('business_id', $business_id)
-                    ->find($job_sheet->status_id);
+                            ->find($job_sheet->status_id);
                 if (! empty($status->sms_template)) {
                     $this->repairUtil->sendJobSheetUpdateSmsNotification($status->sms_template, $job_sheet);
                 }
@@ -416,7 +402,7 @@ class JobSheetController extends Controller
 
             if (! empty($request->input('send_notification')) && in_array('email', $request->input('send_notification'))) {
                 $status = RepairStatus::where('business_id', $business_id)
-                    ->find($job_sheet->status_id);
+                            ->find($job_sheet->status_id);
                 $notification = [
                     'subject' => $status->email_subject,
                     'body' => $status->email_body,
@@ -435,11 +421,9 @@ class JobSheetController extends Controller
 
             if (! empty($request->input('submit_type')) && $request->input('submit_type') == 'save_and_add_parts') {
                 return redirect()
-                    ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'addParts'], [$job_sheet->id])
-                    ->with('status', [
-                        'success' => true,
-                        'msg' => __('lang_v1.success'),
-                    ]);
+                ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'addParts'], [$job_sheet->id])
+                ->with('status', ['success' => true,
+                    'msg' => __('lang_v1.success'), ]);
             } elseif (! empty($request->input('submit_type')) && $request->input('submit_type') == 'save_and_upload_docs') {
                 return redirect()
                     ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'getUploadDocs'], [$job_sheet->id])
@@ -448,16 +432,13 @@ class JobSheetController extends Controller
 
             return redirect()
                 ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'show'], [$job_sheet->id])
-                ->with('status', [
-                    'success' => true,
-                    'msg' => __('lang_v1.success'),
-                ]);
+                ->with('status', ['success' => true,
+                    'msg' => __('lang_v1.success'), ]);
         } catch (\Exception $e) {
             DB::rollBack();
 
             return redirect()->back()
-                ->with('status', [
-                    'success' => false,
+                ->with('status', ['success' => false,
                     'msg' => __('messages.something_went_wrong'),
                 ]);
         }
@@ -477,19 +458,10 @@ class JobSheetController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $query = JobSheet::with(
-            'customer',
-            'customer.business',
-            'technician',
-            'status',
-            'Brand',
-            'Device',
-            'deviceModel',
-            'businessLocation',
-            'invoices',
-            'media'
-        )
-            ->where('business_id', $business_id);
+        $query = JobSheet::with('customer',
+                        'customer.business', 'technician',
+                        'status', 'Brand', 'Device', 'deviceModel', 'businessLocation', 'invoices', 'media')
+                        ->where('business_id', $business_id);
 
         //if user is not admin or didn't have permission `job_sheet.view_all` get only assgined/created_by job sheet
         if (! ($this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('job_sheet.view_all'))) {
@@ -507,12 +479,12 @@ class JobSheetController extends Controller
         $business = Business::find($business_id);
         $repair_settings = json_decode($business->repair_settings, true);
         $jobsheet_settings = ! empty($business->repair_jobsheet_settings) ?
-            json_decode($business->repair_jobsheet_settings, true) : [];
+        json_decode($business->repair_jobsheet_settings, true) : [];
 
         $activities = Activity::forSubject($job_sheet)
-            ->with(['causer', 'subject'])
-            ->latest()
-            ->get();
+           ->with(['causer', 'subject'])
+           ->latest()
+           ->get();
 
         return view('repair::job_sheet.show')
             ->with(compact('job_sheet', 'repair_settings', 'parts', 'activities', 'jobsheet_settings'));
@@ -533,7 +505,7 @@ class JobSheetController extends Controller
         }
 
         $job_sheet = JobSheet::where('business_id', $business_id)
-            ->findOrFail($id);
+                    ->findOrFail($id);
 
         $repair_statuses = RepairStatus::getRepairSatuses($business_id);
         $device_models = DeviceModel::forDropdown($business_id);
@@ -592,7 +564,7 @@ class JobSheetController extends Controller
             DB::beginTransaction();
 
             $job_sheet = JobSheet::where('business_id', $business_id)
-                ->findOrFail($id);
+                            ->findOrFail($id);
 
             $job_sheet->update($input);
 
@@ -601,7 +573,7 @@ class JobSheetController extends Controller
 
             if (! empty($request->input('send_notification')) && in_array('sms', $request->input('send_notification'))) {
                 $status = RepairStatus::where('business_id', $business_id)
-                    ->find($job_sheet->status_id);
+                            ->find($job_sheet->status_id);
                 if (! empty($status->sms_template)) {
                     $this->repairUtil->sendJobSheetUpdateSmsNotification($status->sms_template, $job_sheet);
                 }
@@ -609,7 +581,7 @@ class JobSheetController extends Controller
 
             if (! empty($request->input('send_notification')) && in_array('email', $request->input('send_notification'))) {
                 $status = RepairStatus::where('business_id', $business_id)
-                    ->find($job_sheet->status_id);
+                            ->find($job_sheet->status_id);
                 $notification = [
                     'subject' => $status->email_subject,
                     'body' => $status->email_body,
@@ -628,11 +600,9 @@ class JobSheetController extends Controller
 
             if (! empty($request->input('submit_type')) && $request->input('submit_type') == 'save_and_add_parts') {
                 return redirect()
-                    ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'addParts'], [$job_sheet->id])
-                    ->with('status', [
-                        'success' => true,
-                        'msg' => __('lang_v1.success'),
-                    ]);
+                ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'addParts'], [$job_sheet->id])
+                ->with('status', ['success' => true,
+                    'msg' => __('lang_v1.success'), ]);
             } elseif (! empty($request->input('submit_type')) && $request->input('submit_type') == 'save_and_upload_docs') {
                 return redirect()
                     ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'getUploadDocs'], [$job_sheet->id])
@@ -641,18 +611,15 @@ class JobSheetController extends Controller
 
             return redirect()
                 ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'show'], [$job_sheet->id])
-                ->with('status', [
-                    'success' => true,
-                    'msg' => __('lang_v1.success'),
-                ]);
+                ->with('status', ['success' => true,
+                    'msg' => __('lang_v1.success'), ]);
         } catch (\Exception $e) {
             DB::rollBack();
 
-            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
 
             return redirect()->back()
-                ->with('status', [
-                    'success' => false,
+                ->with('status', ['success' => false,
                     'msg' => __('messages.something_went_wrong'),
                 ]);
         }
@@ -680,13 +647,11 @@ class JobSheetController extends Controller
                 $job_sheet->delete();
                 $job_sheet->media()->delete();
 
-                $output = [
-                    'success' => true,
+                $output = ['success' => true,
                     'msg' => __('lang_v1.success'),
                 ];
             } catch (\Exception $e) {
-                $output = [
-                    'success' => false,
+                $output = ['success' => false,
                     'msg' => __('messages.something_went_wrong'),
                 ];
             }
@@ -719,43 +684,6 @@ class JobSheetController extends Controller
                 ->with(compact('job_sheet', 'status_dropdown', 'status_template_tags'));
         }
     }
-
-    public function view_parts($id)
-    {
-
-        $business_id = request()->session()->get('user.business_id');
-
-        if (! (auth()->user()->can('superadmin') || auth()->user()->can('repair.view_part') || auth()->user()->can('job_sheet.view_all') || auth()->user()->can('job_sheet.create'))) {
-            abort(403, 'Unauthorized action.');
-        }
-        $job_sheet = JobSheet::findOrFail($id);
-        $parts = $job_sheet->getPartsUsed();
-        if (request()->ajax()) {
-            return view('repair::job_sheet.partials.view_parts', compact('parts', "job_sheet"));
-        }
-    }
-
-    public function updatePartsStatus(Request $request, $id)
-    {
-        $job_sheet = JobSheet::findOrFail($id);
-
-        $parts = $job_sheet->parts;
-
-        foreach ($request->parts as $variation_id => $data) {
-            if (isset($parts[$variation_id])) {
-                if ($parts[$variation_id]['status'] !== null && $data['status'] !== null) {
-                    $parts[$variation_id]['status'] = $data['status'];
-                }
-                $parts[$variation_id]['note'] = $data['note'] ?? null;
-            }
-        }
-
-        $job_sheet->parts = $parts;
-        $job_sheet->save();
-
-        return back()->with('success', 'Parts status updated successfully');
-    }
-
 
     private function updateJobsheetStatus($input, $jobsheet_id)
     {
@@ -833,13 +761,11 @@ class JobSheetController extends Controller
 
                 $this->updateJobsheetStatus($input, $id);
 
-                $output = [
-                    'success' => true,
+                $output = ['success' => true,
                     'msg' => __('lang_v1.success'),
                 ];
             } catch (Exception $e) {
-                $output = [
-                    'success' => false,
+                $output = ['success' => false,
                     'msg' => __('messages.something_went_wrong'),
                 ];
             }
@@ -860,13 +786,11 @@ class JobSheetController extends Controller
             try {
                 Media::deleteMedia($business_id, $id);
 
-                $output = [
-                    'success' => true,
+                $output = ['success' => true,
                     'msg' => __('lang_v1.success'),
                 ];
             } catch (\Exception $e) {
-                $output = [
-                    'success' => false,
+                $output = ['success' => false,
                     'msg' => __('messages.something_went_wrong'),
                 ];
             }
@@ -877,7 +801,6 @@ class JobSheetController extends Controller
 
     public function addParts($id)
     {
-
         $business_id = request()->session()->get('user.business_id');
 
         if (! (auth()->user()->can('superadmin') || ($this->moduleUtil->hasThePermissionInSubscription($business_id, 'repair_module') && (auth()->user()->can('job_sheet.create') || auth()->user()->can('job_sheet.edit'))))) {
@@ -934,20 +857,17 @@ class JobSheetController extends Controller
                 $request->session()->forget('repair_status_update_data');
             }
 
-            $output = [
-                'success' => true,
+            $output = ['success' => true,
                 'msg' => __('lang_v1.success'),
             ];
         } catch (\Exception $e) {
-            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
         }
 
         return redirect()
-            ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'show'], [$job_sheet->id])
-            ->with('status', [
-                'success' => true,
-                'msg' => __('lang_v1.success'),
-            ]);
+                ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'show'], [$job_sheet->id])
+                ->with('status', ['success' => true,
+                    'msg' => __('lang_v1.success'), ]);
     }
 
     public function jobsheetPartRow(Request $request)
@@ -958,13 +878,13 @@ class JobSheetController extends Controller
             $business_id = $request->session()->get('user.business_id');
             $product = $this->productUtil->getDetailsFromVariation($variation_id, $business_id);
 
-            $variation_name = $product->product_name . ' - ' . $product->sub_sku;
+            $variation_name = $product->product_name.' - '.$product->sub_sku;
             $variation_id = $product->variation_id;
             $quantity = 1;
             $unit = $product->unit;
 
             return view('repair::job_sheet.partials.job_sheet_part_row')
-                ->with(compact('variation_name', 'variation_id', 'quantity', 'unit'));
+            ->with(compact('variation_name', 'variation_id', 'quantity', 'unit'));
         }
     }
 
@@ -982,19 +902,10 @@ class JobSheetController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $query = JobSheet::with(
-            'customer',
-            'customer.business',
-            'technician',
-            'status',
-            'Brand',
-            'Device',
-            'deviceModel',
-            'businessLocation',
-            'invoices',
-            'media'
-        )
-            ->where('business_id', $business_id);
+        $query = JobSheet::with('customer',
+                        'customer.business', 'technician',
+                        'status', 'Brand', 'Device', 'deviceModel', 'businessLocation', 'invoices', 'media')
+                        ->where('business_id', $business_id);
 
         //if user is not admin or didn't have permission `job_sheet.view_all` get only assgined/created_by job sheet
         if (! ($this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('job_sheet.view_all'))) {
@@ -1013,12 +924,11 @@ class JobSheetController extends Controller
         $repair_settings = json_decode($business->repair_settings, true);
 
         $jobsheet_settings = ! empty($business->repair_jobsheet_settings) ?
-            json_decode($business->repair_jobsheet_settings, true) : [];
+        json_decode($business->repair_jobsheet_settings, true) : [];
 
         $html = view('repair::job_sheet.print_pdf')
             ->with(compact('job_sheet', 'repair_settings', 'parts', 'jobsheet_settings'))->render();
-        $mpdf = new \Mpdf\Mpdf([
-            'tempDir' => public_path('uploads/temp'),
+        $mpdf = new \Mpdf\Mpdf(['tempDir' => public_path('uploads/temp'),
             'mode' => 'utf-8',
             'autoScriptToLang' => true,
             'autoLangToFont' => true,
@@ -1028,7 +938,7 @@ class JobSheetController extends Controller
             'margin_bottom' => 8,
         ]);
         $mpdf->useSubstitutions = true;
-        $mpdf->SetTitle(__('repair::lang.job_sheet') . ' | ' . $job_sheet->job_sheet_no);
+        $mpdf->SetTitle(__('repair::lang.job_sheet').' | '.$job_sheet->job_sheet_no);
         $mpdf->WriteHTML($html);
         $mpdf->Output('job_sheet.pdf', 'I');
 
@@ -1084,7 +994,7 @@ class JobSheetController extends Controller
         $label_height = isset($jobsheet_settings['label_height']) ? $jobsheet_settings['label_height'] : 50;
 
         $html = view('repair::job_sheet.print_label')
-            ->with(compact('job_sheet', 'repair_settings', 'jobsheet_settings'))->render();
+        ->with(compact('job_sheet', 'repair_settings', 'jobsheet_settings'))->render();
         $mpdf = new \Mpdf\Mpdf([
             'format' => [$label_width, $label_height],
             'tempDir' => public_path('uploads/temp'),
@@ -1099,7 +1009,7 @@ class JobSheetController extends Controller
             'margin_bottom' => 4,
         ]);
         $mpdf->useSubstitutions = true;
-        $mpdf->SetTitle(__('repair::lang.job_sheet_label') . ' | ' . $job_sheet->job_sheet_no);
+        $mpdf->SetTitle(__('repair::lang.job_sheet_label').' | '.$job_sheet->job_sheet_no);
         $mpdf->WriteHTML($html);
         $mpdf->Output('job_sheet_label.pdf', 'I');
     }
@@ -1113,8 +1023,8 @@ class JobSheetController extends Controller
         }
 
         $job_sheet = JobSheet::with(['media'])
-            ->where('business_id', $business_id)
-            ->findOrFail($id);
+                        ->where('business_id', $business_id)
+                        ->findOrFail($id);
 
         return view('repair::job_sheet.upload_doc', compact('job_sheet'));
     }
@@ -1131,29 +1041,25 @@ class JobSheetController extends Controller
             $images = json_decode($request->input('images'), true);
 
             $job_sheet = JobSheet::where('business_id', $business_id)
-                ->findOrFail($request->input('job_sheet_id'));
+                        ->findOrFail($request->input('job_sheet_id'));
 
             if (! empty($images) && ! empty($job_sheet)) {
                 Media::attachMediaToModel($job_sheet, $business_id, $images);
             }
 
-            $output = [
-                'success' => true,
+            $output = ['success' => true,
                 'msg' => __('lang_v1.success'),
             ];
         } catch (\Exception $e) {
-            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
-            $output = [
-                'success' => false,
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
+            $output = ['success' => false,
                 'msg' => __('messages.something_went_wrong'),
             ];
         }
 
         return redirect()
             ->action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'show'], [$job_sheet->id])
-            ->with('status', [
-                'success' => true,
-                'msg' => __('lang_v1.success'),
-            ]);
+            ->with('status', ['success' => true,
+                'msg' => __('lang_v1.success'), ]);
     }
 }

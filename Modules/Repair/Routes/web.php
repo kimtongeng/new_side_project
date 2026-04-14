@@ -1,13 +1,8 @@
 <?php
 
-use Modules\Repair\Http\Controllers\MigrateDataController;
-
 Route::get('/repair-status', [Modules\Repair\Http\Controllers\CustomerRepairStatusController::class, 'index'])->name('repair-status');
 Route::post('/post-repair-status', [Modules\Repair\Http\Controllers\CustomerRepairStatusController::class, 'postRepairStatus'])->name('post-repair-status');
 Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezone', 'AdminSidebarMenu')->prefix('repair')->group(function () {
-
-    Route::get("migrate", [MigrateDataController::class, "migrate"]);
-    Route::get("rollback", [MigrateDataController::class, "rollback"]);
     Route::get('edit-repair/{id}/status', [Modules\Repair\Http\Controllers\RepairController::class, 'editRepairStatus']);
     Route::post('update-repair-status', [Modules\Repair\Http\Controllers\RepairController::class, 'updateRepairStatus']);
     Route::get('delete-media/{id}', [Modules\Repair\Http\Controllers\RepairController::class, 'deleteMedia']);
@@ -40,8 +35,4 @@ Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezon
     Route::resource('job-sheet', 'Modules\Repair\Http\Controllers\JobSheetController');
     Route::post('update-repair-jobsheet-settings', [Modules\Repair\Http\Controllers\RepairSettingsController::class, 'updateJobsheetSettings']);
     Route::get('job-sheet/print-label/{id}', [Modules\Repair\Http\Controllers\JobSheetController::class, 'printLabel']);
-
-
-    Route::get('job-sheet/{id}/view_parts', [Modules\Repair\Http\Controllers\JobSheetController::class, 'view_parts']);
-    Route::post('job-sheet-update/{id}/status_parts', [Modules\Repair\Http\Controllers\JobSheetController::class, 'updatePartsStatus']);
 });

@@ -2321,9 +2321,9 @@ class ProductUtil extends Util
     /**
      * Return the products less than alert quntity.
      *
-     * @return array
+     * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function getProductAlert($business_id, $permitted_locations = null)
+    public function getProductAlert($business_id, $permitted_locations = null,$product_id=null,$variation_id=null,$location_id=null)
     {
         $query = VariationLocationDetails::join(
             'product_variations as pv',
@@ -2367,6 +2367,13 @@ class ProductUtil extends Util
 
         if (! empty(request()->input('location_id'))) {
             $query->where('variation_location_details.location_id', request()->input('location_id'));
+        }
+
+
+        if(!empty($product_id) && !empty($location_id) && !empty($variation_id) ){
+            $query->where('variation_location_details.product_id', $product_id);
+            $query->where('variation_location_details.variation_id', $variation_id);
+            $query->where('variation_location_details.location_id', $location_id);
         }
 
         $products = $query->select(

@@ -425,6 +425,9 @@ class TransactionUtil extends Util
                 //Update purchase order line quantity received
                 $this->updateSalesOrderLine($line['so_line_id'], $line['quantity'], 0);
             }
+
+            
+
         }
 
         if (! is_object($transaction)) {

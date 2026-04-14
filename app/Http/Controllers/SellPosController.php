@@ -67,6 +67,7 @@ use App\Events\SellCreatedOrModified;
 use App\Notifications\TelegramNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Modules\ExchangeCurrency\Entities\ExchangeCurrency;
 
 class SellPosController extends Controller
@@ -339,6 +340,7 @@ class SellPosController extends Controller
      */
     public function store(Request $request)
     {
+
         if (!auth()->user()->can('sell.create') && !auth()->user()->can('direct_sell.access') && !auth()->user()->can('so.create')) {
             abort(403, 'Unauthorized action.');
         }
@@ -585,6 +587,39 @@ class SellPosController extends Controller
                                     $input['location_id']
                                 );
                         }
+
+                        dispatch(function () use ($business_id, $product, $input) {
+                            $product_alert = $this->productUtil->getProductAlert(
+                                $business_id,
+                                null,
+                                $product['product_id'],
+                                $product['variation_id'],
+                                $input['location_id']
+                            )->first();
+
+                            if ($product_alert) {
+                                try {
+                                    $location_id = BusinessLocation::find($input['location_id'])?->location_id ?? 'PT1001';
+
+                                    TelegramNotification::stockAlertMessage(
+                                        [[
+                                            'product'   => $product_alert->product,
+                                            'type'      => $product_alert->type,
+                                            'sku'       => $product_alert->sku,
+                                            'variation' => $product_alert->variation,
+                                            'sub_sku'   => $product_alert->sub_sku,
+                                            'location'  => $product_alert->location,
+                                            'stock'     => $product_alert->stock,
+                                            'unit'      => $product_alert->unit,
+                                        ]],
+                                        'home',
+                                        $location_id
+                                    );
+                                } catch (\Exception $te) {
+                                    Log::warning('Telegram stock alert notification failed: ' . $te->getMessage());
+                                }
+                            }
+                        })->afterResponse();
                     }
 
                     //Add payments to Cash Register
@@ -640,17 +675,56 @@ class SellPosController extends Controller
                 $invoice_layout_id = $request->input('invoice_layout_id');
 
                 $receipt_details = $this->get_recipe_detail($business_id, $input['location_id'], $transaction->id, null, false, true, $invoice_layout_id);
-                
+
                 $business_location = BusinessLocation::find($input['location_id']);
-                if ($input['status'] == "final") {
-                    TelegramNotification::addSaleMessage($receipt_details, "sell", $business_location->location_id ?? 'PT1001');
-                } else if ($input['status'] == "draft") {
-                    if ($input["is_quotation"] == 0) {
-                        TelegramNotification::addSaleMessage($receipt_details, 'draft', $business_location->location_id ?? 'PT1001');
-                    } else if ($input["is_quotation"] == 1) {
-                        TelegramNotification::addSaleMessage($receipt_details, 'quotation', $business_location->location_id ?? 'PT1001');
+
+                dispatch(function () use ($input, $receipt_details, $business_location, $transaction, $business_id) {
+                    if ($input['status'] == "final") {
+                        TelegramNotification::addSaleMessage($receipt_details, "sell", $business_location->location_id ?? 'PT1001');
+                    } else if ($input['status'] == "draft") {
+                        if ($input["is_quotation"] == 0) {
+                            TelegramNotification::addSaleMessage($receipt_details, 'draft', $business_location->location_id ?? 'PT1001');
+                        } else if ($input["is_quotation"] == 1) {
+                            TelegramNotification::addSaleMessage($receipt_details, 'quotation', $business_location->location_id ?? 'PT1001');
+                        }
+                    } else if ($input['status'] == 'ordered') {
+                        try {
+                            $transaction->load(['payment_lines']);
+
+                            // $transaction here is the result from getListSells()->find($id)
+                            // or re-query it with the same selects to get all needed fields
+                            $sell = $this->transactionUtil->getListSells($business_id, 'sales_order')
+                                ->where('transactions.id', $transaction->id)
+                                ->first();
+
+                            $payment_types = $this->transactionUtil->payment_types(null, true, $business_id);
+                            $location_id   = $transaction->location->location_id ?? 'PT1001';
+
+                            \App\Notifications\TelegramNotification::saleOrderMessage(
+                                $sell,
+                                $payment_types,
+                                'home',
+                                $location_id
+                            );
+                        } catch (\Exception $te) {
+                            \Log::warning('Telegram sale order notification failed: ' . $te->getMessage());
+                        }
                     }
-                }
+
+                    $location_id = BusinessLocation::find(request()->input('location_id'))?->location_id ?? 'PT1001';
+                    try {
+                        TelegramNotification::paymentDueAlertMessage('home', $location_id, $transaction->id);
+                    } catch (\Exception $te) {
+                        \Log::warning('Telegram payment due alert failed: ' . $te->getMessage());
+                    }
+
+                    try {
+                        TelegramNotification::pendingShipmentsAlertMessage('home', $location_id, $transaction->id);
+                    } catch (\Exception $te) {
+                        \Log::warning('Telegram pending shipments alert failed: ' . $te->getMessage());
+                    }
+                })->afterResponse();
+
 
                 if ($request->input('is_save_and_print') == 1) {
                     $url = $this->transactionUtil->getInvoiceUrl($transaction->id, $business_id);
@@ -816,7 +890,7 @@ class SellPosController extends Controller
         }
 
         if ($is_delivery_note) {
-            $output['html_content'] = view('sale_pos.receipts.delivery_note', compact('receipt_details',"currency_exchange"))->render();
+            $output['html_content'] = view('sale_pos.receipts.delivery_note', compact('receipt_details', "currency_exchange"))->render();
 
             return $output;
         }
@@ -830,7 +904,7 @@ class SellPosController extends Controller
         } else {
             $layout = !empty($receipt_details->design) ? 'sale_pos.receipts.' . $receipt_details->design : 'sale_pos.receipts.classic';
 
-            $output['html_content'] = view($layout, compact('receipt_details',"currency_exchange"))->render();
+            $output['html_content'] = view($layout, compact('receipt_details', "currency_exchange"))->render();
         }
 
         return $output;

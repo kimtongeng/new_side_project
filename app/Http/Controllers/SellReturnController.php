@@ -594,7 +594,7 @@ class SellReturnController extends Controller
             
             $receipt_details = $this->transactionUtil->getReceiptDetails($transaction_id, $location_id, $invoice_layout, $business_details, $location_details, $receipt_printer_type);
             
-            TelegramNotification::returnSell($receipt_details,"sell",$location_details->location_id ?? "BLO1");
+            TelegramNotification::returnSell($receipt_details,$transaction_id,"sell",$location_details->location_id ?? "PT1001");
             //If print type browser - return the content, printer - return printer config data, and invoice format config
             $output['print_title'] = $receipt_details->invoice_no;
             if ($receipt_printer_type == 'printer') {

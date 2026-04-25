@@ -582,7 +582,7 @@ class PurchaseController extends Controller
 
         $statuses = $this->productUtil->orderStatuses();
 
-        dd($taxes, $purchase, $payment_methods, $purchase_taxes, $activities, $statuses, $purchase_order_nos, $purchase_order_dates);
+
         return view('purchase.show')
             ->with(compact('taxes', 'purchase', 'payment_methods', 'purchase_taxes', 'activities', 'statuses', 'purchase_order_nos', 'purchase_order_dates'));
     }

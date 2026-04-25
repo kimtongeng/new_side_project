@@ -8,6 +8,7 @@ use App\Transaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Modules\ExchangeCurrency\Entities\ExchangeCurrency;
+use Modules\Repair\Entities\JobSheet;
 
 class TelegramNotification
 {
@@ -46,7 +47,7 @@ class TelegramNotification
                 "stock_adjustment" => 20,
                 "home" => 30,
                 "purchase" => 15,
-                "reapir" => 23,
+                "repair" => 23,
                 "payment_accoun" => 22,
                 "expense" => 21,
                 "transfer" => 19,
@@ -206,7 +207,6 @@ class TelegramNotification
 
         if (empty($receipt))
             return;
-
         // Shop info
 
         $msg = "<b>🏪 Shop:</b> {$receipt->display_name} ";
@@ -226,6 +226,101 @@ class TelegramNotification
             "<b>📞 Mobile:</b> {$receipt->customer_mobile}\n\n" .
             "<b>🧾 Invoice No:</b> {$receipt->invoice_no}\n" .
             "<b>🕒 Date:</b> {$receipt->invoice_date}\n\n";
+
+
+        if ($receipt->sub_type == "repair") {
+            $to = "repair";
+            $job_sheet = JobSheet::find($receipt->repair_job_sheet_id);
+            $job_sheet->load([
+                'customer',
+                'technician',
+                'status',
+                'Brand',
+                'Device',
+                'deviceModel',
+                'businessLocation',
+            ]);
+            info($job_sheet);
+            // ── Repair Job Sheet Info ──────────────────────────────
+            $statusName  = ($job_sheet->status && ($job_sheet->status_id ?? 0) != 0)
+                ? ($job_sheet->status->name ?? 'N/A')
+                : 'N/A';
+            $brandName   = $job_sheet->Brand->name       ?? 'N/A';
+            $deviceName  = $job_sheet->Device->name      ?? 'N/A';
+            $modelName   = $job_sheet->deviceModel->name ?? 'N/A';
+            $staffName   = $job_sheet->technician
+                ? trim(
+                    ($job_sheet->technician->surname    ?? '') . ' ' .
+                        ($job_sheet->technician->first_name ?? '') . ' ' .
+                        ($job_sheet->technician->last_name  ?? '')
+                )
+                : null;
+
+            $jobSheetNo     = $job_sheet->job_sheet_no ?? 'N/A';
+            $serviceType    = ucfirst(str_replace('_', ' ', $job_sheet->service_type ?? 'N/A'));
+            $serialNo       = $job_sheet->serial_no ?? 'N/A';
+            $securityPwd    = $job_sheet->security_pwd ?? null;
+            $securityPattern = $job_sheet->security_pattern ?? null;
+            $estimatedCost  = $job_sheet->estimated_cost
+                ? number_format($job_sheet->estimated_cost, 2)
+                : '0.00';
+            $deliveryDate   = $job_sheet->delivery_date
+                ? \Carbon\Carbon::parse($job_sheet->delivery_date)->format('d/m/Y H:i')
+                : 'N/A';
+            $productConfig  = self::decodeRepairField($job_sheet->product_configuration);
+            $defects        = self::decodeRepairField($job_sheet->defects);
+            $condition      = self::decodeRepairField($job_sheet->product_condition);
+            $commentBySS    = $job_sheet->comment_by_ss ?? null;
+            $pickUpAddr     = $job_sheet->pick_up_on_site_addr ?? null;
+
+            $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+            $msg .= "🔧 <b>REPAIR JOB SHEET INFO</b>\n";
+            $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+
+            $msg .= "<b>🔖 Job Sheet No:</b> #{$jobSheetNo}\n";
+            $msg .= "<b>🛠️ Service Type:</b> {$serviceType}\n";
+            $msg .= "<b>📌 Status:</b> {$statusName}\n";
+            $msg .= "<b>📅 Due Date:</b> {$deliveryDate}\n";
+            $msg .= "<b>💵 Estimated Cost:</b> \${$estimatedCost}\n\n";
+
+            $msg .= "<b>📱 Brand:</b> {$brandName}\n";
+            $msg .= "<b>📟 Device:</b> {$deviceName}\n";
+            $msg .= "<b>🔩 Device Model:</b> {$modelName}\n";
+            $msg .= "<b>🔢 Serial Number:</b> {$serialNo}\n";
+            if ($securityPwd)      $msg .= "<b>🔑 Password:</b> {$securityPwd}\n";
+            if ($securityPattern)  $msg .= "<b>🔐 Pattern Code:</b> {$securityPattern}\n";
+            $msg .= "\n";
+
+            if ($staffName)    $msg .= "<b>👨‍🔧 Technician:</b> {$staffName}\n";
+            if ($commentBySS)  $msg .= "<b>💬 Technician Comment:</b> {$commentBySS}\n";
+            if ($pickUpAddr)   $msg .= "<b>📍 Pick Up Address:</b> {$pickUpAddr}\n";
+            if ($staffName || $commentBySS || $pickUpAddr) $msg .= "\n";
+
+            if ($productConfig) $msg .= "<b>⚙️ Configuration:</b> {$productConfig}\n";
+            if ($defects)       $msg .= "<b>🐛 Problem:</b> {$defects}\n";
+            if ($condition)     $msg .= "<b>📋 Condition:</b> {$condition}\n";
+            if ($productConfig || $defects || $condition) $msg .= "\n";
+
+            // ── Checklist ──────────────────────────────────────────
+            if (!empty($job_sheet->checklist)) {
+                $checklist = is_array($job_sheet->checklist)
+                    ? $job_sheet->checklist
+                    : json_decode($job_sheet->checklist, true);
+
+                if (!empty($checklist)) {
+                    $msg .= "<b>✅ Pre Repair Checklist:</b>\n";
+                    foreach ($checklist as $item => $value) {
+                        $icon = $value == 1 ? '✅' : ($value == 0 ? '❌' : '➖');
+                        $msg .= "  {$icon} {$item}\n";
+                    }
+                    $msg .= "\n";
+                }
+            }
+
+            $msg .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        }
+
+
 
         // Products
         $product_lines = '';
@@ -3423,6 +3518,414 @@ class TelegramNotification
 
         $msg .= "⏰ <b>Date:</b> " . now()->format('d/m/Y H:i') . "\n";
         $msg .= "🚚 <i>Alert via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function addJobSheetMessage(
+        $job_sheet,
+        $contact,
+        $location,
+        $brand,
+        $device,
+        $deviceModel,
+        $status,
+        $serviceStaff,
+        string $to = 'repair',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($job_sheet)) return;
+
+        $all_account = self::fetchAccounts();
+
+        // ── Resolve fields safely ──────────────────────────────
+        $customerName    = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
+        $customerMobile  = $contact->mobile ?? null;
+        $locationName    = $location->name ?? 'N/A';
+        $brandName       = $brand->name ?? 'N/A';
+        $deviceName      = $device->name ?? 'N/A';
+        $modelName       = $deviceModel->name ?? 'N/A';
+        $statusName      = ($status && ($job_sheet->status_id ?? 0) != 0) ? ($status->name ?? 'N/A') : 'N/A';
+        $staffName       = $serviceStaff
+            ? trim(
+                ($serviceStaff->surname    ?? '') . ' ' .
+                    ($serviceStaff->first_name ?? '') . ' ' .
+                    ($serviceStaff->last_name  ?? '')
+            )
+            : null;
+
+        $jobSheetNo      = $job_sheet->job_sheet_no ?? 'N/A';
+        $date            = \Carbon\Carbon::parse($job_sheet->created_at)->format('d/m/Y H:i');
+        $serviceType     = ucfirst(str_replace('_', ' ', $job_sheet->service_type ?? 'N/A'));
+        $serialNo        = $job_sheet->serial_no ?? 'N/A';
+        $securityPwd     = $job_sheet->security_pwd ?? null;
+        $securityPattern = $job_sheet->security_pattern ?? null;
+        $estimatedCost   = $job_sheet->estimated_cost
+            ? number_format($job_sheet->estimated_cost, 2)
+            : '0.00';
+        $deliveryDate    = $job_sheet->delivery_date
+            ? \Carbon\Carbon::parse($job_sheet->delivery_date)->format('d/m/Y H:i')
+            : 'N/A';
+        $productConfig   = self::decodeRepairField($job_sheet->product_configuration);
+        $defects         = self::decodeRepairField($job_sheet->defects);
+        $condition       = self::decodeRepairField($job_sheet->product_condition);
+        $commentBySS     = $job_sheet->comment_by_ss ?? null;
+        $pickUpAddr      = $job_sheet->pick_up_on_site_addr ?? null;
+
+        $customFields = array_filter([
+            '1' => $job_sheet->custom_field_1 ?? null,
+            '2' => $job_sheet->custom_field_2 ?? null,
+            '3' => $job_sheet->custom_field_3 ?? null,
+            '4' => $job_sheet->custom_field_4 ?? null,
+            '5' => $job_sheet->custom_field_5 ?? null,
+        ]);
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "🔧 <b>NEW JOB SHEET CREATED</b>\n\n";
+
+        // ── Business / Location ────────────────────────────────
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        // ── Customer ───────────────────────────────────────────
+        $msg .= "<b>👤 Customer:</b> {$customerName}\n";
+        if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
+        $msg .= "\n";
+
+        // ── Job Sheet Info ─────────────────────────────────────
+        $msg .= "<b>🔖 Job Sheet No:</b> #{$jobSheetNo}\n";
+        $msg .= "<b>🕒 Date:</b> {$date}\n";
+        $msg .= "<b>🛠️ Service Type:</b> {$serviceType}\n";
+        $msg .= "<b>📌 Status:</b> {$statusName}\n";
+        $msg .= "<b>📅 Due Date:</b> {$deliveryDate}\n";
+        $msg .= "<b>💵 Estimated Cost:</b> \${$estimatedCost}\n";
+        $msg .= "\n";
+
+        // ── Device Info ────────────────────────────────────────
+        $msg .= "<b>📱 Brand:</b> {$brandName}\n";
+        $msg .= "<b>📟 Device:</b> {$deviceName}\n";
+        $msg .= "<b>🔩 Device Model:</b> {$modelName}\n";
+        $msg .= "<b>🔢 Serial Number:</b> {$serialNo}\n";
+        if ($securityPwd)     $msg .= "<b>🔑 Password:</b> {$securityPwd}\n";
+        if ($securityPattern) $msg .= "<b>🔐 Security Pattern Code:</b> {$securityPattern}\n";
+        $msg .= "\n";
+
+        // ── Technician ─────────────────────────────────────────
+        $msg .= "<b>👨‍🔧 Technician:</b> " . ($staffName ?: 'N/A') . "\n";
+        if ($commentBySS) $msg .= "<b>💬 Comment by Technician:</b> {$commentBySS}\n";
+        $msg .= "\n";
+
+        // ── Repair Details ─────────────────────────────────────
+        $msg .= "<b>📍 Pick up/On site address:</b> "        . ($pickUpAddr    ?: 'N/A') . "\n";
+        $msg .= "<b>⚙️ Product Configuration:</b> "          . ($productConfig ?: 'N/A') . "\n";
+        $msg .= "<b>📋 Condition Of The Product:</b> "        . ($condition     ?: 'N/A') . "\n";
+        $msg .= "<b>🐛 Problem Reported By Customer:</b> "    . ($defects       ?: 'N/A') . "\n";
+        $msg .= "\n";
+
+        // ── Pre Repair Checklist ───────────────────────────────
+        if (!empty($job_sheet->checklist)) {
+            $checklist = is_array($job_sheet->checklist)
+                ? $job_sheet->checklist
+                : json_decode($job_sheet->checklist, true);
+
+            if (!empty($checklist)) {
+                $msg .= "<b>✅ Pre Repair Checklist:</b>\n";
+                foreach ($checklist as $item => $value) {
+                    $icon = $value == 1 ? '✅' : ($value == 0 ? '❌' : '➖');
+                    $msg .= "  {$icon} {$item}\n";
+                }
+                $msg .= "\n";
+            } else {
+                $msg .= "<b>✅ Pre Repair Checklist:</b> N/A\n\n";
+            }
+        } else {
+            $msg .= "<b>✅ Pre Repair Checklist:</b> N/A\n\n";
+        }
+
+        // ── Parts Used ─────────────────────────────────────────
+        try {
+            $parts = $job_sheet->getPartsUsed();
+            if (!empty($parts)) {
+                $msg .= "<b>🔩 Parts Used:</b>\n";
+                foreach ($parts as $part) {
+                    $partName   = $part['variation_name'] ?? 'N/A';
+                    $partQty    = $part['quantity']        ?? '0';
+                    $partUnit   = $part['unit']            ?? 'Pc(s)';
+                    $partStatus = isset($part['status'])
+                        ? ' | ' . ucfirst($part['status'])
+                        : '';
+                    $msg .= "  • <b>{$partName}</b> | Qty: {$partQty} {$partUnit}{$partStatus}\n";
+                }
+                $msg .= "\n";
+            } else {
+                $msg .= "<b>🔩 Parts Used:</b> N/A\n\n";
+            }
+        } catch (\Exception $e) {
+            $msg .= "<b>🔩 Parts Used:</b> N/A\n\n";
+        }
+
+        // ── Custom Fields ──────────────────────────────────────
+        if (!empty($customFields)) {
+            $msg .= "<b>📝 Custom Fields:</b>\n";
+            foreach ($customFields as $i => $value) {
+                $msg .= "  • Field {$i}: {$value}\n";
+            }
+            $msg .= "\n";
+        }
+
+        // ── Accounts ───────────────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Date Added:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "🔧 <i>Saved via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+
+    public static function updateStatusMessage(
+        $job_sheet,
+        $contact,
+        $location,
+        $brand,
+        $device,
+        $deviceModel,
+        $status,
+        $serviceStaff,
+        $old_status,
+        string $to = 'repair',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($job_sheet)) return;
+
+        $all_account = self::fetchAccounts();
+
+        // ── Resolve fields safely ──────────────────────────────
+        $customerName    = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
+        $customerMobile  = $contact->mobile ?? null;
+        $locationName    = $location->name ?? 'N/A';
+        $brandName       = $brand->name ?? 'N/A';
+        $deviceName      = $device->name ?? 'N/A';
+        $modelName       = $deviceModel->name ?? 'N/A';
+        $statusName      = ($status && ($job_sheet->status_id ?? 0) != 0) ? self::diff($old_status->name, $status->name) : 'N/A';
+        $staffName       = $serviceStaff
+            ? trim(
+                ($serviceStaff->surname    ?? '') . ' ' .
+                    ($serviceStaff->first_name ?? '') . ' ' .
+                    ($serviceStaff->last_name  ?? '')
+            )
+            : null;
+
+        $jobSheetNo      = $job_sheet->job_sheet_no ?? 'N/A';
+        $date            = \Carbon\Carbon::parse($job_sheet->created_at)->format('d/m/Y H:i');
+        $serviceType     = ucfirst(str_replace('_', ' ', $job_sheet->service_type ?? 'N/A'));
+        $serialNo        = $job_sheet->serial_no ?? 'N/A';
+        $securityPwd     = $job_sheet->security_pwd ?? null;
+        $securityPattern = $job_sheet->security_pattern ?? null;
+        $estimatedCost   = $job_sheet->estimated_cost
+            ? number_format($job_sheet->estimated_cost, 2)
+            : '0.00';
+        $deliveryDate    = $job_sheet->delivery_date
+            ? \Carbon\Carbon::parse($job_sheet->delivery_date)->format('d/m/Y H:i')
+            : 'N/A';
+        $productConfig   = self::decodeRepairField($job_sheet->product_configuration);
+        $defects         = self::decodeRepairField($job_sheet->defects);
+        $condition       = self::decodeRepairField($job_sheet->product_condition);
+        $commentBySS     = $job_sheet->comment_by_ss ?? null;
+        $pickUpAddr      = $job_sheet->pick_up_on_site_addr ?? null;
+
+        $customFields = array_filter([
+            '1' => $job_sheet->custom_field_1 ?? null,
+            '2' => $job_sheet->custom_field_2 ?? null,
+            '3' => $job_sheet->custom_field_3 ?? null,
+            '4' => $job_sheet->custom_field_4 ?? null,
+            '5' => $job_sheet->custom_field_5 ?? null,
+        ]);
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "🔧 <b>UPDATE JOB SHEET STATUS</b>\n\n";
+
+        // ── Business / Location ────────────────────────────────
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        // ── Customer ───────────────────────────────────────────
+        $msg .= "<b>👤 Customer:</b> {$customerName}\n";
+        if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
+        $msg .= "\n";
+
+        // ── Job Sheet Info ─────────────────────────────────────
+        $msg .= "<b>🔖 Job Sheet No:</b> #{$jobSheetNo}\n";
+        $msg .= "<b>🕒 Date:</b> {$date}\n";
+        $msg .= "<b>🛠️ Service Type:</b> {$serviceType}\n";
+        $msg .= "<b>📌 Status:</b> {$statusName}\n";
+        $msg .= "<b>📅 Due Date:</b> {$deliveryDate}\n";
+        $msg .= "<b>💵 Estimated Cost:</b> \${$estimatedCost}\n";
+        $msg .= "\n";
+
+        // ── Device Info ────────────────────────────────────────
+        $msg .= "<b>📱 Brand:</b> {$brandName}\n";
+        $msg .= "<b>📟 Device:</b> {$deviceName}\n";
+        $msg .= "<b>🔩 Device Model:</b> {$modelName}\n";
+        $msg .= "<b>🔢 Serial Number:</b> {$serialNo}\n";
+        if ($securityPwd)     $msg .= "<b>🔑 Password:</b> {$securityPwd}\n";
+        if ($securityPattern) $msg .= "<b>🔐 Security Pattern Code:</b> {$securityPattern}\n";
+        $msg .= "\n";
+
+        // ── Technician ─────────────────────────────────────────
+        $msg .= "<b>👨‍🔧 Technician:</b> " . ($staffName ?: 'N/A') . "\n";
+        if ($commentBySS) $msg .= "<b>💬 Comment by Technician:</b> {$commentBySS}\n";
+        $msg .= "\n";
+
+        // ── Repair Details ─────────────────────────────────────
+        $msg .= "<b>📍 Pick up/On site address:</b> "        . ($pickUpAddr    ?: 'N/A') . "\n";
+        $msg .= "<b>⚙️ Product Configuration:</b> "          . ($productConfig ?: 'N/A') . "\n";
+        $msg .= "<b>📋 Condition Of The Product:</b> "        . ($condition     ?: 'N/A') . "\n";
+        $msg .= "<b>🐛 Problem Reported By Customer:</b> "    . ($defects       ?: 'N/A') . "\n";
+        $msg .= "\n";
+
+        // ── Pre Repair Checklist ───────────────────────────────
+        if (!empty($job_sheet->checklist)) {
+            $checklist = is_array($job_sheet->checklist)
+                ? $job_sheet->checklist
+                : json_decode($job_sheet->checklist, true);
+
+            if (!empty($checklist)) {
+                $msg .= "<b>✅ Pre Repair Checklist:</b>\n";
+                foreach ($checklist as $item => $value) {
+                    $icon = $value == 1 ? '✅' : ($value == 0 ? '❌' : '➖');
+                    $msg .= "  {$icon} {$item}\n";
+                }
+                $msg .= "\n";
+            } else {
+                $msg .= "<b>✅ Pre Repair Checklist:</b> N/A\n\n";
+            }
+        } else {
+            $msg .= "<b>✅ Pre Repair Checklist:</b> N/A\n\n";
+        }
+
+        // ── Parts Used ─────────────────────────────────────────
+        try {
+            $parts = $job_sheet->getPartsUsed();
+            if (!empty($parts)) {
+                $msg .= "<b>🔩 Parts Used:</b>\n";
+                foreach ($parts as $part) {
+                    $partName   = $part['variation_name'] ?? 'N/A';
+                    $partQty    = $part['quantity']        ?? '0';
+                    $partUnit   = $part['unit']            ?? 'Pc(s)';
+                    $partStatus = isset($part['status'])
+                        ? ' | ' . ucfirst($part['status'])
+                        : '';
+                    $msg .= "  • <b>{$partName}</b> | Qty: {$partQty} {$partUnit}{$partStatus}\n";
+                }
+                $msg .= "\n";
+            } else {
+                $msg .= "<b>🔩 Parts Used:</b> N/A\n\n";
+            }
+        } catch (\Exception $e) {
+            $msg .= "<b>🔩 Parts Used:</b> N/A\n\n";
+        }
+
+        // ── Custom Fields ──────────────────────────────────────
+        if (!empty($customFields)) {
+            $msg .= "<b>📝 Custom Fields:</b>\n";
+            foreach ($customFields as $i => $value) {
+                $msg .= "  • Field {$i}: {$value}\n";
+            }
+            $msg .= "\n";
+        }
+
+        // ── Accounts ───────────────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Date Added:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "🔧 <i>Saved via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+
+    private static function decodeRepairField($value): ?string
+    {
+        if (empty($value)) return null;
+
+        $decoded = json_decode($value, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $items = array_filter(array_map(fn($item) => trim($item['value'] ?? ''), $decoded));
+            return !empty($items) ? implode(', ', $items) : null;
+        }
+
+        return $value;
+    }
+    public static function addPartsJobSheetMessage(
+        $job_sheet,
+        array $parts,
+        string $to = 'repair',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($job_sheet)) return;
+
+        $all_account = self::fetchAccounts();
+
+        // ── Resolve only what's needed ─────────────────────────
+        $contact  = \App\Contact::find($job_sheet->contact_id);
+        $location = \App\BusinessLocation::find($job_sheet->location_id);
+
+        $customerName   = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
+        $customerMobile = $contact->mobile ?? null;
+        $locationName   = $location->name ?? 'N/A';
+        $jobSheetNo     = $job_sheet->job_sheet_no ?? 'N/A';
+        $date           = \Carbon\Carbon::parse($job_sheet->created_at)->format('d/m/Y H:i');
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "🔩 <b>JOB SHEET PARTS UPDATED</b>\n\n";
+
+        // ── Info ───────────────────────────────────────────────
+        $msg .= "<b>🔖 Job Sheet No:</b> #{$jobSheetNo}\n";
+        $msg .= "<b>🕒 Date:</b> {$date}\n";
+        $msg .= "<b>👤 Customer:</b> {$customerName}\n";
+        if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        // ── Parts Used ─────────────────────────────────────────
+        if (!empty($parts)) {
+            $msg .= "<b>🔩 Parts Used:</b>\n";
+
+            $totalQty = 0;
+            foreach ($parts as $part) {
+                $partName = $part['variation_name'] ?? 'N/A';
+                $partQty  = $part['quantity']        ?? '0';
+                $partUnit = $part['unit']            ?? 'Pc(s)';
+                $totalQty += (float)$partQty;
+
+                $msg .= "\n  • <b>{$partName}</b>\n";
+                $msg .= "    Qty: {$partQty} {$partUnit}\n";
+            }
+
+            $msg .= "\n<b>📦 Total Parts:</b> " . count($parts) . " item(s) | Total Qty: " . number_format($totalQty, 2) . "\n\n";
+        } else {
+            $msg .= "<b>🔩 Parts Used:</b> N/A\n\n";
+        }
+
+        // ── Accounts ───────────────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Date Updated:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "🔩 <i>Updated via Shoper POS</i>";
 
         self::sendMessage($msg, $to, $location_id);
     }

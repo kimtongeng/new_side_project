@@ -340,7 +340,6 @@ class SellPosController extends Controller
      */
     public function store(Request $request)
     {
-
         if (!auth()->user()->can('sell.create') && !auth()->user()->can('direct_sell.access') && !auth()->user()->can('so.create')) {
             abort(403, 'Unauthorized action.');
         }
@@ -678,8 +677,10 @@ class SellPosController extends Controller
 
                 $business_location = BusinessLocation::find($input['location_id']);
 
+
                 dispatch(function () use ($input, $receipt_details, $business_location, $transaction, $business_id) {
                     if ($input['status'] == "final") {
+
                         TelegramNotification::addSaleMessage($receipt_details, "sell", $business_location->location_id ?? 'PT1001');
                     } else if ($input['status'] == "draft") {
                         if ($input["is_quotation"] == 0) {
@@ -3537,6 +3538,7 @@ class SellPosController extends Controller
             'decimal_separator' => $business_details->decimal_separator,
         ];
         $receipt_details->currency = $currency_details;
+
         return $receipt_details;
     }
 }

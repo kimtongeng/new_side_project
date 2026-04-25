@@ -100,7 +100,11 @@ class CreateJobSheetsTable extends Migration
      * @return void
      */
     public function down()
-    {
-        Schema::dropIfExists('repair_job_sheets');
-    }
+{
+    Schema::table('transactions', function (Blueprint $table) {
+        $table->dropForeign(['repair_job_sheet_id']);
+        $table->dropColumn('repair_job_sheet_id');
+    });
+}
+
 }

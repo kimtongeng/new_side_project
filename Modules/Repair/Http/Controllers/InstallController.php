@@ -66,29 +66,29 @@ class InstallController extends Controller
         try {
             DB::beginTransaction();
 
-            request()->validate(
-                ['license_code' => 'required',
-                    'login_username' => 'required', ],
-                ['license_code.required' => 'License code is required',
-                    'login_username.required' => 'Username is required', ]
-            );
+            // request()->validate(
+            //     ['license_code' => 'required',
+            //         'login_username' => 'required', ],
+            //     ['license_code.required' => 'License code is required',
+            //         'login_username.required' => 'Username is required', ]
+            // );
 
-            $license_code = request()->license_code;
-            $email = request()->email;
-            $login_username = request()->login_username;
-            $pid = config('repair.pid');
+            // $license_code = request()->license_code;
+            // $email = request()->email;
+            // $login_username = request()->login_username;
+            // $pid = config('repair.pid');
 
             //Validate
-            $response = pos_boot(url('/'), __DIR__, $license_code, $email, $login_username, $type = 1, $pid);
+            // $response = pos_boot(url('/'), __DIR__, $license_code, $email, $login_username, $type = 1, $pid);
 
-            if (! empty($response)) {
-                return $response;
-            }
+            // if (! empty($response)) {
+            //     return $response;
+            // }
 
-            $is_installed = System::getProperty($this->module_name.'_version');
-            if (! empty($is_installed)) {
-                abort(404);
-            }
+            // $is_installed = System::getProperty($this->module_name.'_version');
+            // if (! empty($is_installed)) {
+            //     abort(404);
+            // }
 
             DB::statement('SET default_storage_engine=INNODB;');
             Artisan::call('module:migrate', ['module' => 'Repair', '--force' => true]);

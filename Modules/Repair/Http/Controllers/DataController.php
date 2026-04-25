@@ -135,6 +135,33 @@ class DataController extends Controller
                 'is_radio' => true,
                 'radio_input_name' => 'job_sheet_view',
             ],
+            [
+                'value' => 'repair.request_and_save',
+                'label' => "Request and save",
+                'default' => false,
+            ],
+            [
+                'value' => 'repair.confirm',
+                'label' => "Confirm",
+                'default' => false,
+            ],
+            [
+                'value' => 'repair.reject_and_note',
+                'label' => 'Reject and note',
+                'default' => false,
+            ],
+            [
+                'value' => 'repair.show_only_available_part',
+                'label' => "Show only available part",
+                'default' => false,
+            ],
+            [
+                'value' => 'repair.view_part',
+                'label' => "View part",
+                'default' => false,
+            ],
+            
+
 
         ];
     }

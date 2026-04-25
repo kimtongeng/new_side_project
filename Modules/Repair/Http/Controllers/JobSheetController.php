@@ -180,6 +180,13 @@ class JobSheetController extends Controller
                                 </a>
                                 </li>';
                     }
+                    if (auth()->user()->can('repair.view_part')) {
+                        $html .= '<li>
+                                    <a data-href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'view_parts'], [$row->id]) . '" class="cursor-pointer view_part_sheet">
+                                        <i class="fas fa-tasks"></i> View Parts
+                                    </a>
+                                </li>';
+                    }
 
                     if (auth()->user()->can('repair.create')) {
                         $html .= '<li>
@@ -751,9 +758,45 @@ class JobSheetController extends Controller
         }
     }
 
-    private function updateJobsheetStatus($input, $jobsheet_id)
+    public function view_parts($id)
     {
 
+        $business_id = request()->session()->get('user.business_id');
+
+        if (! (auth()->user()->can('superadmin') || auth()->user()->can('repair.view_part') || auth()->user()->can('job_sheet.view_all') || auth()->user()->can('job_sheet.create'))) {
+            abort(403, 'Unauthorized action.');
+        }
+        $job_sheet = JobSheet::findOrFail($id);
+        $parts = $job_sheet->getPartsUsed();
+        if (request()->ajax()) {
+            return view('repair::job_sheet.partials.view_parts', compact('parts', "job_sheet"));
+        }
+    }
+
+    public function updatePartsStatus(Request $request, $id)
+    {
+        $job_sheet = JobSheet::findOrFail($id);
+
+        $parts = $job_sheet->parts;
+
+        foreach ($request->parts as $variation_id => $data) {
+            if (isset($parts[$variation_id])) {
+                if ($parts[$variation_id]['status'] !== null && $data['status'] !== null) {
+                    $parts[$variation_id]['status'] = $data['status'];
+                }
+                $parts[$variation_id]['note'] = $data['note'] ?? null;
+            }
+        }
+
+        $job_sheet->parts = $parts;
+        $job_sheet->save();
+
+        return back()->with('success', 'Parts status updated successfully');
+    }
+
+
+    private function updateJobsheetStatus($input, $jobsheet_id)
+    {
         $job_sheet = JobSheet::where('business_id', $input['business_id'])->findOrFail($jobsheet_id);
         $job_sheet->load([
             'customer',
@@ -819,7 +862,7 @@ class JobSheetController extends Controller
         } catch (\Exception $te) {
             \Log::warning('Telegram stastus notification failed: ' . $te->getMessage());
         }
-        activity()
+       activity()
             ->performedOn($job_sheet)
             ->withProperties(['update_note' => $input['update_note'], 'updated_status' => $status->name])
             ->log('status_changed');
@@ -835,7 +878,6 @@ class JobSheetController extends Controller
 
         if ($request->ajax()) {
             try {
-
                 $input = $request->only([
                     'status_id',
                     'update_note',
@@ -925,7 +967,6 @@ class JobSheetController extends Controller
         $status_dropdown = RepairStatus::forDropdown($business_id, true);
         $status_template_tags = $this->repairUtil->getRepairStatusTemplateTags();
 
-
         return view('repair::job_sheet.add_parts')
             ->with(compact('job_sheet', 'parts', 'status_update_data', 'status_dropdown', 'status_template_tags'));
     }
@@ -939,13 +980,12 @@ class JobSheetController extends Controller
         }
 
         try {
-            $parts     = $request->input('parts');
+            $parts = $request->input('parts');
             $job_sheet = JobSheet::where('business_id', $business_id)->findOrFail($id);
-
-            $job_sheet->parts = !empty($parts) ? $parts : null;
+            $job_sheet->parts = ! empty($parts) ? $parts : null;
             $job_sheet->save();
 
-            if (!empty($request->session()->get('repair_status_update_data')) && !empty($request->input('status_id'))) {
+            if (! empty($request->session()->get('repair_status_update_data')) && ! empty($request->input('status_id'))) {
                 $input = $request->only([
                     'status_id',
                     'update_note',
@@ -953,14 +993,13 @@ class JobSheetController extends Controller
 
                 $input['business_id'] = $business_id;
 
-                if (!empty($request->input('send_sms'))) {
+                if (! empty($request->input('send_sms'))) {
                     $input['send_sms'] = true;
                     $input['sms_body'] = $request->input('sms_body');
                 }
-
-                if (!empty($request->input('send_email'))) {
-                    $input['send_email']    = true;
-                    $input['email_body']    = $request->input('email_body');
+                if (! empty($request->input('send_email'))) {
+                    $input['send_email'] = true;
+                    $input['email_body'] = $request->input('email_body');
                     $input['email_subject'] = $request->input('email_subject');
                 }
 
@@ -986,10 +1025,10 @@ class JobSheetController extends Controller
             }
             $output = [
                 'success' => true,
-                'msg'     => __('lang_v1.success'),
+                'msg' => __('lang_v1.success'),
             ];
         } catch (\Exception $e) {
-            \Log::emergency(
+              \Log::emergency(
                 'File:'    . $e->getFile() .
                     'Line:'    . $e->getLine() .
                     'Message:' . $e->getMessage()
@@ -1211,40 +1250,5 @@ class JobSheetController extends Controller
                 'success' => true,
                 'msg' => __('lang_v1.success'),
             ]);
-    }
-    public function updatePartsStatus(Request $request, $id)
-    {
-        $job_sheet = JobSheet::findOrFail($id);
-
-        $parts = $job_sheet->parts;
-
-        foreach ($request->parts as $variation_id => $data) {
-            if (isset($parts[$variation_id])) {
-                if ($parts[$variation_id]['status'] !== null && $data['status'] !== null) {
-                    $parts[$variation_id]['status'] = $data['status'];
-                }
-                $parts[$variation_id]['note'] = $data['note'] ?? null;
-            }
-        }
-
-        $job_sheet->parts = $parts;
-        $job_sheet->save();
-
-        return back()->with('success', 'Parts status updated successfully');
-    }
-
-    public function view_parts($id)
-    {
-
-        $business_id = request()->session()->get('user.business_id');
-
-        if (! (auth()->user()->can('superadmin') || auth()->user()->can('repair.view_part') || auth()->user()->can('job_sheet.view_all') || auth()->user()->can('job_sheet.create'))) {
-            abort(403, 'Unauthorized action.');
-        }
-        $job_sheet = JobSheet::findOrFail($id);
-        $parts = $job_sheet->getPartsUsed();
-        if (request()->ajax()) {
-            return view('repair::job_sheet.partials.view_parts', compact('parts', "job_sheet"));
-        }
     }
 }

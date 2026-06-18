@@ -20,5 +20,7 @@
     "CustomDashboard": true,
     "Gym": true,
     "ZatcaIntegrationKsa": true,
-    "ExchangeCurrency": true
+    "ExchangeCurrency": true,
+    "Loan":true
+
 }

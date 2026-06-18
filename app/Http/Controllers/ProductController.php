@@ -794,6 +794,7 @@ class ProductController extends Controller
         if (! auth()->user()->can('product.view')) {
             abort(403, 'Unauthorized action.');
         }
+        
 
         $business_id = request()->session()->get('user.business_id');
         $details = $this->productUtil->getRackDetails($business_id, $id, true);
@@ -2371,8 +2372,8 @@ class ProductController extends Controller
                 $combo_variations = $this->productUtil->__getComboProductDetails($product['variations'][0]->combo_variations, $business_id);
             }
 
-            $location_id = $product->product_locations->first()->location_id ?? 'PT1001';
-            TelegramNotification::addProductMessage($product, $combo_variations, 'product', $location_id);
+            // $location_id = $product->product_locations->first()->location_id ?? 'PT1001';
+            // TelegramNotification::addProductMessage($product, $combo_variations, 'product', $location_id);
 
 
             return view('product.view-modal')->with(compact(

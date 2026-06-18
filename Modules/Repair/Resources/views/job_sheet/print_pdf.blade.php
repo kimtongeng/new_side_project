@@ -341,10 +341,13 @@
 			@if(!empty($parts))
 				<table class="table-slim">
 					@foreach($parts as $part)
+					@if ($part['status'] == 'confirmed')
 						<tr>
 							<td>{{$part['variation_name']}}: &nbsp;</td>
 							<td>{{$part['quantity']}} {{$part['unit']}}</td>
 						</tr>
+					@endif)
+						
 					@endforeach
 				</table>
 			@endif

@@ -2,6 +2,7 @@
 
 namespace Modules\Repair\Entities;
 
+use App\Utils\ProductUtil;
 use App\Variation;
 use Illuminate\Database\Eloquent\Model;
 
@@ -111,26 +112,47 @@ class JobSheet extends Model
     public function getPartsUsed()
     {
         $parts = [];
-        if (! empty($this->parts)) {
-            $variation_ids = [];
+        if (!empty($this->parts)) {
             $job_sheet_parts = $this->parts;
 
+            $variation_ids = [];
             foreach ($job_sheet_parts as $key => $value) {
-                $variation_ids[] = $key;
+                $vid = $value['variation_id'] ?? $key;
+                $variation_ids[$key] = $vid;
             }
 
-            $variations = Variation::whereIn('id', $variation_ids)
-                                ->with(['product_variation', 'product', 'product.unit'])
-                                ->get();
+            $variations = Variation::whereIn('id', array_values($variation_ids))
+                ->with(['product_variation', 'product', 'product.unit'])
+                ->get()
+                ->keyBy('id');
 
-            foreach ($variations as $variation) {
-                $parts[$variation->id]['variation_id'] = $variation->id;
-                $parts[$variation->id]['variation_name'] = $variation->full_name;
-                $parts[$variation->id]['unit'] = $variation->product->unit->short_name;
-                $parts[$variation->id]['unit_id'] = $variation->product->unit->id;
-                $parts[$variation->id]['quantity'] = $job_sheet_parts[$variation->id]['quantity'];
-                $parts[$variation->id]['status'] = $job_sheet_parts[$variation->id]['status'] ?? null;
-                $parts[$variation->id]['note'] = $job_sheet_parts[$variation->id]['note'] ?? "";
+            $productUtil = app(ProductUtil::class);
+            $location_id = $this->location_id ?? null;
+
+            foreach ($job_sheet_parts as $key => $value) {
+                $vid = $value['variation_id'] ?? $key;
+                $variation = $variations->get($vid);
+
+                if (!$variation) continue;
+                $current_stock = null;
+                if (!empty($variation->product->enable_stock) && !empty($location_id)) {
+                    $current_stock = $productUtil->getCurrentStock($variation->id, $location_id);
+                }
+
+                $parts[$key]['part_key']      = $key; // ← the storage key
+                $parts[$key]['variation_id']  = $variation->id;
+                $parts[$key]['variation_name'] = $variation->full_name;
+                $parts[$key]['unit']          = $variation->product->unit->short_name;
+                $parts[$key]['unit_id']       = $variation->product->unit->id;
+                $parts[$key]['quantity']      = $value['quantity'];
+                $parts[$key]['status']        = $value['status'] ?? null;
+                $parts[$key]['user_id']       = $value['user_id'] ?? null;
+                $parts[$key]['note']          = $value['note'] ?? '';
+                $parts[$key]['product_image'] = !empty($variation->product->image)
+                    ? asset('/uploads/img/' . rawurlencode($variation->product->image))
+                    : asset('/img/default.png');
+                $parts[$key]['current_stock'] = $current_stock;
+                $parts[$key]['enable_stock']  = !empty($variation->product->enable_stock) ? 1 : 0;
             }
         }
 

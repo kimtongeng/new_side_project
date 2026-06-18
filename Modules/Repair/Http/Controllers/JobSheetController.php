@@ -9,6 +9,7 @@ use App\Category;
 use App\Contact;
 use App\CustomerGroup;
 use App\Media;
+use App\Notifications\TelegramNotification;
 use App\Utils\CashRegisterUtil;
 use App\Utils\ContactUtil;
 use App\Utils\ModuleUtil;
@@ -18,12 +19,14 @@ use DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 use Modules\Repair\Entities\DeviceModel;
 use Modules\Repair\Entities\JobSheet;
 use Modules\Repair\Entities\RepairStatus;
 use Modules\Repair\Utils\RepairUtil;
 use Spatie\Activitylog\Models\Activity;
 use Yajra\DataTables\Facades\DataTables;
+use Modules\Repair\Notifications\RepairStatusUpdated;
 
 class JobSheetController extends Controller
 {
@@ -112,7 +115,14 @@ class JobSheetController extends Controller
                 )
                 ->leftJoin('users', 'repair_job_sheets.created_by', '=', 'users.id')
                 ->where('repair_job_sheets.business_id', $business_id)
-                ->select('delivery_date', 'job_sheet_no', DB::raw("CONCAT(COALESCE(technecian.surname, ''),' ',COALESCE(technecian.first_name, ''),' ',COALESCE(technecian.last_name,'')) as technecian"), DB::raw("CONCAT(COALESCE(users.surname, ''),' ',COALESCE(users.first_name, ''),' ',COALESCE(users.last_name,'')) as added_by"), 'contacts.name as customer', 'b.name as brand', 'rdm.name as device_model', 'serial_no', 'estimated_cost', 'rs.name as status', 'repair_job_sheets.id as id', 'repair_job_sheets.created_at as created_at', 'service_type', 'rs.color as status_color', 'bl.name as location', 'rs.is_completed_status', 'device.name as device', 'repair_job_sheets.custom_field_1', 'repair_job_sheets.custom_field_2', 'repair_job_sheets.custom_field_3', 'repair_job_sheets.custom_field_4', 'repair_job_sheets.custom_field_5');
+
+                ->select('repair_job_sheets.delivery_date', 'job_sheet_no', DB::raw("(
+                    SELECT t.invoice_no
+                    FROM transactions t
+                    WHERE t.repair_job_sheet_id = repair_job_sheets.id
+                    AND t.type = 'sell'
+                    LIMIT 1
+                ) as repair_no"), DB::raw("CONCAT(COALESCE(technecian.surname, ''),' ',COALESCE(technecian.first_name, ''),' ',COALESCE(technecian.last_name,'')) as technecian"), DB::raw("CONCAT(COALESCE(users.surname, ''),' ',COALESCE(users.first_name, ''),' ',COALESCE(users.last_name,'')) as added_by"), 'contacts.name as customer', 'b.name as brand', 'rdm.name as device_model', 'serial_no', 'estimated_cost', 'rs.name as status', 'repair_job_sheets.id as id', 'repair_job_sheets.created_at as created_at', 'service_type', 'rs.color as status_color', 'bl.name as location', 'rs.is_completed_status', 'device.name as device', 'repair_job_sheets.custom_field_1', 'repair_job_sheets.custom_field_2', 'repair_job_sheets.custom_field_3', 'repair_job_sheets.custom_field_4', 'repair_job_sheets.custom_field_5');
 
             //if user is not admin get only assgined/created_by job sheet
             if (! auth()->user()->can('job_sheet.view_all')) {
@@ -180,7 +190,7 @@ class JobSheetController extends Controller
                                 </a>
                                 </li>';
                     }
-                    if (auth()->user()->can('repair.view_part')) {
+                    if (auth()->user()->can('repair.view_own_part') || auth()->user()->can('repair.view_all_part')) {
                         $html .= '<li>
                                     <a data-href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'view_parts'], [$row->id]) . '" class="cursor-pointer view_part_sheet">
                                         <i class="fas fa-tasks"></i> View Parts
@@ -200,13 +210,17 @@ class JobSheetController extends Controller
                                     <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'edit'], [$row->id]) . '" class="cursor-pointer edit_job_sheet"><i class="fa fa-edit"></i> ' . __('messages.edit') . '
                                     </a>
                                 </li>';
-
+                    }
+                    if (auth()->user()->can('repair.request_and_save')) {
                         $html .= '<li>
                                     <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'addParts'], [$row->id]) . '" class="cursor-pointer">
                                         <i class="fas fa-toolbox"></i>
                                         ' . __('repair::lang.add_parts') . '
                                     </a>
                                 </li>';
+                    }
+
+                    if (auth()->user()->can('job_sheet.edit')) {
 
                         $html .= '<li>
                                     <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'getUploadDocs'], [$row->id]) . '" class="cursor-pointer">
@@ -215,6 +229,7 @@ class JobSheetController extends Controller
                                     </a>
                                 </li>';
                     }
+
 
                     $html .= '<li>
                                     <a href="' . action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'print'], [$row->id]) . '" target="_blank"><i class="fa fa-print"></i> ' . __('messages.print') . '
@@ -276,8 +291,10 @@ class JobSheetController extends Controller
 
                     $add_invoice = '';
                     if (auth()->user()->can('repair.create')) {
+
                         $add_invoice = '<br><a href="' . action([\App\Http\Controllers\SellPosController::class, 'create']) . '?sub_type=repair&job_sheet_id=' . $row->id . '" class="cursor-pointer" data-toggle="tooltip" title="' . __('repair::lang.add_invoice') . '">
-                                <i class="fas fa-plus-circle"></i>
+
+                            <i class="fas fa-plus-circle"></i>
                             </a>';
                     }
 
@@ -632,6 +649,16 @@ class JobSheetController extends Controller
             $job_sheet = JobSheet::where('business_id', $business_id)
                 ->findOrFail($id);
 
+            // ── Snapshot BEFORE update ─────────────────────────
+            $job_sheet->load(['customer', 'technician', 'status', 'Brand', 'Device', 'deviceModel', 'businessLocation']);
+
+            $old_job_sheet    = clone $job_sheet;
+            $old_status       = $job_sheet->status;
+            $old_serviceStaff = $job_sheet->technician;
+            $old_brand        = $job_sheet->Brand;
+            $old_device       = $job_sheet->Device;
+            $old_deviceModel  = $job_sheet->deviceModel;
+
             $job_sheet->update($input);
 
             //upload media
@@ -663,6 +690,34 @@ class JobSheetController extends Controller
             }
 
             DB::commit();
+
+            // ── Telegram Notification ──────────────────────────
+            try {
+                $job_sheet->load(['customer', 'technician', 'status', 'Brand', 'Device', 'deviceModel', 'businessLocation']);
+
+                $location_id = $job_sheet->businessLocation->location_id ?? 'PT1001';
+
+                \App\Notifications\TelegramNotification::updateJobSheetMessage(
+                    $job_sheet,
+                    $old_job_sheet,
+                    $job_sheet->customer,
+                    $job_sheet->businessLocation,
+                    $job_sheet->Brand,
+                    $job_sheet->Device,
+                    $job_sheet->deviceModel,
+                    $job_sheet->status,
+                    $old_status,
+                    $job_sheet->technician,
+                    $old_serviceStaff,
+                    $old_brand,
+                    $old_device,
+                    $old_deviceModel,
+                    'repair',
+                    $location_id
+                );
+            } catch (\Exception $te) {
+                \Log::warning('Telegram update job sheet notification failed: ' . $te->getMessage());
+            }
 
             if (! empty($request->input('submit_type')) && $request->input('submit_type') == 'save_and_add_parts') {
                 return redirect()
@@ -715,8 +770,24 @@ class JobSheetController extends Controller
                 $job_sheet = JobSheet::where('business_id', $business_id)
                     ->findOrFail($id);
 
+                // ── Load relationships BEFORE delete ───────────────
+                $job_sheet->load(['customer', 'technician', 'status', 'Brand', 'Device', 'deviceModel', 'businessLocation']);
+
+                $location_id = $job_sheet->businessLocation->location_id ?? 'PT1001';
+
                 $job_sheet->delete();
                 $job_sheet->media()->delete();
+
+                // ── Telegram Notification ──────────────────────────
+                try {
+                    \App\Notifications\TelegramNotification::deleteJobSheetMessage(
+                        $job_sheet,
+                        'repair',
+                        $location_id
+                    );
+                } catch (\Exception $te) {
+                    \Log::warning('Telegram delete job sheet notification failed: ' . $te->getMessage());
+                }
 
                 $output = [
                     'success' => true,
@@ -760,16 +831,202 @@ class JobSheetController extends Controller
 
     public function view_parts($id)
     {
-
         $business_id = request()->session()->get('user.business_id');
 
-        if (! (auth()->user()->can('superadmin') || auth()->user()->can('repair.view_part') || auth()->user()->can('job_sheet.view_all') || auth()->user()->can('job_sheet.create'))) {
+        if (! (auth()->user()->can('superadmin') || auth()->user()->can('repair.view_own_part') || auth()->user()->can('repair.view_all_part'))) {
             abort(403, 'Unauthorized action.');
         }
         $job_sheet = JobSheet::findOrFail($id);
         $parts = $job_sheet->getPartsUsed();
+        if (auth()->user()->can('repair.view_own_part')) {
+            $parts = array_filter($parts, function ($part) {
+                return auth()->user()->can('superadmin')
+                    || auth()->user()->can('repair.view_all_part')
+                    || (
+                        auth()->user()->can('repair.view_own_part')
+                        && isset($part['user_id'])
+                        && auth()->id() == $part['user_id']
+                    );
+            });
+        }
+
+
+
         if (request()->ajax()) {
             return view('repair::job_sheet.partials.view_parts', compact('parts', "job_sheet"));
+        }
+    }
+    public function editPartStatus($part_key, $job_sheet_id)
+    {
+        $job_sheet = JobSheet::findOrFail($job_sheet_id);
+        $parts = $job_sheet->getPartsUsed();
+
+        // Direct key lookup — no ambiguity
+        $part = $parts[$part_key] ?? null;
+
+        if (!$part) {
+            abort(404, 'Part not found');
+        }
+
+        if (request()->ajax()) {
+            return view('repair::job_sheet.partials.edit_part_status', compact('part', 'job_sheet'));
+        }
+    }
+    public function updatePartStatus(Request $request, $part_key, $job_sheet_id)
+    {
+        $job_sheet = JobSheet::findOrFail($job_sheet_id);
+        $parts     = $job_sheet->parts;
+
+        if (!isset($parts[$part_key])) {
+            return response()->json([
+                'success' => false,
+                'msg'     => 'Part not found',
+            ], 404);
+        }
+
+        $old_parts  = $job_sheet->getPartsUsed();
+        $old_status = $parts[$part_key]['status'] ?? null;
+        $status     = $request->input('status_id');
+        $note       = $request->input('Note');
+        $variation_id = $parts[$part_key]['variation_id'] ?? $part_key;
+
+        // Find another row with the same variation_id AND same target status
+        $merge_key = null;
+        foreach ($parts as $key => $value) {
+            if ($key === $part_key) continue; // skip current row
+
+            $vid = $value['variation_id'] ?? $key;
+            if ((string)$vid === (string)$variation_id && ($value['status'] ?? null) === $status) {
+                $merge_key = $key;
+                break;
+            }
+        }
+
+        if ($merge_key !== null) {
+            // Merge qty into the existing same-status row
+            $merged_qty = (float)($parts[$merge_key]['quantity'] ?? 0)
+                + (float)($parts[$part_key]['quantity'] ?? 0);
+
+            $parts[$merge_key]['quantity'] = number_format($merged_qty, 2, '.', '');
+            $parts[$merge_key]['note']     = $note;
+
+            // Remove the current row since it's been merged
+            unset($parts[$part_key]);
+        } else {
+            // No existing row with same status — just update
+            $parts[$part_key]['status'] = $status;
+            $parts[$part_key]['note']   = $note;
+        }
+
+        $job_sheet->parts = $parts;
+        $job_sheet->save();
+
+        // ── Database Notification ──────────────────────────────
+        try {
+            if ($old_status != $status) {
+                $part_name = $parts[$merge_key ?? $part_key]['variation_name'] ?? 'Part';
+
+                $notification_data = [
+                    'subject'   => 'Part status updated for Job Sheet #' . $job_sheet->id,
+                    'body'      => $part_name . ' status changed to ' . ($status ?? 'no status'),
+                    'repair_id' => $job_sheet->id,
+                ];
+
+                $users = \App\User::where('business_id', $job_sheet->business_id)->get();
+                foreach ($users as $user) {
+                    $user->notify(new RepairStatusUpdated($notification_data));
+                }
+            }
+        } catch (\Exception $ne) {
+            \Log::warning('Part status notification failed: ' . $ne->getMessage());
+        }
+
+        $response = response()->json([
+            'success' => true,
+            'data'    => $job_sheet,
+            'msg'     => 'Part status updated successfully',
+        ]);
+
+        // ── Telegram Notification (After Response) ──────────────────────────────
+
+        try {
+            $new_parts   = $job_sheet->getPartsUsed();
+            $location_id = \App\BusinessLocation::find($job_sheet->location_id)?->location_id ?? 'PT1001';
+
+            TelegramNotification::updatePartsStatusJobSheetMessage(
+                $job_sheet,
+                $old_parts,
+                $new_parts,
+                'repair',
+                $location_id
+            );
+        } catch (\Exception $te) {
+            \Log::warning('Telegram part status notification failed: ' . $te->getMessage());
+        }
+
+
+        return $response;
+    }
+
+    public function deletePart($job_sheet_id, $part_key)
+    {
+        $business_id = request()->session()->get('user.business_id');
+
+        if (!auth()->user()->can('superadmin') && !auth()->user()->can('repair.delete_part')) {
+            return response()->json(['success' => false, 'msg' => 'Unauthorized action.'], 403);
+        }
+
+        try {
+            $job_sheet = JobSheet::where('business_id', $business_id)->findOrFail($job_sheet_id);
+            $parts     = $job_sheet->parts;
+            $old_parts = $job_sheet->getPartsUsed();
+
+            if (!isset($parts[$part_key])) {
+                return response()->json(['success' => false, 'msg' => 'Part not found.'], 404);
+            }
+
+            $part_name = $parts[$part_key]['variation_name'] ?? 'Part';
+            unset($parts[$part_key]);
+
+            $job_sheet->parts = !empty($parts) ? $parts : null;
+            $job_sheet->save();
+
+            // ── Database Notification ──────────────────────────────
+            try {
+                $notification_data = [
+                    'subject'   => 'Part deleted from Job Sheet #' . $job_sheet->id,
+                    'body'      => $part_name . ' has been removed from this job sheet.',
+                    'repair_id' => $job_sheet->id,
+                ];
+                $users = \App\User::where('business_id', $business_id)->get();
+                foreach ($users as $user) {
+                    $user->notify(new RepairStatusUpdated($notification_data));
+                }
+            } catch (\Exception $ne) {
+                \Log::warning('Delete part notification failed: ' . $ne->getMessage());
+            }
+
+            // ── Telegram Notification ──────────────────────────────
+            try {
+                $new_parts   = $job_sheet->getPartsUsed();
+
+                $location_id = \App\BusinessLocation::find($job_sheet->location_id)?->location_id ?? 'PT1001';
+                TelegramNotification::updatePartsStatusJobSheetMessage(
+                    $job_sheet,
+                    $old_parts,
+                    $new_parts,
+                    'repair',
+                    $location_id,
+                    '🗑️ <b>PART DELETED FROM JOB SHEET</b>'
+                );
+            } catch (\Exception $te) {
+                \Log::warning('Telegram delete part notification failed: ' . $te->getMessage());
+            }
+
+            return response()->json(['success' => true, 'msg' => 'Part deleted successfully.']);
+        } catch (\Exception $e) {
+            \Log::error('Delete part error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'msg' => __('messages.something_went_wrong')]);
         }
     }
 
@@ -777,7 +1034,8 @@ class JobSheetController extends Controller
     {
         $job_sheet = JobSheet::findOrFail($id);
 
-        $parts = $job_sheet->parts;
+        $old_parts = $job_sheet->getPartsUsed(); // capture before change
+        $parts     = $job_sheet->parts;
 
         foreach ($request->parts as $variation_id => $data) {
             if (isset($parts[$variation_id])) {
@@ -790,6 +1048,60 @@ class JobSheetController extends Controller
 
         $job_sheet->parts = $parts;
         $job_sheet->save();
+
+        // ── Database Notification (Parts Status Updated) ─────────────
+        // ── Database Notification (Parts Status Updated - Smart) ─────────────
+        try {
+            $new_parts = $job_sheet->getPartsUsed();
+
+            $changes = [];
+
+            foreach ($new_parts as $part) {
+                $variation_id = $part['variation_id'];
+
+                $old = collect($old_parts)->firstWhere('variation_id', $variation_id);
+
+                $old_status = $old['status'] ?? null;
+                $new_status = $part['status'] ?? null;
+
+                if ($old_status != $new_status) {
+                    $changes[] = $part['variation_name'] . ' (' . ($new_status ?? 'no status') . ')';
+                }
+            }
+
+            // Only send notification if something actually changed
+            if (!empty($changes)) {
+
+                $notification_data = [
+                    'subject' => 'Parts updated for Job Sheet #' . $job_sheet->id,
+                    'body' => 'Updated: ' . implode(', ', $changes),
+                    'repair_id' => $job_sheet->id,
+                ];
+                $business_id = $job_sheet->business_id;
+
+                $users = \App\User::where('business_id', $business_id)->get();
+
+                foreach ($users as $user) {
+                    $user->notify(new RepairStatusUpdated($notification_data));
+                }
+            }
+        } catch (\Exception $ne) {
+            \Log::warning('Repair parts status notification failed: ' . $ne->getMessage());
+        }
+        // ── Telegram Notification ──────────────────────────────
+        try {
+            $location_id = \App\BusinessLocation::find($job_sheet->location_id)?->location_id ?? 'PT1001';
+            TelegramNotification::updatePartsStatusJobSheetMessage(
+                $job_sheet,
+                $old_parts,
+                $job_sheet->getPartsUsed(),
+                'repair',
+                $location_id
+            );
+        } catch (\Exception $e) {
+            \Log::error('Telegram job sheet parts status notification failed: ' . $e->getMessage());
+        }
+        // ── End Telegram Notification ──────────────────────────
 
         return back()->with('success', 'Parts status updated successfully');
     }
@@ -862,7 +1174,7 @@ class JobSheetController extends Controller
         } catch (\Exception $te) {
             \Log::warning('Telegram stastus notification failed: ' . $te->getMessage());
         }
-       activity()
+        activity()
             ->performedOn($job_sheet)
             ->withProperties(['update_note' => $input['update_note'], 'updated_status' => $status->name])
             ->log('status_changed');
@@ -966,11 +1278,15 @@ class JobSheetController extends Controller
 
         $status_dropdown = RepairStatus::forDropdown($business_id, true);
         $status_template_tags = $this->repairUtil->getRepairStatusTemplateTags();
+        $business = Business::find($business_id);
+        if (!empty($business->pos_settings) && !is_array($business->pos_settings)) {
+            $business->pos_settings = json_decode($business->pos_settings, true);
+        }
+        $allow_overselling = !empty($business->pos_settings['allow_overselling']) ? true : false;
 
         return view('repair::job_sheet.add_parts')
-            ->with(compact('job_sheet', 'parts', 'status_update_data', 'status_dropdown', 'status_template_tags'));
+            ->with(compact('job_sheet', 'parts', 'status_update_data', 'status_dropdown', 'status_template_tags', 'allow_overselling'));
     }
-
     public function saveParts(Request $request, $id)
     {
         $business_id = request()->session()->get('user.business_id');
@@ -981,8 +1297,24 @@ class JobSheetController extends Controller
 
         try {
             $parts = $request->input('parts');
+
             $job_sheet = JobSheet::where('business_id', $business_id)->findOrFail($id);
-            $job_sheet->parts = ! empty($parts) ? $parts : null;
+
+            // ── Snapshot old parts BEFORE save ────────────────────
+            $old_parts_used = $job_sheet->getPartsUsed() ?? [];
+
+            $normalized = [];
+            foreach ($parts as $key => $data) {
+                $variation_id = $data['variation_id'] ?? $key;
+
+                if (empty($data['user_id'])) {
+                    $data['user_id'] = auth()->user()->id;
+                }
+
+                $normalized[$key] = array_merge($data, ['variation_id' => $variation_id]);
+            }
+
+            $job_sheet->parts = !empty($normalized) ? $normalized : null;
             $job_sheet->save();
 
             if (! empty($request->session()->get('repair_status_update_data')) && ! empty($request->input('status_id'))) {
@@ -1016,19 +1348,38 @@ class JobSheetController extends Controller
 
                 \App\Notifications\TelegramNotification::addPartsJobSheetMessage(
                     $job_sheet,
-                    $partsUsed ?? [],
+                    $partsUsed      ?? [],
+                    $old_parts_used,
                     'repair',
                     $location_id
                 );
             } catch (\Exception $te) {
                 \Log::warning('Telegram job sheet parts notification failed: ' . $te->getMessage());
             }
+
+            // ── Database Notification (Repair) ────────────────────
+            try {
+                $notification_data = [
+                    'subject'   => 'Repair updated for Job Sheet #' . $job_sheet->id,
+                    'body'      => 'Parts have been updated for this repair.',
+                    'repair_id' => $job_sheet->id,
+                ];
+
+                $users = \App\User::where('business_id', $business_id)->get();
+
+                foreach ($users as $user) {
+                    $user->notify(new RepairStatusUpdated($notification_data));
+                }
+            } catch (\Exception $ne) {
+                \Log::warning('Repair notification failed: ' . $ne->getMessage());
+            }
+
             $output = [
                 'success' => true,
-                'msg' => __('lang_v1.success'),
+                'msg'     => __('lang_v1.success'),
             ];
         } catch (\Exception $e) {
-              \Log::emergency(
+            \Log::emergency(
                 'File:'    . $e->getFile() .
                     'Line:'    . $e->getLine() .
                     'Message:' . $e->getMessage()
@@ -1048,18 +1399,56 @@ class JobSheetController extends Controller
     public function jobsheetPartRow(Request $request)
     {
         if (request()->ajax()) {
-            $variation_id = $request->input('variation_id');
+            $variation_id    = $request->input('variation_id');
+            $part_key        = $request->input('part_key');
+            $business_id     = $request->session()->get('user.business_id');
+            $location_id     = $request->input('location_id');
+            $already_used_qty = (float) $request->input('already_used_qty', 0); // ← from JS
 
-            $business_id = $request->session()->get('user.business_id');
             $product = $this->productUtil->getDetailsFromVariation($variation_id, $business_id);
 
-            $variation_name = $product->product_name . ' - ' . $product->sub_sku;
-            $variation_id = $product->variation_id;
-            $quantity = 1;
-            $unit = $product->unit;
+            // ── Get Business & Check Allow Overselling ──
+            $business = Business::find($business_id);
+            if (!empty($business->pos_settings) && !is_array($business->pos_settings)) {
+                $business->pos_settings = json_decode($business->pos_settings, true);
+            }
+            $allow_overselling = !empty($business->pos_settings['allow_overselling']) ? true : false;
 
-            return view('repair::job_sheet.partials.job_sheet_part_row')
-                ->with(compact('variation_name', 'variation_id', 'quantity', 'unit'));
+            // ── Stock Check ──────────────────────────────
+            if (!empty($product->enable_stock) && $product->enable_stock == 1 && !empty($location_id)) {
+                $current_stock = $this->productUtil->getCurrentStock($product->variation_id, $location_id);
+
+                // Subtract qty already in the table
+                $available_stock = $current_stock - $already_used_qty;
+
+                // Only block if overselling is not allowed and stock is insufficient
+                if ($available_stock <= 0 && !$allow_overselling) {
+                    return response()->json([
+                        'success' => false,
+                        'msg' => __('lang_v1.item_out_of_stock') .
+                            ' (Available: ' . number_format($current_stock, 2) .
+                            ', Already used: ' . number_format($already_used_qty, 2) . ')',
+                    ]);
+                }
+            }
+            // ─────────────────────────────────────────────
+
+            $variation_name = $product->product_name . ' - ' . $product->sub_sku;
+            $variation_id   = $product->variation_id;
+            $current_stock  = (!empty($product->enable_stock) && $product->enable_stock == 1) ? $this->productUtil->getCurrentStock($product->variation_id, $location_id) : null;
+            $quantity       = 1;
+            $unit           = $product->unit;
+            $user_id        = auth()->user()->id;
+            $product_image = !empty($product->product_image)
+                ? asset('/uploads/img/' . rawurlencode($product->product_image))
+                : asset('/img/default.png');
+            $can_not_edit = false;
+            return response()->json([
+                'success' => true,
+                'html'    => view('repair::job_sheet.partials.job_sheet_part_row')
+                    ->with(compact('variation_name', 'variation_id', 'quantity', 'unit', 'user_id', 'part_key', 'current_stock', 'product_image', 'allow_overselling', 'can_not_edit'))
+                    ->render(),
+            ]);
         }
     }
 

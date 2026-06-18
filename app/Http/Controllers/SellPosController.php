@@ -3511,22 +3511,41 @@ class SellPosController extends Controller
         }
 
 
-        //get all account
+        //get all account — only accounts enabled for this business location
         $receipt_details->all_account = [];
 
-        $all_account = Account::where("business_id", $business_id)->select(
+        // Read the location's enabled account IDs from default_payment_accounts
+        $location_account_ids = [];
+        if (!empty($location_details->default_payment_accounts)) {
+            $default_payment_accounts = json_decode($location_details->default_payment_accounts, true);
+            if (is_array($default_payment_accounts)) {
+                foreach ($default_payment_accounts as $pa) {
+                    if (!empty($pa['is_enabled']) && !empty($pa['account'])) {
+                        $location_account_ids[] = (int) $pa['account'];
+                    }
+                }
+            }
+        }
+
+        $account_query = Account::where("business_id", $business_id)->select(
             'accounts.name',
             'accounts.id',
             DB::raw("(SELECT SUM( IF(account_transactions.type='credit', amount, -1*amount) ) as balance from account_transactions where account_transactions.account_id = accounts.id AND deleted_at is NULL) as balance"),
-        )->get();
+        );
+
+        // If location has specific accounts configured, filter to only those
+        if (!empty($location_account_ids)) {
+            $account_query->whereIn('accounts.id', $location_account_ids);
+        }
+
+        $all_account = $account_query->get();
 
         if ($all_account->isNotEmpty()) {
-
             $receipt_details->all_account = $all_account->map(function ($item) {
                 return [
-                    'name' => $item->name,
-                    'id' => $item->id,
-                    'balance' => $this->transactionUtil->num_f($item->balance, true)
+                    'name'    => $item->name,
+                    'id'      => $item->id,
+                    'balance' => $this->transactionUtil->num_f($item->balance, true),
                 ];
             })->toArray();
         }

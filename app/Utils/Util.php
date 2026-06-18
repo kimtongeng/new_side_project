@@ -74,9 +74,9 @@ class Util
             $symbol = ! empty($business_details) ? $business_details->currency_symbol : session('currency')['symbol'];
 
             if ($currency_symbol_placement == 'after') {
-                $formatted = $formatted.' '.$symbol;
+                $formatted = $formatted . ' ' . $symbol;
             } else {
-                $formatted = $symbol.' '.$formatted;
+                $formatted = $symbol . ' ' . $formatted;
             }
         }
 
@@ -233,9 +233,9 @@ class Util
         $mysql_format = 'Y-m-d';
         if ($time) {
             if (session('business.time_format') == 12) {
-                $date_format = $date_format.' h:i A';
+                $date_format = $date_format . ' h:i A';
             } else {
-                $date_format = $date_format.' H:i';
+                $date_format = $date_format . ' H:i';
             }
             $mysql_format = 'Y-m-d H:i:s';
         }
@@ -358,9 +358,9 @@ class Util
 
         if (! in_array($type, ['contacts', 'business_location', 'username'])) {
             $ref_year = \Carbon::now()->year;
-            $ref_number = $prefix.$ref_year.'/'.$ref_digits;
+            $ref_number = $prefix . $ref_year . '/' . $ref_digits;
         } else {
-            $ref_number = $prefix.$ref_digits;
+            $ref_number = $prefix . $ref_digits;
         }
 
         return $ref_number;
@@ -377,7 +377,7 @@ class Util
     {
         $business_id = empty($business_id) ? $user->business_id : $business_id;
 
-        return $user->hasRole('Admin#'.$business_id) ? true : false;
+        return $user->hasRole('Admin#' . $business_id) ? true : false;
     }
 
     /**
@@ -431,7 +431,7 @@ class Util
             ]);
 
             $request = new \GuzzleHttp\Psr7\Request('POST', 'https://rest.nexmo.com/sms/json', $headers, $body);
-            
+
             $response = $client->sendAsync($request)->wait();
         }
     }
@@ -530,7 +530,7 @@ class Util
         }
 
         if ($sms_settings['request_method'] == 'get') {
-            $response = $client->get($sms_settings['url'].'?'.http_build_query($request_data), $options);
+            $response = $client->get($sms_settings['url'] . '?' . http_build_query($request_data), $options);
         } else {
             $options['form_params'] = $request_data;
 
@@ -552,9 +552,9 @@ class Util
         $whatsapp_number = abs((int) filter_var($data['mobile_number'], FILTER_SANITIZE_NUMBER_INT));
         $text = $data['whatsapp_text'];
 
-        $base_url = config('constants.whatsapp_base_url').'/'.$whatsapp_number;
+        $base_url = config('constants.whatsapp_base_url') . '/' . $whatsapp_number;
 
-        return $base_url.'?text='.urlencode($text);
+        return $base_url . '?text=' . urlencode($text);
     }
 
     /**
@@ -636,7 +636,7 @@ class Util
      */
     public function generateToken()
     {
-        return md5(rand(1, 10).microtime());
+        return md5(rand(1, 10) . microtime());
     }
 
     /**
@@ -715,7 +715,7 @@ class Util
             }
 
             if ($request->$file_name->getSize() <= config('constants.document_size_limit')) {
-                $new_file_name = time().'_'.$request->$file_name->getClientOriginalName();
+                $new_file_name = time() . '_' . $request->$file_name->getClientOriginalName();
                 if ($request->$file_name->storeAs($dir_name, $new_file_name)) {
                     $uploaded_file_name = $new_file_name;
                 }
@@ -745,7 +745,7 @@ class Util
                 ->role($service_staff_roles);
 
             if (! empty($location_id)) {
-                $waiters->permission(['location.'.$location_id, 'access_all_locations']);
+                $waiters->permission(['location.' . $location_id, 'access_all_locations']);
             }
 
             if ($for_dropdown) {
@@ -850,7 +850,7 @@ class Util
             //Replace business_logo
             if (strpos($value, '{business_logo}') !== false) {
                 $logo_name = $business->logo;
-                $business_logo = ! empty($logo_name) ? '<img src="'.url('uploads/business_logos/'.$logo_name).'" alt="Business Logo" >' : '';
+                $business_logo = ! empty($logo_name) ? '<img src="' . url('uploads/business_logos/' . $logo_name) . '" alt="Business Logo" >' : '';
 
                 $data[$key] = str_replace('{business_logo}', $business_logo, $data[$key]);
             }
@@ -1056,7 +1056,7 @@ class Util
             $php_binary_path = 'php';
         }
 
-        $command = '* * * * * '.$php_binary_path.' '.base_path('artisan').' schedule:run >> /dev/null 2>&1';
+        $command = '* * * * * ' . $php_binary_path . ' ' . base_path('artisan') . ' schedule:run >> /dev/null 2>&1';
 
         if (config('app.env') == 'demo') {
             $command = '';
@@ -1139,7 +1139,7 @@ class Util
      */
     public function get_admins($business_id)
     {
-        $admins = User::role('Admin#'.$business_id)->get();
+        $admins = User::role('Admin#' . $business_id)->get();
 
         return $admins;
     }
@@ -1224,8 +1224,8 @@ class Util
      */
     public function get_pl_quantity_sum_string($table_name = '')
     {
-        $table_name = ! empty($table_name) ? $table_name.'.' : '';
-        $string = $table_name.'quantity_sold + '.$table_name.'quantity_adjusted + '.$table_name.'quantity_returned + '.$table_name.'mfg_quantity_used';
+        $table_name = ! empty($table_name) ? $table_name . '.' : '';
+        $string = $table_name . 'quantity_sold + ' . $table_name . 'quantity_adjusted + ' . $table_name . 'quantity_returned + ' . $table_name . 'mfg_quantity_used';
 
         return $string;
     }
@@ -1334,15 +1334,40 @@ class Util
                     'read_at' => $notification->read_at,
                     'created_at' => $notification->created_at->diffForHumans(),
                 ];
+            } elseif ($notification->type == \Modules\Repair\Notifications\RepairStatusUpdated::class) {
+
+                $msg = '<strong>' . ($data['subject'] ?? 'Repair updated') . '</strong><br>'
+                    . ($data['body'] ?? '');
+
+                $icon_class = 'fas fa-tools bg-blue';
+                $link = url('/repair/job-sheet/?id=' . ($data['repair_id'] ?? '') . '&action=view_part' );
+
+                $notifications_data[] = [
+                    'msg' => $msg,
+                    'icon_class' => $icon_class,
+                    'link' => $link,
+                    'read_at' => $notification->read_at,
+                    'created_at' => $notification->created_at->diffForHumans(),
+                ];
             } else {
                 $moduleUtil = new \App\Utils\ModuleUtil;
                 $module_notification_data = $moduleUtil->getModuleData('parse_notification', $notification);
+
                 if (! empty($module_notification_data)) {
                     foreach ($module_notification_data as $module_data) {
                         if (! empty($module_data)) {
                             $notifications_data[] = $module_data;
                         }
                     }
+                } else {
+                    // ✅ ADD THIS PART (fallback)
+                    $notifications_data[] = [
+                        'msg' => $notification->data['message'] ?? 'New notification',
+                        'icon_class' => 'fas fa-info-circle bg-blue',
+                        'link' => '#',
+                        'read_at' => $notification->read_at,
+                        'created_at' => $notification->created_at->diffForHumans(),
+                    ];
                 }
             }
         }
@@ -1388,15 +1413,34 @@ class Util
         $i = 0;
         $str = [];
         $words = [
-            0 => '', 1 => 'one', 2 => 'two',
-            3 => 'three', 4 => 'four', 5 => 'five', 6 => 'six',
-            7 => 'seven', 8 => 'eight', 9 => 'nine',
-            10 => 'ten', 11 => 'eleven', 12 => 'twelve',
-            13 => 'thirteen', 14 => 'fourteen', 15 => 'fifteen',
-            16 => 'sixteen', 17 => 'seventeen', 18 => 'eighteen',
-            19 => 'nineteen', 20 => 'twenty', 30 => 'thirty',
-            40 => 'forty', 50 => 'fifty', 60 => 'sixty',
-            70 => 'seventy', 80 => 'eighty', 90 => 'ninety',
+            0 => '',
+            1 => 'one',
+            2 => 'two',
+            3 => 'three',
+            4 => 'four',
+            5 => 'five',
+            6 => 'six',
+            7 => 'seven',
+            8 => 'eight',
+            9 => 'nine',
+            10 => 'ten',
+            11 => 'eleven',
+            12 => 'twelve',
+            13 => 'thirteen',
+            14 => 'fourteen',
+            15 => 'fifteen',
+            16 => 'sixteen',
+            17 => 'seventeen',
+            18 => 'eighteen',
+            19 => 'nineteen',
+            20 => 'twenty',
+            30 => 'thirty',
+            40 => 'forty',
+            50 => 'fifty',
+            60 => 'sixty',
+            70 => 'seventy',
+            80 => 'eighty',
+            90 => 'ninety',
         ];
         $digits = ['', 'hundred', 'thousand', 'lakh', 'crore'];
         while ($i < $digits_length) {
@@ -1407,15 +1451,15 @@ class Util
             if ($number) {
                 $plural = (($counter = count($str)) && $number > 9) ? 's' : null;
                 $hundred = ($counter == 1 && $str[0]) ? ' and ' : null;
-                $str[] = ($number < 21) ? $words[$number].' '.$digits[$counter].$plural.' '.$hundred : $words[floor($number / 10) * 10].' '.$words[$number % 10].' '.$digits[$counter].$plural.' '.$hundred;
+                $str[] = ($number < 21) ? $words[$number] . ' ' . $digits[$counter] . $plural . ' ' . $hundred : $words[floor($number / 10) * 10] . ' ' . $words[$number % 10] . ' ' . $digits[$counter] . $plural . ' ' . $hundred;
             } else {
                 $str[] = null;
             }
         }
         $whole_number_part = implode('', array_reverse($str));
-        $decimal_part = ($decimal > 0) ? ' point '.($words[$decimal / 10].' '.$words[$decimal % 10]) : '';
+        $decimal_part = ($decimal > 0) ? ' point ' . ($words[$decimal / 10] . ' ' . $words[$decimal % 10]) : '';
 
-        return ($whole_number_part ? $whole_number_part : '').$decimal_part;
+        return ($whole_number_part ? $whole_number_part : '') . $decimal_part;
     }
 
     public function getCustomLabels($business, $type = null)
@@ -1484,7 +1528,7 @@ class Util
     {
         $php_binary_path = empty(PHP_BINARY) ? 'php' : PHP_BINARY;
 
-        $command = '* * * * * '.$php_binary_path.' '.base_path('artisan').' backup:clean >> /dev/null 2>&1';
+        $command = '* * * * * ' . $php_binary_path . ' ' . base_path('artisan') . ' backup:clean >> /dev/null 2>&1';
 
         if (config('app.env') == 'demo') {
             $command = '';
@@ -1573,7 +1617,7 @@ class Util
 
         $roles = [];
         foreach ($app_roles as $key => $value) {
-            $roles[$key] = str_replace('#'.$business_id, '', $value);
+            $roles[$key] = str_replace('#' . $business_id, '', $value);
         }
 
         return $roles;
@@ -1585,11 +1629,41 @@ class Util
     public function createUser($request)
     {
         $user_details = $request->only([
-            'surname', 'first_name', 'last_name', 'email',
-            'user_type', 'crm_contact_id', 'allow_login', 'username', 'password',
-            'cmmsn_percent', 'max_sales_discount_percent', 'dob', 'gender', 'marital_status', 'blood_group', 'contact_number', 'alt_number', 'family_number', 'fb_link',
-            'twitter_link', 'social_media_1', 'social_media_2', 'custom_field_1',
-            'custom_field_2', 'custom_field_3', 'custom_field_4', 'guardian_name', 'id_proof_name', 'id_proof_number', 'permanent_address', 'current_address', 'bank_details', 'selected_contacts', 'is_enable_service_staff_pin', 'service_staff_pin',
+            'surname',
+            'first_name',
+            'last_name',
+            'email',
+            'user_type',
+            'crm_contact_id',
+            'allow_login',
+            'username',
+            'password',
+            'cmmsn_percent',
+            'max_sales_discount_percent',
+            'dob',
+            'gender',
+            'marital_status',
+            'blood_group',
+            'contact_number',
+            'alt_number',
+            'family_number',
+            'fb_link',
+            'twitter_link',
+            'social_media_1',
+            'social_media_2',
+            'custom_field_1',
+            'custom_field_2',
+            'custom_field_3',
+            'custom_field_4',
+            'guardian_name',
+            'id_proof_name',
+            'id_proof_number',
+            'permanent_address',
+            'current_address',
+            'bank_details',
+            'selected_contacts',
+            'is_enable_service_staff_pin',
+            'service_staff_pin',
         ]);
 
         $user_details['status'] = ! empty($request->input('is_active')) ? $request->input('is_active') : 'inactive';
@@ -1674,7 +1748,7 @@ class Util
     {
         $business_id = Auth::user()->business_id;
 
-        $extension = ! empty(System::getProperty('enable_business_based_username')) ? '-'.str_pad($business_id, 2, 0, STR_PAD_LEFT) : null;
+        $extension = ! empty(System::getProperty('enable_business_based_username')) ? '-' . str_pad($business_id, 2, 0, STR_PAD_LEFT) : null;
 
         return $extension;
     }
@@ -1692,8 +1766,8 @@ class Util
 
         $all_locations = BusinessLocation::where('business_id', $business_id)->get();
         foreach ($all_locations as $location) {
-            if ($role->hasPermissionTo('location.'.$location->id)) {
-                $role->revokePermissionTo('location.'.$location->id);
+            if ($role->hasPermissionTo('location.' . $location->id)) {
+                $role->revokePermissionTo('location.' . $location->id);
             }
         }
     }
@@ -1715,7 +1789,7 @@ class Util
             $location_permissions = [];
             if (! empty($location_ids)) {
                 foreach ($location_ids as $location_id) {
-                    $location_permissions[] = 'location.'.$location_id;
+                    $location_permissions[] = 'location.' . $location_id;
                 }
             }
         }
@@ -1734,8 +1808,8 @@ class Util
 
             if (is_array($permitted_locations)) {
                 foreach ($permitted_locations as $key => $value) {
-                    if (! in_array('location.'.$value, $permissions)) {
-                        $revoked_permissions[] = 'location.'.$value;
+                    if (! in_array('location.' . $value, $permissions)) {
+                        $revoked_permissions[] = 'location.' . $value;
                     }
                 }
             }
@@ -1752,7 +1826,7 @@ class Util
             if (! empty($permitted_locations)) {
                 $revoked_permissions = [];
                 foreach ($permitted_locations as $key => $value) {
-                    $revoke_permissions[] = 'location.'.$value;
+                    $revoke_permissions[] = 'location.' . $value;
                 }
 
                 $user->revokePermissionTo($revoke_permissions);
@@ -1809,19 +1883,19 @@ class Util
                 $end = \Carbon::now()->subYear()->endOfYear();
                 break;
 
-                case 'current_financial_year':
-                    // Assuming financial year starts in April
-                    $start = \Carbon\Carbon::now()->month >= 4 ? \Carbon\Carbon::now()->startOfYear()->month(4)->startOfMonth() : \Carbon\Carbon::now()->subYear()->startOfYear()->month(4)->startOfMonth();
-                    $end = \Carbon\Carbon::now()->month >= 4 ? \Carbon\Carbon::now()->startOfYear()->month(4)->startOfMonth()->addYear()->subDay() : \Carbon\Carbon::now()->startOfYear()->subDay();
-                    break;
-        
-                case 'last_financial_year':
-                    // Assuming financial year starts in April
-                    $start = \Carbon\Carbon::now()->subYear()->month >= 4 ? \Carbon\Carbon::now()->subYear()->startOfYear()->month(4)->startOfMonth() : \Carbon\Carbon::now()->subYears(2)->startOfYear()->month(4)->startOfMonth();
-                    $end = \Carbon\Carbon::now()->subYear()->month >= 4 ? \Carbon\Carbon::now()->subYear()->startOfYear()->month(4)->startOfMonth()->addYear()->subDay() : \Carbon\Carbon::now()->subYear()->startOfYear()->subDay();
-                    break;
-        
-                default:
+            case 'current_financial_year':
+                // Assuming financial year starts in April
+                $start = \Carbon\Carbon::now()->month >= 4 ? \Carbon\Carbon::now()->startOfYear()->month(4)->startOfMonth() : \Carbon\Carbon::now()->subYear()->startOfYear()->month(4)->startOfMonth();
+                $end = \Carbon\Carbon::now()->month >= 4 ? \Carbon\Carbon::now()->startOfYear()->month(4)->startOfMonth()->addYear()->subDay() : \Carbon\Carbon::now()->startOfYear()->subDay();
+                break;
+
+            case 'last_financial_year':
+                // Assuming financial year starts in April
+                $start = \Carbon\Carbon::now()->subYear()->month >= 4 ? \Carbon\Carbon::now()->subYear()->startOfYear()->month(4)->startOfMonth() : \Carbon\Carbon::now()->subYears(2)->startOfYear()->month(4)->startOfMonth();
+                $end = \Carbon\Carbon::now()->subYear()->month >= 4 ? \Carbon\Carbon::now()->subYear()->startOfYear()->month(4)->startOfMonth()->addYear()->subDay() : \Carbon\Carbon::now()->subYear()->startOfYear()->subDay();
+                break;
+
+            default:
                 $start = null;
                 $end = null;
                 break;
@@ -1829,5 +1903,4 @@ class Util
 
         return ['start' => $start, 'end' => $end];
     }
-
 }

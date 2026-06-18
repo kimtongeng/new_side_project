@@ -89,7 +89,6 @@ class SellController extends Controller
      */
     public function index()
     {
-
         $is_admin = $this->businessUtil->is_admin(auth()->user());
 
         if (! $is_admin && ! auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'direct_sell.view', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping', 'so.view_all', 'so.view_own'])) {

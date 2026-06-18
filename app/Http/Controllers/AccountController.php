@@ -267,27 +267,27 @@ class AccountController extends Controller
                         ->value('location_id') ?? 'PT1001';
 
                     // Build all_account list
-                    $all_account = Account::where('business_id', $business_id)
-                        ->select(
-                            'accounts.name',
-                            'accounts.id',
-                            DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
-                                  FROM account_transactions
-                                  WHERE account_transactions.account_id = accounts.id
-                                  AND deleted_at IS NULL) as balance")
-                        )
-                        ->get()
-                        ->map(fn($item) => [
-                            'name'    => $item->name,
-                            'id'      => $item->id,
-                            'balance' => $this->commonUtil->num_f($item->balance, true),
-                        ])
-                        ->toArray();
+                    // $all_account = Account::where('business_id', $business_id)
+                    //     ->select(
+                    //         'accounts.name',
+                    //         'accounts.id',
+                    //         DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+                    //               FROM account_transactions
+                    //               WHERE account_transactions.account_id = accounts.id
+                    //               AND deleted_at IS NULL) as balance")
+                    //     )
+                    //     ->get()
+                    //     ->map(fn($item) => [
+                    //         'name'    => $item->name,
+                    //         'id'      => $item->id,
+                    //         'balance' => $this->commonUtil->num_f($item->balance, true),
+                    //     ])
+                    //     ->toArray();
 
                     TelegramNotification::addAccountMessage(
                         $account,
                         $opening_bal,
-                        $all_account,
+                        // $all_account,
                         'payment_accoun',
                         $location_code
                     );
@@ -603,27 +603,27 @@ class AccountController extends Controller
                         ->value('location_id') ?? 'PT1001';
 
                     // Build all_account list
-                    $all_account = Account::where('business_id', $business_id)
-                        ->select(
-                            'accounts.name',
-                            'accounts.id',
-                            DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
-                                  FROM account_transactions
-                                  WHERE account_transactions.account_id = accounts.id
-                                  AND deleted_at IS NULL) as balance")
-                        )
-                        ->get()
-                        ->map(fn($item) => [
-                            'name'    => $item->name,
-                            'id'      => $item->id,
-                            'balance' => $this->commonUtil->num_f($item->balance, true),
-                        ])
-                        ->toArray();
+                    // $all_account = Account::where('business_id', $business_id)
+                    //     ->select(
+                    //         'accounts.name',
+                    //         'accounts.id',
+                    //         DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+                    //               FROM account_transactions
+                    //               WHERE account_transactions.account_id = accounts.id
+                    //               AND deleted_at IS NULL) as balance")
+                    //     )
+                    //     ->get()
+                    //     ->map(fn($item) => [
+                    //         'name'    => $item->name,
+                    //         'id'      => $item->id,
+                    //         'balance' => $this->commonUtil->num_f($item->balance, true),
+                    //     ])
+                    //     ->toArray();
 
                     TelegramNotification::updateAccountMessage(
                         $account,
                         $old_account,
-                        $all_account,
+                        // $all_account,
                         'payment_accoun',
                         $location_code
                     );
@@ -721,26 +721,26 @@ class AccountController extends Controller
                         ->value('location_id') ?? 'PT1001';
 
                     // Build all_account list
-                    $all_account = Account::where('business_id', $business_id)
-                        ->select(
-                            'accounts.name',
-                            'accounts.id',
-                            DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
-                                  FROM account_transactions
-                                  WHERE account_transactions.account_id = accounts.id
-                                  AND deleted_at IS NULL) as balance")
-                        )
-                        ->get()
-                        ->map(fn($item) => [
-                            'name'    => $item->name,
-                            'id'      => $item->id,
-                            'balance' => $this->commonUtil->num_f($item->balance, true),
-                        ])
-                        ->toArray();
+                    // $all_account = Account::where('business_id', $business_id)
+                    //     ->select(
+                    //         'accounts.name',
+                    //         'accounts.id',
+                    //         DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+                    //               FROM account_transactions
+                    //               WHERE account_transactions.account_id = accounts.id
+                    //               AND deleted_at IS NULL) as balance")
+                    //     )
+                    //     ->get()
+                    //     ->map(fn($item) => [
+                    //         'name'    => $item->name,
+                    //         'id'      => $item->id,
+                    //         'balance' => $this->commonUtil->num_f($item->balance, true),
+                    //     ])
+                    //     ->toArray();
 
                     TelegramNotification::closeAccountMessage(
                         $account,
-                        $all_account,
+                        // $all_account,
                         'payment_accoun',
                         $location_code
                     );
@@ -873,22 +873,22 @@ class AccountController extends Controller
                     $location_code = BusinessLocation::where('business_id', $business_id)
                         ->value('location_id') ?? 'PT1001';
 
-                        $all_account = Account::where('business_id', $business_id)
-                        ->select(
-                            'accounts.name',
-                            'accounts.id',
-                            DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
-                                  FROM account_transactions
-                                  WHERE account_transactions.account_id = accounts.id
-                                  AND deleted_at IS NULL) as balance")
-                        )
-                        ->get()
-                        ->map(fn($item) => [
-                            'name'    => $item->name,
-                            'id'      => $item->id,
-                            'balance' => $this->commonUtil->num_f($item->balance, true),
-                        ])
-                        ->toArray();
+                    // $all_account = Account::where('business_id', $business_id)
+                    //     ->select(
+                    //         'accounts.name',
+                    //         'accounts.id',
+                    //         DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+                    //               FROM account_transactions
+                    //               WHERE account_transactions.account_id = accounts.id
+                    //               AND deleted_at IS NULL) as balance")
+                    //     )
+                    //     ->get()
+                    //     ->map(fn($item) => [
+                    //         'name'    => $item->name,
+                    //         'id'      => $item->id,
+                    //         'balance' => $this->commonUtil->num_f($item->balance, true),
+                    //     ])
+                    //     ->toArray();
                     TelegramNotification::fundTransferMessage(
                         $from_account,
                         $to_account,
@@ -897,7 +897,7 @@ class AccountController extends Controller
                         $to_balance,
                         $debit_data['operation_date'],
                         $note,
-                        $all_account,
+                        // $all_account,
                         'payment_accoun',
                         $location_code
                     );
@@ -1018,22 +1018,22 @@ class AccountController extends Controller
                         ->value('location_id') ?? 'PT1001';
 
                     // Build all_account list
-                    $all_account = Account::where('business_id', $business_id)
-                        ->select(
-                            'accounts.name',
-                            'accounts.id',
-                            DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
-                                  FROM account_transactions
-                                  WHERE account_transactions.account_id = accounts.id
-                                  AND deleted_at IS NULL) as balance")
-                        )
-                        ->get()
-                        ->map(fn($item) => [
-                            'name'    => $item->name,
-                            'id'      => $item->id,
-                            'balance' => $this->commonUtil->num_f($item->balance, true),
-                        ])
-                        ->toArray();
+                    // $all_account = Account::where('business_id', $business_id)
+                    //     ->select(
+                    //         'accounts.name',
+                    //         'accounts.id',
+                    //         DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+                    //               FROM account_transactions
+                    //               WHERE account_transactions.account_id = accounts.id
+                    //               AND deleted_at IS NULL) as balance")
+                    //     )
+                    //     ->get()
+                    //     ->map(fn($item) => [
+                    //         'name'    => $item->name,
+                    //         'id'      => $item->id,
+                    //         'balance' => $this->commonUtil->num_f($item->balance, true),
+                    //     ])
+                    //     ->toArray();
 
                     TelegramNotification::depositAccountMessage(
                         $account,
@@ -1042,7 +1042,7 @@ class AccountController extends Controller
                         $from_account,
                         $credit_data['operation_date'],
                         $note,
-                        $all_account,
+                        // $all_account,
                         'payment_accoun',
                         $location_code
                     );

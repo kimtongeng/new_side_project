@@ -11,8 +11,10 @@ return new class extends Migration
             'repair.request_and_save',
             'repair.confirm',
             'repair.reject_and_note',
-            'repair.show_only_available_part',
-            'repair.view_part',
+            'repair.view_own_part',
+            'repair.view_all_part',
+            "repair.edit_part",
+            'repair.delete_part',
         ];
 
         foreach ($permissions as $permission) {
@@ -31,8 +33,10 @@ return new class extends Migration
             'repair.request_and_save',
             'repair.confirm',
             'repair.reject_and_note',
-            'repair.show_only_available_part',
-            'repair.view_part',
+            'repair.view_own_part',
+            'repair.view_all_part',
+            "repair.edit_part",
+            'repair.delete_part',
         ])->delete();
     }
 };

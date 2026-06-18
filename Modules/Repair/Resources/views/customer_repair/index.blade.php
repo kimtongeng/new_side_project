@@ -53,9 +53,15 @@
                     </form>
 
                 </div>
+
             </div>
         </div>
         <div class="col-md-4"></div>
+    </div>
+    <div class="row">
+        <div class="col-12 repair_status_details">
+
+        </div>
     </div>
 @endsection
 @section('javascript')
@@ -75,6 +81,7 @@
                     success: function(result) {
                         ladda.stop();
                         if (result.success) {
+
                             $(".repair_status_details").html(result.repair_html);
                             toastr.success(result.msg);
                         } else {

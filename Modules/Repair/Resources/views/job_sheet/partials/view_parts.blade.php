@@ -162,21 +162,70 @@
                     <tr>
                         <th style="width: 40%;">PART</th>
                         <th style="width: 15%;">QTY</th>
-                        @if ($hasStatus)
-                            <th style="width: 25%;">STATUS/ACTION</th>
-                        @endif
+                        <th style="width: 25%;">STATUS</th>
+                        {{-- @if (($hasStatus && auth()->user()->can('repair.confirm')) || !auth()->user()->can('repair.reject_and_note')) --}}
+                        <th style="width: 25%;">ACTION</th>
+                        {{-- @endif --}}
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($parts as $index => $part)
                         <tr>
-                            <td class="part-name">{{ $part['variation_name'] }}</td>
-
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div
+                                        style="width: 48px; height: 48px; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; flex-shrink: 0; background: #f8f8f8; display: flex; align-items: center; justify-content: center;">
+                                        <img src="{{ $part['product_image'] }}" alt="{{ $part['variation_name'] }}"
+                                            style="width: 100%; height: 100%; object-fit: contain;"
+                                            onerror="this.src='{{ asset('/img/default.png') }}'">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 14px;">{{ $part['variation_name'] }}
+                                        @if(!empty($part['enable_stock']))
+                                            <div style="font-size: 12px; color: #888;">
+                                                {{ number_format($part['current_stock'], 2) }} {{ $part['unit'] }}(s) in
+                                                stock
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
                             <td>
                                 {{ $part['quantity'] }}
                                 <span class="qty-text">{{ $part['unit'] }}</span>
                             </td>
-                            @if ($part['status'] != null)
+                            <td>
+                                @php
+                                    $statusStyle = match ($part['status'] ?? 'requested') {
+                                        'requested' => 'background-color: #17a2b8; color: #fff;',
+                                        'confirmed' => 'background-color: #28a745; color: #fff;',
+                                        'rejected' => 'background-color: #dc3545; color: #fff;',
+                                        default => 'background-color: #6c757d; color: #fff;',
+                                    };
+                                    $statusText = match ($part['status'] ?? 'requested') {
+                                        'requested' => 'Requested',
+                                        'confirmed' => 'Confirmed',
+                                        'rejected' => 'Rejected',
+                                        default => ucfirst($part['status'] ?? 'Unknown'),
+                                    };
+                                @endphp
+                                <span
+                                class="cursor-pointer edit-part-status"
+                                                    data-href="{{ route('repair.parts.edit', [
+                                                        'part_key' => $part['part_key'],
+                                                        'job_sheet_id' => $job_sheet->id,
+                                                    ]) }}"
+                                    style="{{ $statusStyle }} display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                    {{ $statusText }}
+                                </span>
+                                @if (($part['status'] ?? '') === 'rejected' && !empty($part['note']))
+                                    <div style="margin-top: 5px; font-size: 12px; color: #dc3545;">
+                                        <i class="fa fa-info-circle"></i>
+                                        <strong>Note:</strong> {{ $part['note'] }}
+                                    </div>
+                                @endif
+                            </td>
+                            {{-- @if (($part['status'] != null && auth()->user()->can('repair.confirm')) || !auth()->user()->can('repair.reject_and_note'))
                                 <td>
                                     <div class="status-select-wrapper" data-part-id="part-1" style="width: 100%">
                                         <select class="status-select" name="parts[{{ $part['variation_id'] }}][status]">
@@ -186,24 +235,87 @@
 
                                             <option value="request" @selected($part['status'] == 'request')>Request</option>
 
-                                            <option value="reject" @cannot('repair.reject_and_note') disabled @endcannot
+                                            <option value="reject"
+                                                @cannot('repair.reject_and_note') disabled
+                                                @endcannot
                                                 @selected($part['status'] == 'reject')>Reject</option>
 
                                         </select>
                                     </div>
-                                    
+
                                     @if (auth()->user()->can('repair.reject_and_note') || $part['status'] === 'reject')
-                                    <div class="note-wrapper">
+                                        <div class="note-wrapper">
                                             <span>Note:</span>
-                                            <input type="text" class="form-control" @cannot('repair.reject_and_note') disabled @endcannot
+                                            <input type="text" class="form-control"
+                                                @cannot('repair.reject_and_note') disabled
+                                                @endcannot
                                                 name="parts[{{ $part['variation_id'] }}][note]"
                                                 value="{{ $part['note'] }}">
                                         </div>
                                     @endif
 
                                 </td>
-                            @endif
+                            @endif --}}
+                            @php
+                                $canConfirm = auth()->user()->can('repair.confirm');
+                                $canReject = auth()->user()->can('repair.reject_and_note');
+                                $canDelete = auth()->user()->can('repair.delete_part');
+                                $isAdmin = auth()->user()->hasRole('Superadmin') || auth()->user()->can('superadmin');
+                                $status = $part['status'] ?? 'requested';
+                                $canEdit = auth()->user()->can('repair.edit_part');
+                                $showAction =
+                                    $isAdmin ||
+                                    match ($status) {
+                                        'confirmed' => $canReject,
+                                        'rejected' => $canConfirm,
+                                        'requested' => $canConfirm || $canReject,
+                                        default => $canConfirm || $canReject,
+                                    };
+                            @endphp
 
+
+                            <td>
+                                <div class="btn-group">
+                                    <button
+                                        class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info tw-w-max dropdown-toggle"
+                                        type="button" data-toggle="dropdown" aria-expanded="false">
+                                        Action
+                                        <span class="caret"></span>
+                                        <span class="sr-only">Action</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-left" role="menu">
+
+                                        @if ($canEdit)
+                                            <li>
+                                                <a class="cursor-pointer"
+                                                    href="{{ url('repair/job-sheet/add-parts/' . $job_sheet->id) }}">
+                                                    <i class="fa fa-edit"></i> Edit
+                                                </a>
+                                            </li>
+                                        @endif
+                                        @if ($showAction)
+                                            <li>
+                                                <a class="cursor-pointer edit-part-status"
+                                                    data-href="{{ route('repair.parts.edit', [
+                                                        'part_key' => $part['part_key'],
+                                                        'job_sheet_id' => $job_sheet->id,
+                                                    ]) }}">
+                                                    <i class="fa fa-tasks"></i> Edit status
+                                                </a>
+                                            </li>
+                                        @endif
+                                        @if ($canDelete)
+                                            <li>
+                                                <a class="cursor-pointer delete-part"
+                                                    data-part-key="{{ $part['part_key'] }}"
+                                                    data-job-sheet-id="{{ $job_sheet->id }}">
+                                                    <i class="fa fa-trash"></i> Delete
+                                                </a>
+                                            </li>
+                                        @endif
+                                    </ul>
+                                </div>
+                            </td>
                         </tr>
                     @endforeach
 
@@ -215,38 +327,56 @@
 
         <div class="custom-modal-footer">
             <button type="button" class="btn-close" data-dismiss="modal">Close</button>
-            @canany(['repair.confirm', 'repair.reject_and_note'])
+            {{-- @canany(['repair.confirm', 'repair.reject_and_note'])
                 @if ($hasStatus)
                     <button type="submit" class="btn-save-changes" id="saveChangesBtn">Save Changes</button>
                 @endif
-            @endcanany
+            @endcanany --}}
         </div>
         {!! Form::close() !!}
 
     </div>
 </div>
+<div class="modal fade" id="edit_part_status_modal" tabindex="-1" role="dialog"
+    aria-labelledby="gridSystemModalLabel">
+</div>
+
 <script>
-document.querySelectorAll('.status-select').forEach(select => {
+    document.querySelectorAll('.status-select').forEach(select => {
 
-    function toggleNote() {
-        const wrapper = select.closest('td');
-        if (!wrapper) return;
+        function toggleNote() {
+            const wrapper = select.closest('td');
+            if (!wrapper) return;
 
-        const noteDiv = wrapper.querySelector('.note-wrapper');
-        if (!noteDiv) return; // ✅ prevent crash
+            const noteDiv = wrapper.querySelector('.note-wrapper');
+            if (!noteDiv) return; // ✅ prevent crash
 
-        if (select.value === 'reject') {
-            noteDiv.style.display = 'block';
-        } else {
-            noteDiv.style.display = 'none';
+            if (select.value === 'reject') {
+                noteDiv.style.display = 'block';
+            } else {
+                noteDiv.style.display = 'none';
 
-            const input = noteDiv.querySelector('input');
-            if (input) input.value = '';
+                const input = noteDiv.querySelector('input');
+                if (input) input.value = '';
+            }
         }
-    }
 
-    select.addEventListener('change', toggleNote);
-    toggleNote();
-});
+        select.addEventListener('change', toggleNote);
+        toggleNote();
+    });
 
+    $(document).ready(function() {
+        // $(document).on('click', '.edit-part-status', function() {
+
+        //     var url = $(this).data('href');
+        //     $.ajax({
+        //         method: 'GET',
+        //         url: url,
+        //         dataType: 'html',
+        //         success: function(result) {
+        //             $('#edit_part_status_modal').html(result).modal('show');
+        //         }
+        //     });
+        // });
+    });
 </script>

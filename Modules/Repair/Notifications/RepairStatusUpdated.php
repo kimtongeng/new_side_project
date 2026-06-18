@@ -30,7 +30,9 @@ class RepairStatusUpdated extends Notification
      */
     public function via($notifiable)
     {
-        return ['mail'];
+        return ['database',
+        // 'mail'
+        ];
     }
 
     /**
@@ -39,16 +41,23 @@ class RepairStatusUpdated extends Notification
      * @param  mixed  $notifiable
      * @return \Illuminate\Notifications\Messages\MailMessage
      */
-    public function toMail($notifiable)
+    // public function toMail($notifiable)
+    // {
+    //     return (new MailMessage)
+    //         ->subject($this->notification_data['subject'])
+    //         ->view(
+    //             'emails.plain_html',
+    //             ['content' => $this->notification_data['body']]
+    //         );
+    // }
+    public function toDatabase($notifiable)
     {
-        return (new MailMessage)
-                    ->subject($this->notification_data['subject'])
-                    ->view(
-                        'emails.plain_html',
-                        ['content' => $this->notification_data['body']]
-                    );
+        return [
+            'message' => $this->notification_data['subject'],
+            'body' => $this->notification_data['body'],
+            'repair_id' => $this->notification_data['repair_id'] ?? null,
+        ];
     }
-
     /**
      * Get the array representation of the notification.
      *

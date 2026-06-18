@@ -43,5 +43,11 @@ Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezon
 
 
     Route::get('job-sheet/{id}/view_parts', [Modules\Repair\Http\Controllers\JobSheetController::class, 'view_parts']);
+   
+    Route::get('job-sheet/{part_key}/{job_sheet_id}/update_status_part', [Modules\Repair\Http\Controllers\JobSheetController::class, 'editPartStatus'])->name('repair.parts.edit');
+
+    Route::put('job-sheet/{part_key}/{job_sheet_id}/update_status_part', [Modules\Repair\Http\Controllers\JobSheetController::class, 'updatePartStatus'])->name('repair.parts.update');
+
+    Route::delete('job-sheet/{job_sheet_id}/parts/{part_key}', [Modules\Repair\Http\Controllers\JobSheetController::class, 'deletePart'])->name('repair.parts.delete');
     Route::post('job-sheet-update/{id}/status_parts', [Modules\Repair\Http\Controllers\JobSheetController::class, 'updatePartsStatus']);
 });

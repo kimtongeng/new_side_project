@@ -35,6 +35,7 @@
             'method' => 'post',
             'id' => 'add_part_form',
         ]) !!}
+        {!! Form::hidden('job_sheet_location_id', $job_sheet->location_id, ['id' => 'job_sheet_location_id']) !!}
         @component('components.widget', ['class' => 'box-solid', 'title' => __('repair::lang.add_parts')])
             <div class="row">
                 <div class="col-sm-8 col-sm-offset-2">
@@ -48,13 +49,14 @@
                                 'class' => 'form-control',
                                 'id' => 'search_job_sheet_parts',
                                 'placeholder' => __('repair::lang.search_parts'),
+                                'disabled' => !auth()->user()->can('repair.request_and_save'),
                             ]) !!}
 
-                            @can('repair.show_only_available_part')
+                            {{-- @can('repair.show_only_available_part')
                                 <span class="input-group-addon">
                                     <input type="checkbox" id="available_part" name="only_available">
                                 </span>
-                            @endcan
+                            @endcan --}}
 
                         </div>
 
@@ -78,18 +80,25 @@
                             </thead>
                             <tbody>
                                 @if (!empty($parts))
-                                    @foreach ($parts as $part)
+                                    @foreach ($parts as $key => $part)
                                         @include('repair::job_sheet.partials.job_sheet_part_row', [
                                             'variation_name' => $part['variation_name'],
                                             'unit' => $part['unit'],
                                             'quantity' => $part['quantity'],
                                             'variation_id' => $part['variation_id'],
+                                            'part_key' => $key,
                                             'status' => $part['status'],
+                                            'user_id' => $part['user_id'] ?? null,
+                                            'product_image' => $part['product_image'] ?? null,
+                                            'current_stock' => $part['current_stock'] ?? null,
+                                            'allow_overselling' => $allow_overselling ?? false,
+                                            'can_not_edit' => !auth()->user()->can('repair.edit_part'),
                                         ])
                                     @endforeach
                                 @endif
                             </tbody>
                         </table>
+                        <input type="hidden" id="product_row_index" value="{{ count($parts ?? []) }}">
                     </div>
                 </div>
             </div>
@@ -103,15 +112,24 @@
         @endif
         <div class="row">
             <div class="col-sm-12">
-                @can('repair.request_and_save')
-                    <button type="button" id="request_btn"
-                        class="tw-dw-btn tw-dw-btn-success tw-text-white pull-right">Request</button>
-                @endcan
-
-                @cannot('repair.request_and_save')
+                @if (auth()->user()->can('superadmin'))
+                    {{-- Admin: always save as confirmed --}}
                     <button type="button" id="submit_add_part_form"
-                        class="tw-dw-btn tw-dw-btn-primary tw-text-white pull-right">@lang('messages.save')</button>
-                @endcannot
+                        class="tw-dw-btn tw-dw-btn-primary tw-text-white pull-right">
+                        @lang('messages.save')
+                    </button>
+                @elsecan('repair.request_and_save')
+                    {{-- Has request permission: show Request button with confirmation --}}
+                    <button type="button" id="request_btn" class="tw-dw-btn tw-dw-btn-success tw-text-white pull-right">
+                        Request
+                    </button>
+                @else
+                    {{-- Has no request permission but can still save --}}
+                    <button type="button" id="submit_add_part_form"
+                        class="tw-dw-btn tw-dw-btn-primary tw-text-white pull-right">
+                        @lang('messages.save')
+                    </button>
+                @endif
             </div>
         </div>
         {!! Form::close() !!}
@@ -119,6 +137,7 @@
 @stop
 @section('javascript')
     <script type="text/javascript">
+        var allow_overselling = {{ json_encode($allow_overselling ?? false) }};
         $(document).ready(function() {
             $(document).on("click", "#request_btn", function(e) {
                 swal({
@@ -142,6 +161,8 @@
                     })
                     .then((willRequest) => {
                         if (willRequest) {
+                            if (!allow_overselling && !validatePartsQty()) return;
+
                             $('form#add_part_form').submit();
                         }
                     });
@@ -175,14 +196,36 @@
                     },
                 })
                 .autocomplete('instance')._renderItem = function(ul, item) {
+                    var isOutOfStock = false;
+                    if (item.enable_stock == 1) {
+                        isOutOfStock = parseFloat(item.qty_available) <= 0 || item.qty_available == null;
+                    }
+
                     var string = '<div>' + item.name;
                     if (item.type == 'variable') {
                         string += '-' + item.variation;
                     }
-                    string += ' (' + item.sub_sku + ') </div>';
-                    return $('<li>')
-                        .append(string)
-                        .appendTo(ul);
+                    string += ' (' + item.sub_sku + ')';
+
+                    if (isOutOfStock && !allow_overselling) {
+                        string +=
+                            ' <span style="color: #999; font-style: italic; font-size: 0.85em;">(Out of Stock)</span>';
+                    }
+
+                    string += '</div>';
+
+                    var $li = $('<li>').append(string).appendTo(ul);
+
+                    if (isOutOfStock && !allow_overselling) {
+                        $li.addClass('ui-state-disabled')
+                            .css({
+                                'pointer-events': 'none',
+                                'opacity': '0.5',
+                                'cursor': 'default'
+                            });
+                    }
+
+                    return $li;
                 };
 
             //initialize editor
@@ -235,24 +278,68 @@
         });
 
         function job_sheet_parts_row(variation_id) {
-            var row_index = parseInt($('#product_row_index').val());
-            var location_id = $('select#location_id').val();
+            var row_index = parseInt($('#product_row_index').val()) || 0;
+            var new_key = 'row_' + variation_id + '_' + row_index;
+            var location_id = $('#job_sheet_location_id').val();
+
+            // Calculate total qty already added for this variation across all rows
+            var already_used_qty = 0;
+            $('tr[data-variation-id]').filter(function() {
+                var vid = $(this).attr('data-variation-id');
+                return vid == variation_id || vid.startsWith('row_' + variation_id + '_');
+            }).each(function() {
+                var qty = parseFloat($(this).find('input[name*="[quantity]"]').val()) || 0;
+                already_used_qty += qty;
+            });
+
             $.ajax({
                 method: 'POST',
                 url: "{{ action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'jobsheetPartRow']) }}",
                 data: {
-                    variation_id: variation_id
+                    variation_id: variation_id,
+                    part_key: new_key,
+                    location_id: location_id,
+                    already_used_qty: already_used_qty, // ← send to controller
                 },
-                dataType: 'html',
-                success: function(result) {
-                    $('table#job_sheet_parts_table tbody').append(result);
+                dataType: 'json',
+                success: function(response) {
+                    if (!response.success) {
+                        toastr.error(response.msg);
+                        $('input#search_job_sheet_parts').val('').focus().select();
+                        return;
+                    }
 
-                    $('input#search_job_sheet_parts').val('')
-                    $('input#search_job_sheet_parts')
-                        .focus()
-                        .select();
+                    var new_row_el = $(response.html);
+                    var new_status = new_row_el.find('input[name*="[status]"]').val();
 
+                    // Find all existing rows for this variation_id
+                    var all_rows = $('tr[data-variation-id]').filter(function() {
+                        var vid = $(this).attr('data-variation-id');
+                        return vid == variation_id || vid.startsWith('row_' + variation_id + '_');
+                    });
+
+                    // Find a row with the SAME status
+                    var matching_row = all_rows.filter(function() {
+                        return $(this).find('input[name*="[status]"]').val() === new_status;
+                    }).first();
+
+                    if (matching_row.length > 0) {
+                        // Same status exists — increment qty only
+                        var qty_input = matching_row.find('input[name*="[quantity]"]');
+                        var currentQty = parseFloat(qty_input.val()) || 0;
+                        qty_input.val((currentQty + 1).toFixed(2));
+                    } else {
+                        // No matching status — add new row
+                        new_row_el.attr('data-variation-id', new_key);
+                        $('table#job_sheet_parts_table tbody').append(new_row_el);
+                        $('#product_row_index').val(row_index + 1);
+                    }
+
+                    $('input#search_job_sheet_parts').val('').focus().select();
                 },
+                error: function() {
+                    toastr.error('Something went wrong.');
+                }
             });
         }
 
@@ -260,8 +347,89 @@
             $(this).closest('tr').remove();
         })
 
+        function getVariationTotalQty($input) {
+            var variationId = $input.closest('tr').find('input[name*="[variation_id]"]').val();
+            if (!variationId) {
+                return __read_number($input);
+            }
+
+            var totalQty = 0;
+            $('input[name*="[variation_id]"]').filter(function() {
+                return $(this).val() === variationId;
+            }).each(function() {
+                var $row = $(this).closest('tr');
+                var status = $row.find('input[name*="[status]"]').val();
+
+                if (status === 'rejected') {
+                    return;
+                }
+
+                var $rowQtyInput = $row.find('input.input_quantity');
+                if ($rowQtyInput.length) {
+                    totalQty += __read_number($rowQtyInput);
+                }
+            });
+
+            return totalQty;
+        }
+
+        $(document).on('change', 'input.input_quantity', function() {
+            var $input = $(this);
+            var max = parseFloat($input.data('rule-max-value'));
+            var available = $input.data('qty_available');
+            var unit = $input.data('unit') || '';
+            var $message = $input.closest('td').find('.qty-available-feedback');
+            var totalQty = getVariationTotalQty($input);
+
+            if (!isNaN(max) && totalQty > max) {
+                $message.text('Quantity ' + __number_f(available, false, false, __quantity_precision) + ' ' + unit +
+                    ' available').show();
+            } else {
+                $message.hide();
+            }
+        });
         $(document).on('click', '#submit_add_part_form', function(e) {
+
+            if (!allow_overselling && !validatePartsQty()) return;
             $('form#add_part_form').submit();
         })
+
+        function validatePartsQty() {
+            var valid = true;
+            var checkedVariations = [];
+
+            $('table#job_sheet_parts_table tbody tr[data-variation-id]').each(function() {
+                var $row = $(this);
+                var status = $row.find('input[name*="[status]"]').val();
+
+                if (status === 'rejected') return;
+
+                var $qtyInput = $row.find('input.input_quantity');
+                var max = parseFloat($qtyInput.data('rule-max-value'));
+
+                if (isNaN(max)) return; // no max set = overselling allowed for this item
+
+                var variationId = $row.find('input[name*="[variation_id]"]').val();
+
+                if (checkedVariations.indexOf(variationId) !== -1) return; // already checked this variation
+                checkedVariations.push(variationId);
+
+                // Use the existing function to get total qty across all rows for this variation
+                var totalQty = getVariationTotalQty($qtyInput);
+                var available = $qtyInput.data('qty_available');
+                var unit = $qtyInput.data('unit') || '';
+                var variationName = $row.find('td:first').text().trim();
+
+                if (totalQty > max) {
+                    toastr.error(
+                        '"' + variationName + '" exceeds available stock. ' +
+                        'Available: ' + __number_f(available, false, false, __quantity_precision) + ' ' + unit
+                    );
+                    valid = false;
+                }
+            });
+
+            return valid;
+        }
     </script>
 @endsection

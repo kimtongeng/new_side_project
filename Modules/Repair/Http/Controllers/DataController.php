@@ -151,18 +151,25 @@ class DataController extends Controller
                 'default' => false,
             ],
             [
-                'value' => 'repair.show_only_available_part',
-                'label' => "Show only available part",
+                'value' => 'repair.view_own_part',
+                'label' => "View own part",
                 'default' => false,
             ],
             [
-                'value' => 'repair.view_part',
-                'label' => "View part",
+                'value' => 'repair.view_all_part',
+                'label' => "View all part",
                 'default' => false,
             ],
-            
-
-
+            [
+                'value' => 'repair.edit_part',
+                'label' => "Edit part",
+                'default' => false,
+            ],
+            [
+                'value' => 'repair.delete_part',
+                'label' => "Delete part",
+                'default' => false,
+            ],
         ];
     }
 

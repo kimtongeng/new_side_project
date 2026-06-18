@@ -460,33 +460,61 @@ class PurchaseController extends Controller
                     'purchase_lines.variations',
                     'location',
                     'payment_lines',
+
                 ]);
 
                 $payment_types = $this->productUtil->payment_types($transaction->location_id, true);
                 $location_id   = $transaction->location->location_id ?? 'PT1001';
 
                 // Build accounts list
-                $all_account = Account::where('business_id', $business_id)
+                // $all_account = Account::where('business_id', $business_id)
+                //     ->select(
+                //         'accounts.name',
+                //         'accounts.id',
+                //         \DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+                //       FROM account_transactions
+                //       WHERE account_transactions.account_id = accounts.id
+                //       AND deleted_at IS NULL) as balance")
+                //     )
+                //     ->get()
+                //     ->map(fn($item) => [
+                //         'name'    => $item->name,
+                //         'id'      => $item->id,
+                //         'balance' => $this->transactionUtil->num_f($item->balance, true),
+                //     ])
+                //     ->toArray();
+
+                $account = AccountTransaction::join('accounts', 'account_transactions.account_id', '=', 'accounts.id')
+                    ->where('transaction_id', $transaction->id)
                     ->select(
                         'accounts.name',
                         'accounts.id',
-                        \DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
-                      FROM account_transactions
-                      WHERE account_transactions.account_id = accounts.id
-                      AND deleted_at IS NULL) as balance")
+                        DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+            FROM account_transactions
+            WHERE account_transactions.account_id = accounts.id
+            AND deleted_at IS NULL) AS balance"),
+                        'account_transactions.amount'
                     )
-                    ->get()
-                    ->map(fn($item) => [
-                        'name'    => $item->name,
-                        'id'      => $item->id,
-                        'balance' => $this->transactionUtil->num_f($item->balance, true),
-                    ])
-                    ->toArray();
+                    ->get();
+                $none_payment_account = $this->getNonePaymentAccount($transaction, $account);
+                $payment_account = [];
+                if ($account->isNotEmpty()) {
+                    $payment_account = $account->map(function ($item) {
+                        return [
+                            'name'    => $item->name,
+                            'id'      => $item->id,
+                            'balance' => $this->transactionUtil->num_f($item->balance, true),
+                            'amount'  => $this->transactionUtil->num_f($item->amount, true),
+                        ];
+                    })->toArray();
+                }
 
                 \App\Notifications\TelegramNotification::addPurchaseMessage(
                     $transaction,
                     $payment_types,
-                    $all_account,   // ← pass it here
+                    // $all_account,   // ← pass it here
+                    $none_payment_account,
+                    $payment_account,
                     'purchase',
                     $location_id
                 );
@@ -728,7 +756,32 @@ class PurchaseController extends Controller
 
         try {
             $transaction = Transaction::findOrFail($id);
+            $account = AccountTransaction::join('accounts', 'account_transactions.account_id', '=', 'accounts.id')
+                ->where('transaction_id', $transaction->id)
+                ->select(
+                    'accounts.name',
+                    'accounts.id',
+                    DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+            FROM account_transactions
+            WHERE account_transactions.account_id = accounts.id
+            AND deleted_at IS NULL) AS balance"),
+                    'account_transactions.amount'
+                )
+                ->get();
+            $old_none_payment_account = $this->getNonePaymentAccount($transaction, $account);
 
+
+            $old_payment_account = [];
+            if ($account->isNotEmpty()) {
+                $old_payment_account = $account->map(function ($item) {
+                    return [
+                        'name'    => $item->name,
+                        'id'      => $item->id,
+                        'balance' => $this->transactionUtil->num_f($item->balance, true),
+                        'amount'  => $this->transactionUtil->num_f($item->amount, true),
+                    ];
+                })->toArray();
+            }
             //Validate document size
             $request->validate([
                 'document' => 'file|max:' . (config('constants.document_size_limit') / 1000),
@@ -883,11 +936,44 @@ class PurchaseController extends Controller
                         'balance' => $this->transactionUtil->num_f($item->balance, true),
                     ])
                     ->toArray();
+
+
+
+
+                $account = AccountTransaction::join('accounts', 'account_transactions.account_id', '=', 'accounts.id')
+                    ->where('transaction_id', $transaction->id)
+                    ->select(
+                        'accounts.name',
+                        'accounts.id',
+                        DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+            FROM account_transactions
+            WHERE account_transactions.account_id = accounts.id
+            AND deleted_at IS NULL) AS balance"),
+                        'account_transactions.amount'
+                    )
+                    ->get();
+
+                $none_payment_account = $this->getNonePaymentAccount($transaction, $account);
+                $payment_account = [];
+                if ($account->isNotEmpty()) {
+                    $payment_account = $account->map(function ($item) {
+                        return [
+                            'name'    => $item->name,
+                            'id'      => $item->id,
+                            'balance' => $this->transactionUtil->num_f($item->balance, true),
+                            'amount'  => $this->transactionUtil->num_f($item->amount, true),
+                        ];
+                    })->toArray();
+                }
                 \App\Notifications\TelegramNotification::updatePurchaseMessage(
                     $transaction,
                     $transaction_before,
                     $payment_types,
                     $all_account,
+                    $none_payment_account,
+                    $old_none_payment_account,
+                    $payment_account,
+                    $old_payment_account,
                     'purchase',
                     $location_id
                 );
@@ -1682,5 +1768,15 @@ class PurchaseController extends Controller
         }
 
         return $output;
+    }
+    public function getNonePaymentAccount($transaction, $account)
+    {
+
+        $total_amount = $account->sum('amount');
+        $none_payment_account = null;
+        if ($total_amount < $transaction->final_total) {
+            $none_payment_account = $this->transactionUtil->num_f($transaction->final_total - $total_amount, true);
+        }
+        return $none_payment_account;
     }
 }

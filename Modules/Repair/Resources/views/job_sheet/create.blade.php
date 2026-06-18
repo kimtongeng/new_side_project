@@ -315,9 +315,11 @@
         </div>
         <div class="col-sm-12 text-center">
             <input type="hidden" name="submit_type" id="submit_type">
-            <button type="submit" class="tw-dw-btn tw-dw-btn-success tw-text-white tw-dw-btn-lg submit_button" value="save_and_add_parts" id="save_and_add_parts">
-                @lang('repair::lang.save_and_add_parts')
-            </button>
+            @can('repair.request_and_save')
+                <button type="submit" class="tw-dw-btn tw-dw-btn-success tw-text-white tw-dw-btn-lg submit_button" value="save_and_add_parts" id="save_and_add_parts">
+                    @lang('repair::lang.save_and_add_parts')
+                </button>    
+            @endcan
             <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white tw-dw-btn-lg submit_button" value="submit" id="save">
                 @lang('messages.save')
             </button>

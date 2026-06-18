@@ -59,7 +59,61 @@ class TelegramNotification
         ],
 
     ];
-    private const PRODUCTION_BOT = '8152281759:AAFEN2PObxW-S8Jck251--mxQEEuNJYCanQ';
+    // private const PRODUCTION_BOT = '8152281759:AAFEN2PObxW-S8Jck251--mxQEEuNJYCanQ';
+    private const PRODUCTION_BOT = '8841464720:AAGLHIGlPDTUhUP52LnAh_0XKfO6qDk8rKo';
+    private const PRODUCTION_GROUP = [
+        'PT1001' => [
+            "name" => "PT1001",
+            "chat_id" => "-1003663677436",
+            "topic" => [
+                "sell" => 2,
+                "payment_account" => 23,
+                "expense" => 5,
+                "stock_adjustment" => 7,
+                "transfer" => 9,
+                "quotation" => 11,
+                "draft" => 13,
+                "home" => 15,
+                "purchase" => 17,
+                "repair" => 19,
+                "product" => 21,
+            ]
+        ],
+        'PT1002' => [
+            "name" => "PT1002",
+            "chat_id" => "-1003984033095",
+            "topic" => [
+                "stock_adjustment" => 6,
+                "home" => 16,
+                "purchase" => 18,
+                "repair" => 20,
+                "payment_account" => 24,
+                "expense" => 4,
+                "transfer" => 8,
+                "product" => 22,
+                "sell" => 2,
+                "quotation" => 10,
+                "draft" => 14,
+            ],
+        ],
+        'PT1003' => [
+            "name" => "PT1003",
+            "chat_id" => "-1003979832282",
+            "topic" => [
+                "stock_adjustment" => 6,
+                "home" => 14,
+                "purchase" => 16,
+                "repair" => 18,
+                "payment_account" => 22,
+                "expense" => 4,
+                "transfer" => 8,
+                "product" => 20,
+                "sell" => 2,
+                "quotation" => 10,
+                "draft" => 12,
+            ]
+        ],
+    ];
 
     // private const BOT = [
     //     'token' => '8152281759:AAFEN2PObxW-S8Jck251--mxQEEuNJYCanQ',
@@ -127,13 +181,15 @@ class TelegramNotification
 
     public static function sendMessage(string $message, string $to = '', $location_id = "PT1001"): void
     {
-        $botToken = self::PRODUCTION_BOT;
+        // $botToken = self::PRODUCTION_BOT;
+        // $groups = self::PRODUCTION_GROUP;
+        $botToken = self::LOCAL_BOT;
         $groups = self::LOCAL_GROUP;
 
-        if (app()->environment("local")) {
-            $botToken = self::LOCAL_BOT;
-            $groups = self::LOCAL_GROUP;
-        }
+        // if (app()->environment("local")) {
+        //     $botToken = self::LOCAL_BOT;
+        //     $groups = self::LOCAL_GROUP;
+        // }
         $group = $groups[$location_id];
 
         $topic = $group["topic"];
@@ -143,7 +199,8 @@ class TelegramNotification
 
         $topic_id = $topic[$to];
 
-
+        // info($group);
+        // info("Sending Telegram message to {$group['name']} - Topic: {$to} (ID: {$topic_id}) - location: {$location_id}");
         if (empty($topic_id)) {
             throw new \Exception("Topic ID not found for key: {$to}");
         }
@@ -162,18 +219,44 @@ class TelegramNotification
 
         $data = $response->json();
     }
-    private static function fetchAccounts(): array
+    private static function getLocationAccountIds($location_id): array
     {
         $business_id = auth()->user()->business_id;
-        return Account::where('business_id', $business_id)
-            ->select(
-                'accounts.name',
-                'accounts.id',
-                \DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
+        $location = \App\BusinessLocation::where('business_id', $business_id)
+            ->where('location_id', $location_id)
+            ->first();
+
+        $location_account_ids = [];
+        if ($location && !empty($location->default_payment_accounts)) {
+            $default_payment_accounts = json_decode($location->default_payment_accounts, true);
+            if (is_array($default_payment_accounts)) {
+                foreach ($default_payment_accounts as $pa) {
+                    if (!empty($pa['is_enabled']) && !empty($pa['account'])) {
+                        $location_account_ids[] = (int) $pa['account'];
+                    }
+                }
+            }
+        }
+        return array_unique($location_account_ids);
+    }
+    private static function fetchAccounts($location_id = null): array
+    {
+        $business_id = auth()->user()->business_id;
+        $query = Account::where('business_id', $business_id);
+
+        if (!empty($location_id)) {
+            $location_account_ids = self::getLocationAccountIds($location_id);
+            $query->whereIn('accounts.id', $location_account_ids);
+        }
+
+        return $query->select(
+            'accounts.name',
+            'accounts.id',
+            \DB::raw("(SELECT SUM(IF(account_transactions.type='credit', amount, -1*amount))
                       FROM account_transactions
                       WHERE account_transactions.account_id = accounts.id
                       AND deleted_at IS NULL) as balance")
-            )
+        )
             ->get()
             ->map(fn($item) => [
                 'name'    => $item->name,
@@ -1417,6 +1500,357 @@ class TelegramNotification
 
         self::sendMessage($msg, $to, $location_id);
     }
+    public static function stockTransferUpdatedMessage(
+        $sell_transfer,
+        $sell_transfer_before,
+        $location_details,
+        $activities = [],
+        string $to = 'transfer',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($sell_transfer) || empty($sell_transfer_before)) return;
+
+        $fromLocation = $location_details['sell'];
+        $toLocation   = $location_details['purchase'];
+
+        $fromName    = $fromLocation->name ?? 'N/A';
+        $fromAddress = implode(', ', array_filter([
+            $fromLocation->city ?? null,
+            $fromLocation->state ?? null,
+            $fromLocation->country ?? null,
+        ]));
+        $fromMobile = $fromLocation->mobile ?? null;
+
+        $toName    = $toLocation->name ?? 'N/A';
+        $toAddress = implode(', ', array_filter([
+            $toLocation->city ?? null,
+            $toLocation->state ?? null,
+            $toLocation->country ?? null,
+        ]));
+        $toMobile = $toLocation->mobile ?? null;
+
+        // ── NEW values ─────────────────────────────────────────
+        $status     = ucfirst($sell_transfer->status ?? 'N/A');
+        $refNo      = $sell_transfer->ref_no ?? 'N/A';
+        $date       = \Carbon\Carbon::parse($sell_transfer->transaction_date)->format('d/m/Y');
+        $finalTotal = number_format($sell_transfer->final_total, 4);
+        $shipping   = number_format($sell_transfer->shipping_charges, 4);
+        $netTotal   = number_format($sell_transfer->total_before_tax, 4);
+        $notes      = $sell_transfer->additional_notes ?? '--';
+
+        // ── OLD values ─────────────────────────────────────────
+        $old_status     = ucfirst($sell_transfer_before->status ?? 'N/A');
+        $old_refNo      = $sell_transfer_before->ref_no ?? 'N/A';
+        $old_date       = \Carbon\Carbon::parse($sell_transfer_before->transaction_date)->format('d/m/Y');
+        $old_finalTotal = number_format($sell_transfer_before->final_total, 4);
+        $old_shipping   = number_format($sell_transfer_before->shipping_charges, 4);
+        $old_netTotal   = number_format($sell_transfer_before->total_before_tax, 4);
+        $old_notes      = $sell_transfer_before->additional_notes ?? '--';
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "✏️ <b>STOCK TRANSFER UPDATED</b>\n\n";
+
+        // ── From Location ──────────────────────────────────────
+        $msg .= "📤 <b>Location (From):</b>\n";
+        $msg .= "<b>{$fromName}</b>\n";
+        if ($fromAddress) $msg .= "{$fromAddress}\n";
+        if ($fromMobile)  $msg .= "📱 {$fromMobile}\n";
+        $msg .= "\n";
+
+        // ── To Location ────────────────────────────────────────
+        $msg .= "📥 <b>Location (To):</b>\n";
+        $msg .= "<b>{$toName}</b>\n";
+        if ($toAddress) $msg .= "{$toAddress}\n";
+        if ($toMobile)  $msg .= "📱 {$toMobile}\n";
+        $msg .= "\n";
+
+        // ── Transfer Info ──────────────────────────────────────
+        $msg .= "🔖 <b>Reference No:</b> " . self::diff($old_refNo, $refNo) . "\n";
+        $msg .= "📅 <b>Date:</b> "         . self::diff($old_date, $date) . "\n";
+        $msg .= "📌 <b>Status:</b> "       . self::diff($old_status, $status) . "\n\n";
+
+        // ── Products ───────────────────────────────────────────
+        $msg .= "<b>🛒 Products:</b>\n";
+
+        $lineNo = 1;
+        foreach ($sell_transfer->sell_lines as $line) {
+            $productName = $line->product->name ?? 'N/A';
+            $subSku      = $line->variations->sub_sku ?? $line->product->sku ?? 'N/A';
+            $qty         = number_format($line->quantity, 2);
+            $unitName    = $line->product->unit->short_name ?? 'Pc(s)';
+            $unitPrice   = number_format($line->unit_price_before_discount, 4);
+            $subtotal    = number_format($line->quantity * $line->unit_price_before_discount, 4);
+
+            $msg .= "\n<b>{$lineNo}. {$productName} - {$subSku}</b>\n";
+            $msg .= "   Qty: {$qty} {$unitName}\n";
+            $msg .= "   Unit Price: \${$unitPrice}\n";
+            $msg .= "   Subtotal: \${$subtotal}\n";
+
+            $lineNo++;
+        }
+
+        // ── Totals ─────────────────────────────────────────────
+        $msg .= "\n";
+        $msg .= "💰 <b>Net Total Amount:</b> "            . self::diff('$' . $old_netTotal, '$' . $netTotal) . "\n";
+        $msg .= "🚚 <b>Additional Shipping Charges:</b> " . self::diff('$' . $old_shipping, '$' . $shipping) . "\n";
+        $msg .= "🧾 <b>Purchase Total:</b> "              . self::diff('$' . $old_finalTotal, '$' . $finalTotal) . "\n";
+
+        // ── Notes ──────────────────────────────────────────────
+        if ($notes !== '--' || $old_notes !== '--') {
+            $msg .= "\n📝 <b>Additional Notes:</b> " . self::diff($old_notes, $notes) . "\n";
+        }
+
+        // ── Activities ─────────────────────────────────────────
+        if (!empty($activities) && count($activities) > 0) {
+            $msg .= "\n<b>📋 Activities:</b>\n";
+            foreach ($activities as $activity) {
+                $actDate   = \Carbon\Carbon::parse($activity->created_at)->format('d/m/Y H:i');
+                $action    = ucfirst($activity->description ?? 'N/A');
+                $by        = trim(($activity->causer->surname ?? '') . ' ' . ($activity->causer->first_name ?? '') . ' ' . ($activity->causer->last_name ?? ''));
+                $statusVal = $activity->properties['attributes']['status'] ?? null;
+
+                $msg .= "\n🕒 <b>{$actDate}</b>\n";
+                $msg .= "   Action: {$action}\n";
+                $msg .= "   By: {$by}\n";
+                if ($statusVal) {
+                    $msg .= "   Status: " . ucfirst($statusVal) . "\n";
+                }
+            }
+        }
+
+        $msg .= "\n⏰ <b>Date Updated:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "✏️ <i>Updated via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function stockTransferStatusUpdatedMessage(
+        $sell_transfer,
+        $old_status,
+        $location_details,
+        $activities = [],
+        string $to = 'transfer',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($sell_transfer)) return;
+
+        $fromLocation = $location_details['sell'];
+        $toLocation   = $location_details['purchase'];
+
+        $fromName    = $fromLocation->name ?? 'N/A';
+        $fromAddress = implode(', ', array_filter([
+            $fromLocation->city ?? null,
+            $fromLocation->state ?? null,
+            $fromLocation->country ?? null,
+        ]));
+        $fromMobile = $fromLocation->mobile ?? null;
+
+        $toName    = $toLocation->name ?? 'N/A';
+        $toAddress = implode(', ', array_filter([
+            $toLocation->city ?? null,
+            $toLocation->state ?? null,
+            $toLocation->country ?? null,
+        ]));
+        $toMobile = $toLocation->mobile ?? null;
+
+
+        $newStatus  = ucfirst($sell_transfer->status ?? 'N/A');
+        $prevStatus = ucfirst($old_status ?? 'N/A');
+        $refNo      = $sell_transfer->ref_no ?? 'N/A';
+        $date       = \Carbon\Carbon::parse($sell_transfer->transaction_date)->format('d/m/Y');
+        $finalTotal = number_format($sell_transfer->final_total, 4);
+        $shipping   = number_format($sell_transfer->shipping_charges, 4);
+        $netTotal   = number_format($sell_transfer->total_before_tax, 4);
+        $notes      = $sell_transfer->additional_notes ?? '--';
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "🔁 <b>STOCK TRANSFER STATUS UPDATED</b>\n\n";
+
+        // ── From Location ──────────────────────────────────────
+        $msg .= "📤 <b>Location (From):</b>\n";
+        $msg .= "<b>{$fromName}</b>\n";
+        if ($fromAddress) $msg .= "{$fromAddress}\n";
+        if ($fromMobile)  $msg .= "📱 {$fromMobile}\n";
+        $msg .= "\n";
+
+        // ── To Location ────────────────────────────────────────
+        $msg .= "📥 <b>Location (To):</b>\n";
+        $msg .= "<b>{$toName}</b>\n";
+        if ($toAddress) $msg .= "{$toAddress}\n";
+        if ($toMobile)  $msg .= "📱 {$toMobile}\n";
+        $msg .= "\n";
+
+        $prevStatus = [
+            'Pending'   => "Pending",
+            'Completed' => "Completed",
+            "In_transit" => "In Transit",
+            'Final'     => "Completed",
+        ][$prevStatus] ?? $prevStatus;
+        $newStatus = [
+            'Pending'   => "Pending",
+            'Completed' => "Completed",
+            "In_transit" => "In Transit",
+            'Final'     => "Completed",
+        ][$newStatus] ?? $newStatus;
+        // ── Transfer Info ──────────────────────────────────────
+        $msg .= "🔖 <b>Reference No:</b> #{$refNo}\n";
+        $msg .= "📅 <b>Date:</b> {$date}\n";
+        $msg .= "📌 <b>Status:</b> " . self::diff($prevStatus, $newStatus) . "\n\n";
+
+        // ── Products ───────────────────────────────────────────
+        $msg .= "<b>🛒 Products:</b>\n";
+
+        $lineNo = 1;
+        foreach ($sell_transfer->sell_lines as $line) {
+            $productName = $line->product->name ?? 'N/A';
+            $subSku      = $line->variations->sub_sku ?? $line->product->sku ?? 'N/A';
+            $qty         = number_format($line->quantity, 2);
+            $unitName    = $line->product->unit->short_name ?? 'Pc(s)';
+            $unitPrice   = number_format($line->unit_price_before_discount, 4);
+            $subtotal    = number_format($line->quantity * $line->unit_price_before_discount, 4);
+
+            $msg .= "\n<b>{$lineNo}. {$productName} - {$subSku}</b>\n";
+            $msg .= "   Qty: {$qty} {$unitName}\n";
+            $msg .= "   Unit Price: \${$unitPrice}\n";
+            $msg .= "   Subtotal: \${$subtotal}\n";
+
+            $lineNo++;
+        }
+
+        // ── Totals ─────────────────────────────────────────────
+        $msg .= "\n";
+        $msg .= "💰 <b>Net Total Amount:</b> \${$netTotal}\n";
+        $msg .= "🚚 <b>Additional Shipping Charges:</b> (+) \${$shipping}\n";
+        $msg .= "🧾 <b>Purchase Total:</b> \${$finalTotal}\n";
+
+        // ── Notes ──────────────────────────────────────────────
+        if ($notes !== '--') {
+            $msg .= "\n📝 <b>Additional Notes:</b> {$notes}\n";
+        }
+
+        // ── Activities ─────────────────────────────────────────
+        if (!empty($activities) && count($activities) > 0) {
+            $msg .= "\n<b>📋 Activities:</b>\n";
+            foreach ($activities as $activity) {
+                $actDate   = \Carbon\Carbon::parse($activity->created_at)->format('d/m/Y H:i');
+                $action    = ucfirst($activity->description ?? 'N/A');
+                $by        = trim(($activity->causer->surname ?? '') . ' ' . ($activity->causer->first_name ?? '') . ' ' . ($activity->causer->last_name ?? ''));
+                $statusVal = $activity->properties['attributes']['status'] ?? null;
+
+                $msg .= "\n🕒 <b>{$actDate}</b>\n";
+                $msg .= "   Action: {$action}\n";
+                $msg .= "   By: {$by}\n";
+                if ($statusVal) {
+                    $msg .= "   Status: " . ucfirst($statusVal) . "\n";
+                }
+            }
+        }
+
+        $msg .= "\n⏰ <b>Date Updated:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "🔁 <i>Status updated via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function stockTransferDeletedMessage(
+        $sell_transfer,
+        $location_details,
+        string $to = 'transfer',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($sell_transfer)) return;
+
+        $fromLocation = $location_details['sell'];
+        $toLocation   = $location_details['purchase'];
+
+        $fromName    = $fromLocation->name ?? 'N/A';
+        $fromAddress = implode(', ', array_filter([
+            $fromLocation->city ?? null,
+            $fromLocation->state ?? null,
+            $fromLocation->country ?? null,
+        ]));
+        $fromMobile = $fromLocation->mobile ?? null;
+
+        $toName    = $toLocation->name ?? 'N/A';
+        $toAddress = implode(', ', array_filter([
+            $toLocation->city ?? null,
+            $toLocation->state ?? null,
+            $toLocation->country ?? null,
+        ]));
+        $toMobile = $toLocation->mobile ?? null;
+
+        $refNo      = $sell_transfer->ref_no ?? 'N/A';
+        $date       = \Carbon\Carbon::parse($sell_transfer->transaction_date)->format('d/m/Y');
+        $status     = ucfirst($sell_transfer->status ?? 'N/A');
+        $finalTotal = number_format($sell_transfer->final_total, 4);
+        $shipping   = number_format($sell_transfer->shipping_charges, 4);
+        $netTotal   = number_format($sell_transfer->total_before_tax, 4);
+        $notes      = $sell_transfer->additional_notes ?? '--';
+        $deletedBy  = trim(
+            (auth()->user()->surname ?? '') . ' ' .
+                (auth()->user()->first_name ?? '') . ' ' .
+                (auth()->user()->last_name ?? '')
+        );
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "🗑️ <b>STOCK TRANSFER DELETED</b>\n\n";
+
+        // ── Deleted By ─────────────────────────────────────────
+        $msg .= "👤 <b>Deleted By:</b> {$deletedBy}\n";
+        $msg .= "⏰ <b>Deleted At:</b> " . now()->format('d/m/Y H:i') . "\n\n";
+
+        // ── From Location ──────────────────────────────────────
+        $msg .= "📤 <b>Location (From):</b>\n";
+        $msg .= "<b>{$fromName}</b>\n";
+        if ($fromAddress) $msg .= "{$fromAddress}\n";
+        if ($fromMobile)  $msg .= "📱 {$fromMobile}\n";
+        $msg .= "\n";
+
+        // ── To Location ────────────────────────────────────────
+        $msg .= "📥 <b>Location (To):</b>\n";
+        $msg .= "<b>{$toName}</b>\n";
+        if ($toAddress) $msg .= "{$toAddress}\n";
+        if ($toMobile)  $msg .= "📱 {$toMobile}\n";
+        $msg .= "\n";
+
+        // ── Transfer Info ──────────────────────────────────────
+        $msg .= "🔖 <b>Reference No:</b> #{$refNo}\n";
+        $msg .= "📅 <b>Date:</b> {$date}\n";
+        $msg .= "📌 <b>Status:</b> {$status}\n\n";
+
+        // ── Products ───────────────────────────────────────────
+        $msg .= "<b>🛒 Products:</b>\n";
+
+        $lineNo = 1;
+        foreach ($sell_transfer->sell_lines as $line) {
+            $productName = $line->product->name ?? 'N/A';
+            $subSku      = $line->variations->sub_sku ?? $line->product->sku ?? 'N/A';
+            $qty         = number_format($line->quantity, 2);
+            $unitName    = $line->product->unit->short_name ?? 'Pc(s)';
+            $unitPrice   = number_format($line->unit_price_before_discount, 4);
+            $subtotal    = number_format($line->quantity * $line->unit_price_before_discount, 4);
+
+            $msg .= "\n<b>{$lineNo}. {$productName} - {$subSku}</b>\n";
+            $msg .= "   Qty: {$qty} {$unitName}\n";
+            $msg .= "   Unit Price: \${$unitPrice}\n";
+            $msg .= "   Subtotal: \${$subtotal}\n";
+
+            $lineNo++;
+        }
+
+        // ── Totals ─────────────────────────────────────────────
+        $msg .= "\n";
+        $msg .= "💰 <b>Net Total Amount:</b> \${$netTotal}\n";
+        $msg .= "🚚 <b>Additional Shipping Charges:</b> (+) \${$shipping}\n";
+        $msg .= "🧾 <b>Purchase Total:</b> \${$finalTotal}\n";
+
+        // ── Notes ──────────────────────────────────────────────
+        if ($notes !== '--') {
+            $msg .= "\n📝 <b>Additional Notes:</b> {$notes}\n";
+        }
+
+        $msg .= "\n🗑️ <i>Deleted via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
     // EXPENSE
     public static function addExpenseMessage(
         $transaction,
@@ -1434,7 +1868,7 @@ class TelegramNotification
         if (empty($transaction)) return;
 
         // ── Fetch accounts ─────────────────────────────────────
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
 
         // ── Resolve labels ─────────────────────────────────────
         $businessName = $business_locations[$transaction->location_id] ?? 'N/A';
@@ -1591,7 +2025,7 @@ class TelegramNotification
         if (empty($transaction) || empty($old_transaction)) return;
 
         // ── Fetch accounts ─────────────────────────────────────
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
 
         // ── Resolve NEW labels ─────────────────────────────────
         $businessName = $business_locations[$transaction->location_id] ?? 'N/A';
@@ -1778,7 +2212,7 @@ class TelegramNotification
         if (empty($transaction)) return;
 
         // ── Fetch accounts ─────────────────────────────────────
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
 
         // ── Resolve labels ─────────────────────────────────────
         $businessName = $business_locations[$transaction->location_id] ?? 'N/A';
@@ -1918,11 +2352,12 @@ class TelegramNotification
     public static function addAccountMessage(
         $account,
         $opening_balance = null,
-        $all_account = [],
+        // $all_account = [],
         string $to = 'payment_accoun',
         string $location_id = 'PT1001'
     ): void {
         if (empty($account)) return;
+        $all_account = self::fetchAccounts($location_id);
 
         $name          = $account->name ?? 'N/A';
         $accountNumber = $account->account_number ?? 'N/A';
@@ -1977,11 +2412,12 @@ class TelegramNotification
     public static function updateAccountMessage(
         $account,
         $old_account,
-        $all_account = [],
+        // $all_account = [],
         string $to = 'payment_accoun',
         string $location_id = 'PT1001'
     ): void {
         if (empty($account) || empty($old_account)) return;
+        $all_account = self::fetchAccounts($location_id);
 
         $name          = $account->name ?? 'N/A';
         $accountNumber = $account->account_number ?? 'N/A';
@@ -2053,11 +2489,12 @@ class TelegramNotification
 
     public static function closeAccountMessage(
         $account,
-        $all_account = [],
+        // $all_account = [],
         string $to = 'payment_accoun',
         string $location_id = 'PT1001'
     ): void {
         if (empty($account)) return;
+        $all_account = self::fetchAccounts($location_id);
 
         $name          = $account->name ?? 'N/A';
         $accountNumber = $account->account_number ?? 'N/A';
@@ -2117,11 +2554,12 @@ class TelegramNotification
         $from_account = null,
         $operation_date = null,
         $note = null,
-        $all_account = [],
+        // $all_account = [],
         string $to = 'payment_accoun',
         string $location_id = 'PT1001'
     ): void {
         if (empty($account)) return;
+        $all_account = self::fetchAccounts($location_id);
 
         $name          = $account->name ?? 'N/A';
         $accountNumber = $account->account_number ?? 'N/A';
@@ -2178,11 +2616,12 @@ class TelegramNotification
         $to_balance,
         $operation_date = null,
         $note = null,
-        $all_account = [],
+        // $all_account = [],
         string $to = 'payment_accoun',
         string $location_id = 'PT1001'
     ): void {
         if (empty($from_account) || empty($to_account)) return;
+        $all_account = self::fetchAccounts($location_id);
 
         $fromName      = $from_account->name ?? 'N/A';
         $fromNumber    = $from_account->account_number ?? 'N/A';
@@ -2239,11 +2678,15 @@ class TelegramNotification
     public static function addPurchaseMessage(
         $transaction,
         $payment_types,
-        $all_account = [],
+        // $all_account = [],
+        $none_payment_account = null,
+        $payment_account = [],
         string $to = 'purchase',
         string $location_id = 'PT1001'
     ): void {
         if (empty($transaction)) return;
+        $all_account = self::fetchAccounts($location_id);
+
 
         $supplier     = $transaction->contact;
         $location     = $transaction->location;
@@ -2262,7 +2705,9 @@ class TelegramNotification
 
         // ── Header ─────────────────────────────────────────────
         $msg  = "🛒 <b>NEW PURCHASE ADDED</b>\n\n";
-
+        if ($none_payment_account) {
+            $msg .= "⚠️ <b>{$none_payment_account}</b>\n";
+        }
         // ── Business Location ──────────────────────────────────
         $msg .= "<b>📍 Business Location:</b> {$locationName}\n\n";
 
@@ -2368,6 +2813,15 @@ class TelegramNotification
         if (!empty($notes)) {
             $msg .= "<b>📝 Additional Notes:</b> {$notes}\n\n";
         }
+        // if ($none_payment_account) {
+        //     $msg .= "None : <b>{$none_payment_account}</b> \n";
+        // }
+
+        // if (filled($payment_account)) {
+        //     foreach ($payment_account as $account) {
+        //         $msg .= "{$account['name']}: {$account['balance']}\n";
+        //     }
+        // }
         // ── Accounts ───────────────────────────────────────────
         if (!empty($all_account)) {
             $msg .= "<b>🏦 LIST ACCOUNT:</b>\n";
@@ -2387,6 +2841,10 @@ class TelegramNotification
         $old_transaction,
         $payment_types,
         $all_account = [],
+        $none_payment_account = null,
+        $old_none_payment_account = null,
+        $payment_account = [],
+        $old_payment_account = [],
         string $to = 'purchase',
         string $location_id = 'PT1001'
     ): void {
@@ -2422,6 +2880,10 @@ class TelegramNotification
 
         // ── Header ─────────────────────────────────────────────
         $msg  = "✏️ <b>PURCHASE UPDATED</b>\n\n";
+
+        if ($none_payment_account || $old_none_payment_account) {
+            $msg = "⚠️ <s><b>{$old_none_payment_account}</b></s> →  <b>{$none_payment_account}</b>\n";
+        }
 
         // ── Business Location ──────────────────────────────────
         $msg .= "<b>📍 Business Location:</b> {$locationName}\n\n";
@@ -2573,6 +3035,19 @@ class TelegramNotification
         // ── Notes ──────────────────────────────────────────────
         if (!empty($notes) || !empty($old_notes)) {
             $msg .= "<b>📝 Additional Notes:</b> " . self::diff($old_notes ?? '--', $notes ?? '--') . "\n\n";
+        }
+
+        $msg .= "🧾<b>PAYMENT ACCOUNT:</b>\n";
+
+        if ($old_none_payment_account || $none_payment_account) {
+            $msg .= "None : <s>{$old_none_payment_account}</s> → <b>{$none_payment_account}</b>";
+        }
+
+
+        if (filled($payment_account) || filled($old_payment_account)) {
+            foreach ($old_payment_account as $index => $account) {
+                $msg .= "{$account['name']}: <s>{$account['balance']}</s> → {$payment_account[$index]["balance"]}\n";
+            }
         }
         // ── Accounts ───────────────────────────────────────────
         if (!empty($all_account)) {
@@ -2731,6 +3206,7 @@ class TelegramNotification
     public static function updatePurchaseStatusMessage(
         $transaction,
         string $old_status,
+        array  $all_account = [],
         string $to = 'purchase',
         string $location_id = 'PT1001'
     ): void {
@@ -2995,7 +3471,7 @@ class TelegramNotification
         $transaction_id
 
     ): void {
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
         $today       = now()->toDateString();
         $business_id = auth()->user()->business_id;
 
@@ -3108,7 +3584,7 @@ class TelegramNotification
         string $location_id = 'PT1001',
         $transaction_id
     ): void {
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
         $today       = now()->toDateString();
         $business_id = auth()->user()->business_id;
 
@@ -3221,7 +3697,7 @@ class TelegramNotification
     ): void {
         if (empty($transaction)) return;
 
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
 
         $customerName  = filled($transaction->name)
             ? $transaction->name
@@ -3358,7 +3834,7 @@ class TelegramNotification
         string $location_id = 'PT1001',
         $transaction_id = null
     ): void {
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
         $business_id = auth()->user()->business_id;
 
         $sells = Transaction::leftJoin('contacts', 'transactions.contact_id', '=', 'contacts.id')
@@ -3535,7 +4011,7 @@ class TelegramNotification
     ): void {
         if (empty($job_sheet)) return;
 
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
 
         // ── Resolve fields safely ──────────────────────────────
         $customerName    = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
@@ -3643,6 +4119,8 @@ class TelegramNotification
         // ── Parts Used ─────────────────────────────────────────
         try {
             $parts = $job_sheet->getPartsUsed();
+
+
             if (!empty($parts)) {
                 $msg .= "<b>🔩 Parts Used:</b>\n";
                 foreach ($parts as $part) {
@@ -3701,7 +4179,7 @@ class TelegramNotification
     ): void {
         if (empty($job_sheet)) return;
 
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
 
         // ── Resolve fields safely ──────────────────────────────
         $customerName    = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
@@ -3868,12 +4346,13 @@ class TelegramNotification
     public static function addPartsJobSheetMessage(
         $job_sheet,
         array $parts,
+        array $old_parts = [],
         string $to = 'repair',
         string $location_id = 'PT1001'
     ): void {
         if (empty($job_sheet)) return;
 
-        $all_account = self::fetchAccounts();
+        $all_account = self::fetchAccounts($location_id);
 
         // ── Resolve only what's needed ─────────────────────────
         $contact  = \App\Contact::find($job_sheet->contact_id);
@@ -3885,6 +4364,43 @@ class TelegramNotification
         $jobSheetNo     = $job_sheet->job_sheet_no ?? 'N/A';
         $date           = \Carbon\Carbon::parse($job_sheet->created_at)->format('d/m/Y H:i');
 
+        // ── Build old/new parts map keyed by variation_name + status ────
+        $oldPartsMap = [];
+        foreach ($old_parts as $index => $part) {
+            $name   = $part['variation_name'] ?? null;
+            $status = $part['status']         ?? 'no_status';
+            $key    = $name . '||' . $status;
+            if ($name) $oldPartsMap[$key] = $part;
+        }
+        $newPartsMap = [];
+        foreach ($parts as $index => $part) {
+            $name   = $part['variation_name'] ?? null;
+            $status = $part['status']         ?? 'no_status';
+            $key    = $name . '||' . $status;
+            if ($name) $newPartsMap[$key] = $part;
+        }
+
+        // ── Detect removed parts ───────────────────────────────
+        $removedParts = array_diff_key($oldPartsMap, $newPartsMap);
+
+        // ── Detect added parts ─────────────────────────────────
+        $addedParts = array_diff_key($newPartsMap, $oldPartsMap);
+
+        $changedParts = [];
+        foreach ($newPartsMap as $key => $newPart) {
+            if (!isset($oldPartsMap[$key])) continue;
+
+            $oldPart = $oldPartsMap[$key];
+            $oldQty  = $oldPart['quantity'] ?? '0';
+            $newQty  = $newPart['quantity'] ?? '0';
+            $oldUnit = $oldPart['unit']     ?? 'Pc(s)';
+            $newUnit = $newPart['unit']     ?? 'Pc(s)';
+
+            if ((string)$oldQty !== (string)$newQty || $oldUnit !== $newUnit) {
+                $changedParts[$key] = ['old' => $oldPart, 'new' => $newPart];
+            }
+        }
+
         // ── Header ─────────────────────────────────────────────
         $msg  = "🔩 <b>JOB SHEET PARTS UPDATED</b>\n\n";
 
@@ -3895,21 +4411,78 @@ class TelegramNotification
         if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
         $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
 
-        // ── Parts Used ─────────────────────────────────────────
-        if (!empty($parts)) {
-            $msg .= "<b>🔩 Parts Used:</b>\n";
+        // ── Added Parts ────────────────────────────────────────
+        if (!empty($addedParts)) {
+            $msg .= "<b>🆕 Added Parts:</b>\n";
+            foreach ($addedParts as $part) {
+                $partName   = $part['variation_name'] ?? 'N/A';
+                $partQty    = $part['quantity']        ?? '0';
+                $partUnit   = $part['unit']            ?? 'Pc(s)';
+                $partStatus = isset($part['status'])
+                    ? ' | ' . ucfirst($part['status'])
+                    : '';
+                $msg .= "  • <b>{$partName}</b> | Qty: {$partQty} {$partUnit}{$partStatus}\n";
+            }
+            $msg .= "\n";
+        }
 
+        // ── Changed Parts ──────────────────────────────────────
+        if (!empty($changedParts)) {
+            $msg .= "<b>✏️ Changed Parts:</b>\n";
+            foreach ($changedParts as $key => $data) {
+                $oldPart  = $data['old'];
+                $newPart  = $data['new'];
+                $partName = $newPart['variation_name'] ?? 'N/A';
+                $oldUnit  = $oldPart['unit']           ?? 'Pc(s)';
+                $newUnit  = $newPart['unit']           ?? 'Pc(s)';
+                $oldQty   = $oldPart['quantity']       ?? '0';
+                $newQty   = $newPart['quantity']       ?? '0';
+                $status   = isset($newPart['status'])
+                    ? ' | ' . ucfirst($newPart['status'])
+                    : '';
+
+                $qtyDisplay = self::diff("{$oldQty} {$oldUnit}", "{$newQty} {$newUnit}");
+
+                $msg .= "\n  • <b>{$partName}</b>{$status}\n";
+                $msg .= "    Qty: {$qtyDisplay}\n";
+            }
+            $msg .= "\n";
+        }
+
+        // ── Removed Parts ──────────────────────────────────────
+        if (!empty($removedParts)) {
+            $msg .= "<b>🗑️ Removed Parts:</b>\n";
+            foreach ($removedParts as $part) {
+                $partName   = $part['variation_name'] ?? 'N/A';
+                $partQty    = $part['quantity']        ?? '0';
+                $partUnit   = $part['unit']            ?? 'Pc(s)';
+                $partStatus = isset($part['status'])
+                    ? ' | ' . ucfirst($part['status'])
+                    : '';
+                $msg .= "  • <s><b>{$partName}</b> | Qty: {$partQty} {$partUnit}{$partStatus}</s>\n";
+            }
+            $msg .= "\n";
+        }
+
+        // ── No changes detected ────────────────────────────────
+        if (empty($addedParts) && empty($changedParts) && empty($removedParts)) {
+            $msg .= "<b>ℹ️ No changes detected.</b>\n\n";
+        }
+
+        // ── Remaining Parts Summary ────────────────────────────
+        if (!empty($parts)) {
+            $msg .= "<b>📋 All Parts:</b>\n";
             $totalQty = 0;
             foreach ($parts as $part) {
-                $partName = $part['variation_name'] ?? 'N/A';
-                $partQty  = $part['quantity']        ?? '0';
-                $partUnit = $part['unit']            ?? 'Pc(s)';
-                $totalQty += (float)$partQty;
-
-                $msg .= "\n  • <b>{$partName}</b>\n";
-                $msg .= "    Qty: {$partQty} {$partUnit}\n";
+                $partName   = $part['variation_name'] ?? 'N/A';
+                $partQty    = $part['quantity']        ?? '0';
+                $partUnit   = $part['unit']            ?? 'Pc(s)';
+                $partStatus = isset($part['status'])
+                    ? ' | ' . ucfirst($part['status'])
+                    : '';
+                $totalQty += (float) $partQty;
+                $msg .= "  • <b>{$partName}</b> | Qty: {$partQty} {$partUnit}{$partStatus}\n";
             }
-
             $msg .= "\n<b>📦 Total Parts:</b> " . count($parts) . " item(s) | Total Qty: " . number_format($totalQty, 2) . "\n\n";
         } else {
             $msg .= "<b>🔩 Parts Used:</b> N/A\n\n";
@@ -3926,6 +4499,705 @@ class TelegramNotification
 
         $msg .= "⏰ <b>Date Updated:</b> " . now()->format('d/m/Y H:i') . "\n";
         $msg .= "🔩 <i>Updated via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function updatePartsStatusJobSheetMessage(
+        $job_sheet,
+        array $old_parts,
+        array $new_parts,
+        string $to = 'repair',
+        string $location_id = 'PT1001',
+        string $label = '🔄 <b>JOB SHEET PARTS STATUS UPDATED</b>'
+    ): void {
+        if (empty($job_sheet)) return;
+
+        $all_account = self::fetchAccounts($location_id);
+
+        // ── Resolve only what's needed ─────────────────────────
+        $contact  = \App\Contact::find($job_sheet->contact_id);
+        $location = \App\BusinessLocation::find($job_sheet->location_id);
+
+        $customerName   = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
+        $customerMobile = $contact->mobile ?? null;
+        $locationName   = $location->name ?? 'N/A';
+        $jobSheetNo     = $job_sheet->job_sheet_no ?? 'N/A';
+        $date           = \Carbon\Carbon::parse($job_sheet->created_at)->format('d/m/Y H:i');
+
+        // ── Parts are keyed by part_key (row_16_0, row_16_1, …) ──
+        // Old and new are already associative arrays keyed by part_key.
+
+        // ── Detect removed rows (part_key in old but not in new) ──
+        $removed_parts = [];
+        foreach ($old_parts as $part_key => $old_part) {
+            if (!isset($new_parts[$part_key])) {
+                $removed_parts[$part_key] = $old_part;
+            }
+        }
+
+        // ── Detect changed rows (part_key exists in both, but something differs) ──
+        $changed_parts = [];
+        foreach ($new_parts as $part_key => $new_part) {
+            $old_part = $old_parts[$part_key] ?? null;
+
+            $old_status = $old_part['status']   ?? null;
+            $new_status = $new_part['status']   ?? null;
+            $old_note   = $old_part['note']     ?? null;
+            $new_note   = $new_part['note']     ?? null;
+            $old_qty    = $old_part['quantity'] ?? null;
+            $new_qty    = $new_part['quantity'] ?? null;
+
+            if ($old_status != $new_status || $old_note != $new_note || (string)$old_qty !== (string)$new_qty) {
+                $changed_parts[$part_key] = [
+                    'new' => $new_part,
+                    'old' => $old_part,
+                ];
+            }
+        }
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "🔄 <b>JOB SHEET PARTS STATUS UPDATED</b>\n\n";
+
+        // ── Info ───────────────────────────────────────────────
+        $msg .= "<b>🔖 Job Sheet No:</b> #{$jobSheetNo}\n";
+        $msg .= "<b>🕒 Date:</b> {$date}\n";
+        $msg .= "<b>👤 Customer:</b> {$customerName}\n";
+        if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        // ── Removed Rows (shown with strikethrough) ────────────
+        if (!empty($removed_parts)) {
+            $msg .= "<b>🗑️ Removed Rows (merged/deleted):</b>\n";
+            foreach ($removed_parts as $part_key => $part) {
+                $pName   = $part['variation_name'] ?? 'N/A';
+                $pQty    = $part['quantity']        ?? '0';
+                $pUnit   = $part['unit']            ?? 'Pc(s)';
+                $pStatus = ucfirst($part['status']  ?? 'N/A');
+                $pNote   = $part['note']            ?? null;
+
+                // Entire row shown as struck-through to indicate it was removed/merged
+                $msg .= "\n  <s>❌ {$pName}</s>\n";
+                $msg .= "  <s>  Qty: {$pQty} {$pUnit}</s>\n";
+                $msg .= "  <s>  Status: {$pStatus}</s>\n";
+                if ($pNote) $msg .= "  <s>  Note: {$pNote}</s>\n";
+            }
+            $msg .= "\n";
+        }
+
+        // ── Changed Rows ───────────────────────────────────────
+        if (!empty($changed_parts)) {
+            $msg .= "<b>🔩 Changed Parts:</b>\n";
+            foreach ($changed_parts as $part_key => $data) {
+                $new_part = $data['new'];
+                $old_part = $data['old'];
+
+                $partName  = $new_part['variation_name'] ?? 'N/A';
+                $partUnit  = $new_part['unit']            ?? 'Pc(s)';
+                $newQty    = $new_part['quantity']        ?? '0';
+                $oldQty    = $old_part['quantity']        ?? '0';
+                $newStatus = ucfirst($new_part['status']  ?? 'N/A');
+                $oldStatus = ucfirst($old_part['status']  ?? 'N/A');
+                $newNote   = $new_part['note']            ?? null;
+                $oldNote   = $old_part['note']            ?? null;
+
+                $msg .= "\n  • <b>{$partName}</b>\n";
+                $msg .= "    Qty: "    . self::diff($oldQty, $newQty, " {$partUnit}") . "\n";
+                $msg .= "    Status: " . self::diff($oldStatus, $newStatus) . "\n";
+
+                if ($newNote !== $oldNote) {
+                    $msg .= "    Note: " . self::diff($oldNote ?? '--', $newNote ?? '--') . "\n";
+                } elseif ($newNote) {
+                    $msg .= "    Note: {$newNote}\n";
+                }
+            }
+            $msg .= "\n";
+        }
+
+        // ── No changes detected ────────────────────────────────
+        if (empty($removed_parts) && empty($changed_parts)) {
+            $msg .= "<b>ℹ️ No changes detected.</b>\n\n";
+        }
+
+        // ── Remaining Parts Summary ────────────────────────────
+        if (!empty($new_parts)) {
+            $msg .= "<b>📋 Remaining Parts:</b>\n";
+            $totalQty = 0;
+            foreach ($new_parts as $part) {
+                $pName   = $part['variation_name'] ?? 'N/A';
+                $pQty    = $part['quantity']        ?? '0';
+                $pUnit   = $part['unit']            ?? 'Pc(s)';
+                $pStatus = ucfirst($part['status']  ?? 'N/A');
+                $totalQty += (float) $pQty;
+
+                $msg .= "  • <b>{$pName}</b> | Qty: {$pQty} {$pUnit} | {$pStatus}\n";
+            }
+            $msg .= "\n<b>📦 Total Remaining:</b> " . count($new_parts) . " item(s) | Qty: " . number_format($totalQty, 2) . "\n\n";
+        } else {
+            $msg .= "<b>📋 Remaining Parts:</b> None\n\n";
+        }
+
+        // ── Account Balances ───────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Date Updated:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "🔄 <i>Updated via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function deletePartJobSheetMessage(
+        $job_sheet,
+        array $deleted_part,  // ← changed from string to array
+        string $to = 'repair',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($job_sheet)) return;
+
+        $all_account = self::fetchAccounts($location_id);
+
+        // ── Resolve info ───────────────────────────────────────
+        $contact  = \App\Contact::find($job_sheet->contact_id);
+        $location = \App\BusinessLocation::find($job_sheet->location_id);
+
+        $customerName   = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
+        $customerMobile = $contact->mobile ?? null;
+        $locationName   = $location->name ?? 'N/A';
+        $jobSheetNo     = $job_sheet->job_sheet_no ?? 'N/A';
+        $date           = \Carbon\Carbon::parse($job_sheet->created_at)->format('d/m/Y H:i');
+
+        // ── Deleted part details ───────────────────────────────
+        $deletedName   = $deleted_part['variation_name'] ?? 'N/A';
+        $deletedQty    = $deleted_part['quantity']        ?? '0';
+        $deletedUnit   = $deleted_part['unit']            ?? 'Pc(s)';
+        $deletedStatus = ucfirst($deleted_part['status']  ?? 'N/A');
+        $deletedNote   = $deleted_part['note']            ?? null;
+
+        // ── Message ────────────────────────────────────────────
+        $msg  = "🗑️ <b>PART DELETED FROM JOB SHEET</b>\n\n";
+
+        $msg .= "<b>🔖 Job Sheet No:</b> #{$jobSheetNo}\n";
+        $msg .= "<b>🕒 Date:</b> {$date}\n";
+        $msg .= "<b>👤 Customer:</b> {$customerName}\n";
+        if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        // ── Deleted part ───────────────────────────────────────
+        $msg .= "<b>🗑️ Deleted Part:</b>\n";
+        $msg .= "  • <b>{$deletedName}</b>\n";
+        $msg .= "    Qty: {$deletedQty} {$deletedUnit}\n";
+        $msg .= "    Status: {$deletedStatus}\n";
+        if ($deletedNote) {
+            $msg .= "    Note: {$deletedNote}\n";
+        }
+        $msg .= "\n";
+
+        // ── Remaining parts ────────────────────────────────────
+        $remaining_parts = $job_sheet->getPartsUsed();
+        if (!empty($remaining_parts)) {
+            $msg .= "<b>📋 Remaining Parts:</b>\n";
+            $totalQty = 0;
+            foreach ($remaining_parts as $part) {
+                $pName   = $part['variation_name'] ?? 'N/A';
+                $pQty    = $part['quantity']        ?? '0';
+                $pUnit   = $part['unit']            ?? 'Pc(s)';
+                $pStatus = ucfirst($part['status']  ?? 'N/A');
+                $totalQty += (float) $pQty;
+
+                $msg .= "  • <b>{$pName}</b>\n";
+                $msg .= "    Qty: {$pQty} {$pUnit} | Status: {$pStatus}\n";
+            }
+            $msg .= "\n<b>📦 Total Remaining:</b> " . count($remaining_parts) . " item(s) | Qty: " . number_format($totalQty, 2) . "\n\n";
+        } else {
+            $msg .= "<b>📋 Remaining Parts:</b> None\n\n";
+        }
+
+        // ── Account Balances ───────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Date Deleted:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "🗑️ <i>Deleted via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function addPaymentMessage(
+        $transaction,
+        $payment,
+        string $to = 'repair',
+        string $location_id = 'PT1001',
+        string $previous_payment_status = ''
+    ): void {
+        if (empty($transaction) || empty($payment)) return;
+
+        $all_account = self::fetchAccounts($location_id);
+
+        // ── Resolve contact & location ─────────────────────────
+        $contact  = $transaction->contact ?? \App\Contact::find($transaction->contact_id);
+        $location = \App\BusinessLocation::find($transaction->location_id);
+
+        $customerName   = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
+        $customerMobile = $contact->mobile ?? null;
+        $locationName   = $location->name ?? 'N/A';
+        $date           = \Carbon\Carbon::parse($payment->paid_on)->format('d/m/Y H:i');
+
+        // ── Payment method label ───────────────────────────────
+        $methodMap = [
+            'cash'          => '💵 Cash',
+            'card'          => '💳 Card',
+            'cheque'        => '🧾 Cheque',
+            'bank_transfer' => '🏦 Bank Transfer',
+            'advance'       => '⏩ Advance',
+            'other'         => '🔄 Other',
+        ];
+        $methodLabel = $methodMap[$payment->method] ?? ucfirst($payment->method);
+
+        // ── Transaction type label ─────────────────────────────
+        $typeMap = [
+            'sell'         => '🛒 Sale',
+            'sell_return'  => '↩️ Sale Return',
+            'purchase'     => '📦 Purchase',
+            'expense'      => '💸 Expense',
+        ];
+        $typeLabel = $typeMap[$transaction->type] ?? ucfirst($transaction->type);
+
+        // ── Payment status label map ───────────────────────────
+        $statusMap = [
+            'paid'         => '✅ Paid',
+            'partial'      => '🔄 Partial',
+            'due'          => '⏳ Due',
+            'overdue'      => '🔴 Overdue',
+        ];
+        $fromStatusLabel = $statusMap[$previous_payment_status] ?? ucfirst($previous_payment_status ?: 'due');
+        $toStatusLabel   = $statusMap[$transaction->payment_status] ?? ucfirst($transaction->payment_status);
+        $statusDisplay   = self::diff($fromStatusLabel, $toStatusLabel);
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "💰 <b>NEW PAYMENT RECEIVED</b>\n\n";
+
+        // ── Transaction info ───────────────────────────────────
+        $msg .= "<b>🧾 Invoice No:</b> #{$transaction->invoice_no}\n";
+        $msg .= "<b>📋 Type:</b> {$typeLabel}\n";
+        $msg .= "<b>🔖 Payment Ref:</b> {$payment->payment_ref_no}\n";
+        $msg .= "<b>🕒 Paid On:</b> {$date}\n\n";
+
+        // ── Customer info ──────────────────────────────────────
+        $msg .= "<b>👤 Customer:</b> {$customerName}\n";
+        if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        // ── Payment details ────────────────────────────────────
+        $msg .= "<b>💳 Payment Details:</b>\n";
+        $msg .= "  • <b>Method:</b> {$methodLabel}\n";
+        $msg .= "  • <b>Amount Paid:</b> " . number_format((float)$payment->amount, 2) . "\n";
+        $msg .= "  • <b>Invoice Total:</b> " . number_format((float)$transaction->final_total, 2) . "\n";
+        $msg .= "  • <b>Status:</b> {$statusDisplay}\n";
+
+        if (!empty($payment->note)) {
+            $msg .= "  • <b>Note:</b> {$payment->note}\n";
+        }
+        if (!empty($payment->transaction_no)) {
+            $msg .= "  • <b>Transaction No:</b> {$payment->transaction_no}\n";
+        }
+        $msg .= "\n";
+
+        // ── Account balances ───────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Date:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "💰 <i>Payment recorded via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function addPurchaseOrderStatusMessage(
+        $transaction,
+        string $from_status,
+        string $to_status,
+        string $to = 'repair',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($transaction)) return;
+
+        $all_account = self::fetchAccounts($location_id);
+
+        // ── Resolve contact & location ─────────────────────────
+        $contact  = \App\Contact::find($transaction->contact_id);
+        $location = \App\BusinessLocation::find($transaction->location_id);
+
+        $supplierName   = filled($contact->supplier_business_name ?? '') ? $contact->supplier_business_name : ($contact->name ?? 'N/A');
+        $supplierMobile = $contact->mobile ?? null;
+        $locationName   = $location->name ?? 'N/A';
+        $date           = \Carbon\Carbon::parse($transaction->transaction_date)->format('d/m/Y H:i');
+
+        // ── Status label map ───────────────────────────────────
+        $statusMap = [
+            'ordered'    => '📋 Ordered',
+            'pending'    => '⏳ Pending',
+            'partial'    => '🔄 Partial',
+            'completed'  => '✅ Completed',
+            'cancelled'  => '❌ Cancelled',
+            'received'   => '📦 Received',
+        ];
+        $fromLabel = $statusMap[$from_status] ?? ucfirst($from_status);
+        $toLabel   = $statusMap[$to_status]   ?? ucfirst($to_status);
+
+        // ── Shipping status ────────────────────────────────────
+        $shippingMap = [
+            'ordered'   => '📋 Ordered',
+            'packed'    => '📦 Packed',
+            'shipped'   => '🚚 Shipped',
+            'delivered' => '✅ Delivered',
+            'cancelled' => '❌ Cancelled',
+        ];
+        $shippingLabel = $shippingMap[$transaction->shipping_status ?? ''] ?? ucfirst($transaction->shipping_status ?? 'N/A');
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "📋 <b>PURCHASE ORDER STATUS UPDATED</b>\n\n";
+
+        // ── Order info ─────────────────────────────────────────
+        $msg .= "<b>🔖 Ref No:</b> #{$transaction->ref_no}\n";
+        $msg .= "<b>🕒 Order Date:</b> {$date}\n";
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        // ── Supplier info ──────────────────────────────────────
+        $msg .= "<b>🏢 Supplier:</b> {$supplierName}\n";
+        if ($supplierMobile) $msg .= "<b>📱 Mobile:</b> {$supplierMobile}\n";
+        $msg .= "\n";
+
+        // ── Status change ──────────────────────────────────────
+        $msg .= "<b>🔄 Status Change:</b>\n";
+        $msg .= "  • <b>From:</b> {$fromLabel}\n";
+        $msg .= "  • <b>To:</b> {$toLabel}\n\n";
+
+        // ── Order details ──────────────────────────────────────
+        $msg .= "<b>📦 Order Details:</b>\n";
+        $msg .= "  • <b>Total:</b> " . number_format((float)$transaction->final_total, 2) . "\n";
+        $msg .= "  • <b>Shipping Status:</b> {$shippingLabel}\n";
+
+        if (!empty($transaction->shipping_address)) {
+            $msg .= "  • <b>Shipping Address:</b> {$transaction->shipping_address}\n";
+        }
+        if (!empty($transaction->delivered_to)) {
+            $msg .= "  • <b>Delivered To:</b> {$transaction->delivered_to}\n";
+        }
+        if (!empty($transaction->additional_notes)) {
+            $msg .= "  • <b>Notes:</b> {$transaction->additional_notes}\n";
+        }
+        $msg .= "\n";
+
+        // ── Account balances ───────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Updated At:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "📋 <i>Updated via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function productPriceUpdatedMessage(
+        $variation,
+        $old_price,
+        string $to = 'transfer',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($variation)) return;
+
+        $productName = $variation->product->name ?? 'N/A';
+        $subSku      = $variation->sub_sku ?? $variation->product->sku ?? 'N/A';
+        $oldPrice    = number_format($old_price, 4);
+        $newPrice    = number_format($variation->sell_price_inc_tax, 4);
+        $date        = now()->format('d/m/Y H:i');
+
+        $msg  = "💲 <b>PRODUCT PRICE UPDATED</b>\n\n";
+        $msg .= "<b>{$productName}</b>\n";
+        $msg .= "🔖 <b>SKU:</b> {$subSku}\n\n";
+        $msg .= "📉 <b>Old Price:</b> \${$oldPrice}\n";
+        $msg .= "📈 <b>New Price:</b> \${$newPrice}\n";
+        $msg .= "\n⏰ <b>Updated At:</b> {$date}\n";
+        $msg .= "🔁 <i>Price updated via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function deleteJobSheetMessage(
+        $job_sheet,
+        string $to = 'repair',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($job_sheet)) return;
+
+        $all_account = self::fetchAccounts($location_id);
+
+        $customerName   = filled($job_sheet->customer->name ?? '')
+            ? $job_sheet->customer->name
+            : ($job_sheet->customer->supplier_business_name ?? 'N/A');
+        $customerMobile = $job_sheet->customer->mobile ?? null;
+        $locationName   = $job_sheet->businessLocation->name ?? 'N/A';
+        $brandName      = $job_sheet->Brand->name ?? 'N/A';
+        $deviceName     = $job_sheet->Device->name ?? 'N/A';
+        $modelName      = $job_sheet->deviceModel->name ?? 'N/A';
+        $statusName     = $job_sheet->status->name ?? 'N/A';
+        $staffName      = $job_sheet->technician
+            ? trim(
+                ($job_sheet->technician->surname    ?? '') . ' ' .
+                    ($job_sheet->technician->first_name ?? '') . ' ' .
+                    ($job_sheet->technician->last_name  ?? '')
+            )
+            : 'N/A';
+
+        $jobSheetNo    = $job_sheet->job_sheet_no ?? 'N/A';
+        $date          = \Carbon\Carbon::parse($job_sheet->created_at)->format('d/m/Y H:i');
+        $serviceType   = ucfirst(str_replace('_', ' ', $job_sheet->service_type ?? 'N/A'));
+        $serialNo      = $job_sheet->serial_no ?? 'N/A';
+        $estimatedCost = $job_sheet->estimated_cost
+            ? number_format($job_sheet->estimated_cost, 2)
+            : '0.00';
+        $deliveryDate  = $job_sheet->delivery_date
+            ? \Carbon\Carbon::parse($job_sheet->delivery_date)->format('d/m/Y H:i')
+            : 'N/A';
+
+        $msg  = "🗑️ <b>JOB SHEET DELETED</b>\n\n";
+
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        $msg .= "<b>👤 Customer:</b> {$customerName}\n";
+        if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
+        $msg .= "\n";
+
+        $msg .= "<b>🔖 Job Sheet No:</b> #{$jobSheetNo}\n";
+        $msg .= "<b>🕒 Created Date:</b> {$date}\n";
+        $msg .= "<b>🛠️ Service Type:</b> {$serviceType}\n";
+        $msg .= "<b>📌 Status:</b> {$statusName}\n";
+        $msg .= "<b>📅 Due Date:</b> {$deliveryDate}\n";
+        $msg .= "<b>💵 Estimated Cost:</b> \${$estimatedCost}\n\n";
+
+        $msg .= "<b>📱 Brand:</b> {$brandName}\n";
+        $msg .= "<b>📟 Device:</b> {$deviceName}\n";
+        $msg .= "<b>🔩 Device Model:</b> {$modelName}\n";
+        $msg .= "<b>🔢 Serial Number:</b> {$serialNo}\n\n";
+
+        $msg .= "<b>👨‍🔧 Technician:</b> {$staffName}\n\n";
+
+        // ── Accounts ───────────────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Deleted At:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "🗑️ <i>Deleted via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+    public static function updateJobSheetMessage(
+        $job_sheet,
+        $old_job_sheet,
+        $contact,
+        $location,
+        $brand,
+        $device,
+        $deviceModel,
+        $status,
+        $old_status,
+        $serviceStaff,
+        $old_serviceStaff,
+        $old_brand,
+        $old_device,
+        $old_deviceModel,
+        string $to = 'repair',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($job_sheet)) return;
+
+        $all_account = self::fetchAccounts($location_id);
+
+        // ── Resolve fields safely ──────────────────────────────
+        $customerName    = filled($contact->name ?? '') ? $contact->name : ($contact->supplier_business_name ?? 'N/A');
+        $customerMobile  = $contact->mobile ?? null;
+        $locationName    = $location->name ?? 'N/A';
+
+        // ── Diff fields ────────────────────────────────────────
+        $brandName  = self::diff($old_brand->name       ?? 'N/A', $brand->name       ?? 'N/A');
+        $deviceName = self::diff($old_device->name      ?? 'N/A', $device->name      ?? 'N/A');
+        $modelName  = self::diff($old_deviceModel->name ?? 'N/A', $deviceModel->name ?? 'N/A');
+        $statusName = self::diff($old_status->name      ?? 'N/A', $status->name      ?? 'N/A');
+
+        $oldStaffName = $old_serviceStaff
+            ? trim(($old_serviceStaff->surname ?? '') . ' ' . ($old_serviceStaff->first_name ?? '') . ' ' . ($old_serviceStaff->last_name ?? ''))
+            : 'N/A';
+        $newStaffName = $serviceStaff
+            ? trim(($serviceStaff->surname ?? '') . ' ' . ($serviceStaff->first_name ?? '') . ' ' . ($serviceStaff->last_name ?? ''))
+            : 'N/A';
+        $staffName = self::diff($oldStaffName, $newStaffName);
+
+        $jobSheetNo  = $job_sheet->job_sheet_no ?? 'N/A';
+        $date        = \Carbon\Carbon::parse($job_sheet->created_at)->format('d/m/Y H:i');
+        $serviceType = self::diff(
+            ucfirst(str_replace('_', ' ', $old_job_sheet->service_type ?? 'N/A')),
+            ucfirst(str_replace('_', ' ', $job_sheet->service_type     ?? 'N/A'))
+        );
+        $serialNo = self::diff(
+            $old_job_sheet->serial_no ?? 'N/A',
+            $job_sheet->serial_no     ?? 'N/A'
+        );
+        $securityPwd     = $job_sheet->security_pwd     ?? null;
+        $securityPattern = $job_sheet->security_pattern ?? null;
+        $estimatedCost   = self::diff(
+            $old_job_sheet->estimated_cost ? number_format($old_job_sheet->estimated_cost, 2) : '0.00',
+            $job_sheet->estimated_cost     ? number_format($job_sheet->estimated_cost,     2) : '0.00'
+        );
+        $deliveryDate = self::diff(
+            $old_job_sheet->delivery_date ? \Carbon\Carbon::parse($old_job_sheet->delivery_date)->format('d/m/Y H:i') : 'N/A',
+            $job_sheet->delivery_date     ? \Carbon\Carbon::parse($job_sheet->delivery_date)->format('d/m/Y H:i')     : 'N/A'
+        );
+        $productConfig = self::diff(
+            self::decodeRepairField($old_job_sheet->product_configuration) ?: 'N/A',
+            self::decodeRepairField($job_sheet->product_configuration)     ?: 'N/A'
+        );
+        $defects = self::diff(
+            self::decodeRepairField($old_job_sheet->defects) ?: 'N/A',
+            self::decodeRepairField($job_sheet->defects)     ?: 'N/A'
+        );
+        $condition = self::diff(
+            self::decodeRepairField($old_job_sheet->product_condition) ?: 'N/A',
+            self::decodeRepairField($job_sheet->product_condition)     ?: 'N/A'
+        );
+        $commentBySS = $job_sheet->comment_by_ss        ?? null;
+        $pickUpAddr  = $job_sheet->pick_up_on_site_addr ?? null;
+
+        $customFields = array_filter([
+            '1' => $job_sheet->custom_field_1 ?? null,
+            '2' => $job_sheet->custom_field_2 ?? null,
+            '3' => $job_sheet->custom_field_3 ?? null,
+            '4' => $job_sheet->custom_field_4 ?? null,
+            '5' => $job_sheet->custom_field_5 ?? null,
+        ]);
+
+        // ── Header ─────────────────────────────────────────────
+        $msg  = "✏️ <b>JOB SHEET UPDATED</b>\n\n";
+
+        // ── Business / Location ────────────────────────────────
+        $msg .= "<b>📍 Location:</b> {$locationName}\n\n";
+
+        // ── Customer ───────────────────────────────────────────
+        $msg .= "<b>👤 Customer:</b> {$customerName}\n";
+        if ($customerMobile) $msg .= "<b>📱 Mobile:</b> {$customerMobile}\n";
+        $msg .= "\n";
+
+        // ── Job Sheet Info ─────────────────────────────────────
+        $msg .= "<b>🔖 Job Sheet No:</b> #{$jobSheetNo}\n";
+        $msg .= "<b>🕒 Date:</b> {$date}\n";
+        $msg .= "<b>🛠️ Service Type:</b> {$serviceType}\n";
+        $msg .= "<b>📌 Status:</b> {$statusName}\n";
+        $msg .= "<b>📅 Due Date:</b> {$deliveryDate}\n";
+        $msg .= "<b>💵 Estimated Cost:</b> \${$estimatedCost}\n";
+        $msg .= "\n";
+
+        // ── Device Info ────────────────────────────────────────
+        $msg .= "<b>📱 Brand:</b> {$brandName}\n";
+        $msg .= "<b>📟 Device:</b> {$deviceName}\n";
+        $msg .= "<b>🔩 Device Model:</b> {$modelName}\n";
+        $msg .= "<b>🔢 Serial Number:</b> {$serialNo}\n";
+        if ($securityPwd)     $msg .= "<b>🔑 Password:</b> {$securityPwd}\n";
+        if ($securityPattern) $msg .= "<b>🔐 Security Pattern Code:</b> {$securityPattern}\n";
+        $msg .= "\n";
+
+        // ── Technician ─────────────────────────────────────────
+        $msg .= "<b>👨‍🔧 Technician:</b> {$staffName}\n";
+        if ($commentBySS) $msg .= "<b>💬 Comment by Technician:</b> {$commentBySS}\n";
+        $msg .= "\n";
+
+        // ── Repair Details ─────────────────────────────────────
+        $msg .= "<b>📍 Pick up/On site address:</b> "     . ($pickUpAddr    ?: 'N/A') . "\n";
+        $msg .= "<b>⚙️ Product Configuration:</b> "       . ($productConfig ?: 'N/A') . "\n";
+        $msg .= "<b>📋 Condition Of The Product:</b> "     . ($condition     ?: 'N/A') . "\n";
+        $msg .= "<b>🐛 Problem Reported By Customer:</b> " . ($defects       ?: 'N/A') . "\n";
+        $msg .= "\n";
+
+        // ── Pre Repair Checklist ───────────────────────────────
+        if (!empty($job_sheet->checklist)) {
+            $checklist = is_array($job_sheet->checklist)
+                ? $job_sheet->checklist
+                : json_decode($job_sheet->checklist, true);
+
+            if (!empty($checklist)) {
+                $msg .= "<b>✅ Pre Repair Checklist:</b>\n";
+                foreach ($checklist as $item => $value) {
+                    $icon = $value == 1 ? '✅' : ($value == 0 ? '❌' : '➖');
+                    $msg .= "  {$icon} {$item}\n";
+                }
+                $msg .= "\n";
+            } else {
+                $msg .= "<b>✅ Pre Repair Checklist:</b> N/A\n\n";
+            }
+        } else {
+            $msg .= "<b>✅ Pre Repair Checklist:</b> N/A\n\n";
+        }
+
+        // ── Parts Used ─────────────────────────────────────────
+        try {
+            $parts = $job_sheet->getPartsUsed();
+            if (!empty($parts)) {
+                $msg .= "<b>🔩 Parts Used:</b>\n";
+                foreach ($parts as $part) {
+                    $partName   = $part['variation_name'] ?? 'N/A';
+                    $partQty    = $part['quantity']        ?? '0';
+                    $partUnit   = $part['unit']            ?? 'Pc(s)';
+                    $partStatus = isset($part['status'])
+                        ? ' | ' . ucfirst($part['status'])
+                        : '';
+                    $msg .= "  • <b>{$partName}</b> | Qty: {$partQty} {$partUnit}{$partStatus}\n";
+                }
+                $msg .= "\n";
+            } else {
+                $msg .= "<b>🔩 Parts Used:</b> N/A\n\n";
+            }
+        } catch (\Exception $e) {
+            $msg .= "<b>🔩 Parts Used:</b> N/A\n\n";
+        }
+
+        // ── Custom Fields ──────────────────────────────────────
+        if (!empty($customFields)) {
+            $msg .= "<b>📝 Custom Fields:</b>\n";
+            foreach ($customFields as $i => $value) {
+                $msg .= "  • Field {$i}: {$value}\n";
+            }
+            $msg .= "\n";
+        }
+
+        // ── Accounts ───────────────────────────────────────────
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 Account Balances:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        $msg .= "⏰ <b>Updated At:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "✏️ <i>Updated via Shoper POS</i>";
 
         self::sendMessage($msg, $to, $location_id);
     }

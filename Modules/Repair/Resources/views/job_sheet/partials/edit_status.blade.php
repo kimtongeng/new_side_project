@@ -1,6 +1,6 @@
 <div class="modal-dialog" role="document">
 	<div class="modal-content">
-		{!! Form::open(['url' => action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'updatePartsStatus'], [$job_sheet->id]), 'method' => 'put', 'id' => 'update_part_status_form']) !!}
+		{!! Form::open(['url' => action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'updateStatus'], [$job_sheet->id]), 'method' => 'put', 'id' => 'update_status_form']) !!}
 			<div class="modal-header">
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
 				<h4 class="modal-title">@lang( 'repair::lang.edit_status' )</h4>
@@ -21,7 +21,7 @@
 			</div>
 			<div class="modal-footer">
 				<input type="hidden" id="status_form_redirect">
-				@if($job_sheet->status->is_completed_status != 1)
+				@if(!$job_sheet->status || $job_sheet->status->is_completed_status != 1)
 					<button type="submit" class="btn btn-danger ladda-button update_status_button hide mark-as-complete-btn" data-href="{{action([\Modules\Repair\Http\Controllers\JobSheetController::class, 'addParts'], [$job_sheet->id])}}">@lang( 'repair::lang.add_parts_and_mark_complete' )</button>
 				@endif
 				

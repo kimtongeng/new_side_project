@@ -25,7 +25,7 @@ class LoanManagementController extends Controller
         $business_id = auth()->user()->business_id;
 
         $query = Loan::where('business_id', $business_id)
-                    ->with(['customer', 'user', 'location']);
+            ->with(['customer', 'user', 'location']);
 
         if ($request->filled('recipient_name')) {
             $query->where(function ($q) use ($request) {
@@ -47,7 +47,23 @@ class LoanManagementController extends Controller
 
         $loans = $query->paginate(10);
 
-        return view('Loan::loans.index', compact('loans'));
+        // Build combined recipients dropdown: customers + users (name => name for LIKE filter)
+        $customer_recipients = Contact::where('business_id', $business_id)
+            ->where('type', 'customer')
+            ->orderBy('name')
+            ->pluck('name', 'name')
+            ->toArray();
+
+        $user_recipients = User::where('business_id', $business_id)
+            ->selectRaw("id, TRIM(CONCAT(COALESCE(surname,''), ' ', COALESCE(first_name,''), ' ', COALESCE(last_name,''))) as full_name")
+            ->get()
+            ->pluck('full_name', 'full_name')
+            ->filter()
+            ->toArray();
+
+        $recipients = $customer_recipients + $user_recipients;
+
+        return view('Loan::loans.index', compact('loans', 'recipients'));
     }
 
     /**
@@ -159,7 +175,7 @@ class LoanManagementController extends Controller
                 'amount' => $amount,
                 'account_id' => $request->account_id,
                 'type' => 'debit',
-                'operation_date' => now(),
+                'operation_date' => $request->start_date,
                 'created_by' => auth()->id(),
                 'note' => __('Loan::lang.loan_disbursed'),
             ]);
@@ -315,7 +331,6 @@ class LoanManagementController extends Controller
             } elseif ($total_paid > 0) {
                 $loan->update(['status' => 'partially_paid']);
             }
-
         } catch (\Exception $e) {
             \Log::error('Failed to store payment in loan_payments', ['error' => $e->getMessage()]);
             return redirect()->back()->with('error', __('Loan::lang.payment_failed'));

@@ -8,6 +8,9 @@ use Modules\Loan\Entities\LoanPayment;
 use Modules\Loan\Entities\Loan;
 use Maatwebsite\Excel\Facades\Excel;
 use Modules\Loan\Exports\PaymentsExport;
+use App\Contact;
+use App\User;
+use App\BusinessLocation;
 
 class PaymentsController extends Controller
 {
@@ -36,8 +39,18 @@ class PaymentsController extends Controller
             $query->where('loan_id', $request->loan_id);
         }
 
-        if ($request->filled('payment_date')) {
-            $query->whereDate('payment_date', $request->payment_date);
+        if ($request->filled('location_id')) {
+            $query->whereHas('loan', function ($q) use ($request) {
+                $q->where('location_id', $request->location_id);
+            });
+        }
+
+        if ($request->filled('payment_start_date')) {
+            $query->whereDate('payment_date', '>=', $request->payment_start_date);
+        }
+
+        if ($request->filled('payment_end_date')) {
+            $query->whereDate('payment_date', '<=', $request->payment_end_date);
         }
 
         if ($request->filled('total_amount_min') || $request->filled('total_amount_max')) {
@@ -53,7 +66,27 @@ class PaymentsController extends Controller
 
         $payments = $query->paginate(10);
 
-        return view('Loan::payments.index', compact('payments', 'request'));
+        // Build combined recipients dropdown: customers + users (name => name for LIKE filter)
+        $business_id = auth()->user()->business_id;
+
+        $customer_recipients = Contact::where('business_id', $business_id)
+            ->where('type', 'customer')
+            ->orderBy('name')
+            ->pluck('name', 'name')
+            ->toArray();
+
+        $user_recipients = User::where('business_id', $business_id)
+            ->selectRaw("id, TRIM(CONCAT(COALESCE(surname,''), ' ', COALESCE(first_name,''), ' ', COALESCE(last_name,''))) as full_name")
+            ->get()
+            ->pluck('full_name', 'full_name')
+            ->filter()
+            ->toArray();
+
+        $recipients = $customer_recipients + $user_recipients;
+
+        $business_locations = BusinessLocation::forDropdown($business_id);
+
+        return view('Loan::payments.index', compact('payments', 'request', 'recipients', 'business_locations'));
     }
 
     /**

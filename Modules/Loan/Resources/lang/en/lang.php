@@ -127,7 +127,8 @@ return [
     'pos' => 'Point of Sale',
     'under_development' => 'Under Development',
     'under_development_message' => 'This page is currently under development. We will add functionalities soon!',
-     'duration' => 'Duration',
+    'duration' => 'Duration',
     'description' => 'Description',
     'update_settings' => 'Update Settings',
+    'fully_completed' => 'Fully Completed',
 ];

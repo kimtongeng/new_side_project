@@ -6,22 +6,21 @@
 
     @include('Loan::layouts.nav')
 
-    <div class="container my-5">
-        <!-- Header Section -->
-        <div class="row mb-4">
-            <div class="col-md-12 text-center">
-                <h1 class="display-4 text-primary font-weight-bold">💵 {{ __('Loan::lang.payments') }}</h1>
-                <p class="lead text-muted">{{ __('Loan::lang.manage_all_payments') }}</p>
-                <hr class="w-25 mx-auto border-primary">
-            </div>
-        </div>
+    <!-- Header Section -->
+    <section class="content-header no-print">
+        <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
+            {{ __('Loan::lang.payments') }}
+        </h1>
+    </section>
 
+    <!-- Main content -->
+    <section class="content no-print">
         <!-- Filters Section -->
         <form action="{{ route('Loan.payments.index') }}" method="GET" id="payments_filter_form">
             <input type="hidden" name="payment_start_date" id="payment_start_date" value="{{ $request->payment_start_date ?? '' }}">
             <input type="hidden" name="payment_end_date" id="payment_end_date" value="{{ $request->payment_end_date ?? '' }}">
 
-            @component('components.filters', ['title' => __('Loan::lang.filters')])
+            @component('components.filters', ['title' => __('report.filters'), 'closed' => false])
                 <div class="col-md-3">
                     <div class="form-group">
                         {!! Form::label('recipient_name', __('Loan::lang.recipient_name') . ':') !!}
@@ -73,71 +72,63 @@
                         ]) !!}
                     </div>
                 </div>
-                @slot('tool')
-                    <div class="box-tools pull-right" style="margin-top: 6px; margin-right: 10px;">
-                        <a href="{{ route('Loan.payments.export.excel') }}" class="tw-dw-btn tw-dw-btn-success tw-dw-btn-sm tw-text-white">
-                            <i class="fa fa-file-excel-o"></i> {{ __('Loan::lang.export_excel') }}
-                        </a>
-                    </div>
-                @endslot
             @endcomponent
         </form>
 
-        <!-- Payments Table -->
-        <div class="card shadow-lg border-0">
-            <div class="card-header bg-info text-white text-center">
-                <h4 class="mb-0">📋 {{ __('Loan::lang.all_payments') }}</h4>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table id="payments-table" class="table table-striped table-hover">
-                        <thead class="bg-primary text-white">
-                            <tr>
-                                <th>#</th>
-                                <th>📅 {{ __('Loan::lang.payment_date') }}</th>
-                                <th>💵 {{ __('Loan::lang.payment_amount') }}</th>
-                                <th>👤 {{ __('Loan::lang.recipient') }}</th>
-                                <th>🆔 {{ __('Loan::lang.loan_id') }}</th>
-                                <th>💰 {{ __('Loan::lang.total_amount') }}</th>
-                                <th>💳 {{ __('Loan::lang.total_paid') }}</th>
-                                <th>💸 {{ __('Loan::lang.remaining_balance') }}</th>
-                                <th>⚙️ {{ __('Loan::lang.actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($payments as $payment)
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $payment->payment_date }}</td>
-                                    <td class="text-success font-weight-bold">{{ number_format($payment->amount, 2) }}</td>
-                                    <td>{{ $payment->loan->recipient_name }}</td>
-                                    <td>{{ $payment->loan->id }}</td>
-                                    <td>{{ number_format($payment->loan->total_amount, 2) }}</td>
-                                    <td>{{ number_format($payment->loan->total_paid, 2) }}</td>
-                                    <td>{{ number_format($payment->loan->remaining_balance, 2) }}</td>
-                                    <td>
-                                        <a href="{{ route('Loan.payments.show', $payment->id) }}" class="btn btn-info btn-sm">
-                                            👁️ {{ __('Loan::lang.view') }}
-                                        </a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center text-muted">🚫 {{ __('Loan::lang.no_payments_found') }}</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+        @component('components.widget', ['class' => 'box-primary', 'title' => __('Loan::lang.all_payments')])
+            @slot('tool')
+                <div class="box-tools pull-right">
+                    <a href="{{ route('Loan.payments.export.excel') }}" class="tw-dw-btn tw-dw-btn-success tw-dw-btn-sm tw-text-white">
+                        <i class="fa fa-file-excel-o"></i> {{ __('Loan::lang.export_excel') }}
+                    </a>
                 </div>
+            @endslot
+            <div class="table-responsive">
+                <table id="payments-table" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>{{ __('Loan::lang.payment_date') }}</th>
+                            <th>{{ __('Loan::lang.payment_amount') }}</th>
+                            <th>{{ __('Loan::lang.recipient') }}</th>
+                            <th>{{ __('Loan::lang.loan_id') }}</th>
+                            <th>{{ __('Loan::lang.total_amount') }}</th>
+                            <th>{{ __('Loan::lang.total_paid') }}</th>
+                            <th>{{ __('Loan::lang.remaining_balance') }}</th>
+                            <th>{{ __('messages.action') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($payments as $payment)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $payment->payment_date }}</td>
+                                <td class="text-success font-weight-bold">{{ number_format($payment->amount, 2) }}</td>
+                                <td>{{ $payment->loan->recipient_name }}</td>
+                                <td>{{ $payment->loan->id }}</td>
+                                <td>{{ number_format($payment->loan->total_amount, 2) }}</td>
+                                <td>{{ number_format($payment->loan->total_paid, 2) }}</td>
+                                <td>{{ number_format($payment->loan->remaining_balance, 2) }}</td>
+                                <td>
+                                    <a href="{{ route('Loan.payments.show', $payment->id) }}" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info">
+                                        <i class="fa fa-eye"></i> @lang('messages.view')
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">🚫 {{ __('Loan::lang.no_payments_found') }}</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
-        </div>
-
-        <!-- Pagination -->
-        <div class="d-flex justify-content-center mt-4">
-            {{ $payments->links() }}
-        </div>
-    </div>
-
+            <!-- Pagination -->
+            <div class="text-right">
+                {{ $payments->links() }}
+            </div>
+        @endcomponent
+    </section>
 @endsection
 
 @section('javascript')
@@ -205,6 +196,20 @@
             amountTimer = setTimeout(function () {
                 $('#payments_filter_form').submit();
             }, 800);
+        });
+
+        // Initialize client-side DataTable for sorting and structure
+        $('#payments-table').DataTable({
+            searching: false,
+            paging: false,
+            info: false,
+            columnDefs: [
+                {
+                    targets: [8], // Action column (9th column, 0-indexed is 8)
+                    orderable: false,
+                    searchable: false
+                }
+            ]
         });
     });
 </script>

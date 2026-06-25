@@ -4,73 +4,74 @@
 
 @section('content')
 
-@include('Loan::layouts.nav')
+    @include('Loan::layouts.nav')
 
-<div class="container my-5">
-    <div class="row mb-5">
-        <div class="col-md-12 text-center">
-            <h1 class="display-4 text-primary font-weight-bold">{{ __('Loan::lang.payment_details') }}</h1>
-            <p class="lead text-muted">{{ __('Loan::lang.view_payment_details') }}</p>
-            <hr class="w-25 mx-auto border-primary">
-        </div>
-    </div>
+    <!-- Header Section -->
+    <section class="content-header no-print">
+        <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
+            {{ __('Loan::lang.payment_details') }}
+        </h1>
+    </section>
 
-    <div class="row justify-content-center">
-        <div class="col-md-10 col-lg-8">
-            <div class="card shadow-lg border-0 rounded-lg overflow-hidden">
-                <div class="card-header bg-gradient-primary text-white text-center py-4">
-                    <h4 class="mb-0">
-                        <i class="fa-solid fa-credit-card"></i> {{ __('Loan::lang.payment_info') }}
-                    </h4>
+    <!-- Main content -->
+    <section class="content no-print">
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                @component('components.widget', ['class' => 'box-primary', 'title' => __('Loan::lang.payment_info')])
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <tbody>
+                            <tr>
+                                <th>{{ __('Loan::lang.payment_date') }}</th>
+                                <td>{{ $payment->payment_date }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ __('Loan::lang.payment_amount') }}</th>
+                                <td><span class="display_currency"
+                                        data-currency_symbol="true">{{ number_format($payment->amount, 2) }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>{{ __('Loan::lang.recipient') }}</th>
+                                <td>{{ $payment->loan->recipient_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ __('Loan::lang.loan_id') }}</th>
+                                <td>{{ $payment->loan->id }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ __('Loan::lang.total_amount') }}</th>
+                                <td><span class="display_currency"
+                                        data-currency_symbol="true">{{ number_format($payment->loan->total_amount, 2) }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>{{ __('Loan::lang.total_paid') }}</th>
+                                <td><span class="display_currency"
+                                        data-currency_symbol="true">{{ number_format($payment->loan->total_paid, 2) }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>{{ __('Loan::lang.remaining_balance') }}</th>
+                                <td><span class="display_currency"
+                                        data-currency_symbol="true">{{ number_format($payment->loan->remaining_balance, 2) }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>{{ __('Loan::lang.branch') }}</th>
+                                <td>{{ $payment->loan->location->name }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="card-body bg-light">
-                    <div class="table-responsive">
-                        <table class="table table-borderless table-hover">
-                            <tbody>
-                                <tr>
-                                    <th class="text-left">📅 {{ __('Loan::lang.payment_date') }}</th>
-                                    <td class="text-right text-dark font-weight-bold">{{ $payment->payment_date }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-left">💵 {{ __('Loan::lang.payment_amount') }}</th>
-                                    <td class="text-right text-success font-weight-bold">{{ number_format($payment->amount, 2) }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-left">👤 {{ __('Loan::lang.recipient') }}</th>
-                                    <td class="text-right text-info font-weight-bold">{{ $payment->loan->recipient_name }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-left">🆔 {{ __('Loan::lang.loan_id') }}</th>
-                                    <td class="text-right text-warning font-weight-bold">{{ $payment->loan->id }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-left">💰 {{ __('Loan::lang.total_amount') }}</th>
-                                    <td class="text-right text-dark font-weight-bold">{{ number_format($payment->loan->total_amount, 2) }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-left">💳 {{ __('Loan::lang.total_paid') }}</th>
-                                    <td class="text-right text-dark font-weight-bold">{{ number_format($payment->loan->total_paid, 2) }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-left">💸 {{ __('Loan::lang.remaining_balance') }}</th>
-                                    <td class="text-right text-dark font-weight-bold">{{ number_format($payment->loan->remaining_balance, 2) }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-left">🏢 {{ __('Loan::lang.branch') }}</th>
-                                    <td class="text-right text-secondary font-weight-bold">{{ $payment->loan->location->name }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="card-footer bg-white text-center">
-                    <a href="{{ route('Loan.payments.index') }}" class="btn btn-primary btn-lg">
-                        ⬅️ {{ __('Loan::lang.back_to_list') }}
+                @endcomponent
+
+                <div class="text-center no-print">
+                    <a href="{{ route('Loan.payments.index') }}" class="tw-dw-btn tw-dw-btn-neutral tw-text-white">
+                        <i class="fa fa-arrow-left"></i> Back
                     </a>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    </section>
 
 @endsection

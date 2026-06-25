@@ -7,25 +7,6 @@
     @include('Loan::layouts.nav')
 
     <style>
-        body {
-            font-family: 'Cairo', sans-serif;
-        }
-
-        .hover-card:hover {
-            transform: scale(1.05);
-            transition: all 0.3s ease-in-out;
-        }
-
-        .card {
-            border-radius: 15px;
-            overflow: hidden;
-        }
-
-        .card-header {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
         .floating-buttons {
             position: fixed;
             bottom: 20px;
@@ -79,141 +60,131 @@
         }
     </style>
 
-    <div class="container my-5">
-        <!-- Header Section -->
-        <div class="row mb-4">
-            <div class="col-md-12 text-center">
-                <h1 class="display-4 text-primary font-weight-bold">{{ __('Loan::lang.Loan_module_dashboard') }}</h1>
-                <p class="lead text-muted">{{ __('Loan::lang.overview') }}</p>
-                <hr class="w-25 mx-auto border-primary">
-            </div>
-        </div>
+    <!-- Content Header (Page header) -->
+    <section class="content-header no-print">
+        <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
+            {{ __('Loan::lang.Loan_module_dashboard') }}
+        </h1>
+    </section>
 
+    <!-- Main content -->
+    <section class="content no-print">
         <!-- Filters Section -->
         <form action="{{ route('Loan.dashboard') }}" method="GET" id="dashboard_filter_form">
             <input type="hidden" name="start_date" id="start_date" value="{{ request('start_date') }}">
             <input type="hidden" name="end_date" id="end_date" value="{{ request('end_date') }}">
 
-            @component('components.filters', ['title' => __('Loan::lang.filters')])
+            @component('components.filters', ['title' => __('report.filters'), 'closed' => false])
             <div class="col-md-3">
                 <div class="form-group">
                     {!! Form::label('date_range', __('report.date_range') . ':') !!}
                     {!! Form::text('date_range', null, [
-        'id' => 'date_range',
-        'class' => 'form-control',
-        'placeholder' => __('lang_v1.select_a_date_range'),
-        'readonly' => true,
-    ]) !!}
+                        'id' => 'date_range',
+                        'class' => 'form-control',
+                        'placeholder' => __('lang_v1.select_a_date_range'),
+                        'readonly' => true,
+                    ]) !!}
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
                     {!! Form::label('location_id', __('Loan::lang.branch') . ':') !!}
                     {!! Form::select('location_id', $locations, request('location_id'), [
-        'id' => 'location_id',
-        'class' => 'form-control select2',
-        'style' => 'width:100%',
-        'placeholder' => __('Loan::lang.all_branches'),
-    ]) !!}
+                        'id' => 'location_id',
+                        'class' => 'form-control select2',
+                        'style' => 'width:100%',
+                        'placeholder' => __('Loan::lang.all_branches'),
+                    ]) !!}
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
                     {!! Form::label('loan_type', __('Loan::lang.loan_type') . ':') !!}
                     {!! Form::select('loan_type', [
-        'personal' => __('Loan::lang.personal_loan'),
-        'business' => __('Loan::lang.business_loan'),
-    ], request('loan_type'), [
-        'id' => 'loan_type',
-        'class' => 'form-control select2',
-        'style' => 'width:100%',
-        'placeholder' => __('Loan::lang.all_loan_types'),
-    ]) !!}
+                        'personal' => __('Loan::lang.personal_loan'),
+                        'business' => __('Loan::lang.business_loan'),
+                    ], request('loan_type'), [
+                        'id' => 'loan_type',
+                        'class' => 'form-control select2',
+                        'style' => 'width:100%',
+                        'placeholder' => __('Loan::lang.all_loan_types'),
+                    ]) !!}
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
                     {!! Form::label('status', __('Loan::lang.status') . ':') !!}
                     {!! Form::select('status', [
-        'active' => __('Loan::lang.active'),
-        'partially_paid' => __('Loan::lang.partially_paid'),
-        'fully_paid' => __('Loan::lang.fully_paid'),
-    ], request('status'), [
-        'id' => 'loan_status',
-        'class' => 'form-control select2',
-        'style' => 'width:100%',
-        'placeholder' => __('Loan::lang.all_statuses'),
-    ]) !!}
+                        'active' => __('Loan::lang.active'),
+                        'partially_paid' => __('Loan::lang.partially_paid'),
+                        'fully_paid' => __('Loan::lang.fully_paid'),
+                    ], request('status'), [
+                        'id' => 'loan_status',
+                        'class' => 'form-control select2',
+                        'style' => 'width:100%',
+                        'placeholder' => __('Loan::lang.all_statuses'),
+                    ]) !!}
                 </div>
             </div>
             @endcomponent
         </form>
 
         <!-- Quick Summary Section -->
-        <div class="row g-4 mb-4">
-            <div class="col-md-3 col-sm-6">
-                <div class="card border-0 shadow-lg h-100 text-center hover-card"
-                    style="background: linear-gradient(135deg, #6366F1, #4F46E5);">
-                    <div class="card-body d-flex flex-column justify-content-center align-items-center text-white">
-                        <i class="fas fa-wallet fa-3x mb-3"></i>
-                        <h6 class="card-title text-uppercase mt-3">{{ __('Loan::lang.total_loans') }}</h6>
-                        <h3 class="display-6 mt-2">{{ $total_loans }}</h3>
+        <div class="row">
+            <div class="col-md-3 col-sm-6 col-xs-12">
+                <div class="info-box info-box-new-style">
+                    <span class="info-box-icon bg-aqua"><i class="fa fa-money-bill"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">@lang('Loan::lang.total_loans')</span>
+                        <span class="info-box-number">{{ $total_loans }}</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="card border-0 shadow-lg h-100 text-center hover-card"
-                    style="background: linear-gradient(135deg, #10B981, #059669);">
-                    <div class="card-body d-flex flex-column justify-content-center align-items-center text-white">
-                        <i class="fas fa-dollar-sign fa-3x mb-3"></i>
-                        <h6 class="card-title text-uppercase mt-3">{{ __('Loan::lang.total_payments') }}</h6>
-                        <h3 class="display-6 mt-2">{{ number_format($total_payments, 2) }}</h3>
+            <div class="col-md-3 col-sm-6 col-xs-12">
+                <div class="info-box info-box-new-style">
+                    <span class="info-box-icon bg-green"><i class="fa fa-credit-card"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">@lang('Loan::lang.total_payments')</span>
+                        <span class="info-box-number">{{ number_format($total_payments, 2) }}</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="card border-0 shadow-lg h-100 text-center hover-card"
-                    style="background: linear-gradient(135deg, #F59E0B, #D97706);">
-                    <div class="card-body d-flex flex-column justify-content-center align-items-center text-white">
-                        <i class="fas fa-percent fa-3x mb-3"></i>
-                        <h6 class="card-title text-uppercase mt-3">{{ __('Loan::lang.total_interest') }}</h6>
-                        <h3 class="display-6 mt-2">{{ number_format($total_interest, 2) }}</h3>
+            <div class="col-md-3 col-sm-6 col-xs-12">
+                <div class="info-box info-box-new-style">
+                    <span class="info-box-icon bg-yellow"><i class="fa fa-percent"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">@lang('Loan::lang.total_interest')</span>
+                        <span class="info-box-number">{{ number_format($total_interest, 2) }}</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="card border-0 shadow-lg h-100 text-center hover-card"
-                    style="background: linear-gradient(135deg, #EF4444, #B91C1C);">
-                    <div class="card-body d-flex flex-column justify-content-center align-items-center text-white">
-                        <i class="fas fa-balance-scale fa-3x mb-3"></i>
-                        <h6 class="card-title text-uppercase mt-3">{{ __('Loan::lang.total_outstanding') }}</h6>
-                        <h3 class="display-6 mt-2">{{ number_format($total_outstanding, 2) }}</h3>
+            <div class="col-md-3 col-sm-6 col-xs-12">
+                <div class="info-box info-box-new-style">
+                    <span class="info-box-icon bg-red"><i class="fa fa-balance-scale"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">@lang('Loan::lang.total_outstanding')</span>
+                        <span class="info-box-number">{{ number_format($total_outstanding, 2) }}</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Charts Section -->
-        <div class="row mt-5">
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-lg">
-                    <div class="card-header bg-primary text-white text-center">
-                        {{ __('Loan::lang.loans_status_distribution') }}</div>
-                    <div class="card-body"><canvas id="loanStatusChart"></canvas></div>
-                </div>
+        <div class="row">
+            <div class="col-md-4">
+                @component('components.widget', ['class' => 'box-primary', 'title' => __('Loan::lang.loans_status_distribution')])
+                    <canvas id="loanStatusChart"></canvas>
+                @endcomponent
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-lg">
-                    <div class="card-header bg-success text-white text-center">{{ __('Loan::lang.loans_by_type') }}</div>
-                    <div class="card-body"><canvas id="loanTypeChart"></canvas></div>
-                </div>
+            <div class="col-md-4">
+                @component('components.widget', ['class' => 'box-primary', 'title' => __('Loan::lang.loans_by_type')])
+                    <canvas id="loanTypeChart"></canvas>
+                @endcomponent
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-lg">
-                    <div class="card-header bg-info text-white text-center">{{ __('Loan::lang.total_payments_overview') }}
-                    </div>
-                    <div class="card-body"><canvas id="paymentsChart"></canvas></div>
-                </div>
+            <div class="col-md-4">
+                @component('components.widget', ['class' => 'box-primary', 'title' => __('Loan::lang.total_payments_overview')])
+                    <canvas id="paymentsChart"></canvas>
+                @endcomponent
             </div>
         </div>
 
@@ -229,46 +200,12 @@
                 <span>{{ __('Loan::lang.purchase_module') }}</span>
             </a>
         </div>
-    </div>
-
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <script>
-        const loanStatusCtx = document.getElementById('loanStatusChart').getContext('2d');
-        new Chart(loanStatusCtx, {
-            type: 'pie',
-            data: {
-                labels: @json($chart_data['status_labels']),
-                datasets: [{ data: @json($chart_data['status_counts']), backgroundColor: ['#28a745', '#ffc107', '#6c757d'], borderColor: '#fff', borderWidth: 1 }]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' }, title: { display: true, text: '{{ __('Loan::lang.loans_status_distribution') }}' } } }
-        });
-
-        const loanTypeCtx = document.getElementById('loanTypeChart').getContext('2d');
-        new Chart(loanTypeCtx, {
-            type: 'bar',
-            data: {
-                labels: @json($chart_data['type_labels']),
-                datasets: [{ label: '{{ __('Loan::lang.count') }}', data: @json($chart_data['type_counts']), backgroundColor: '#28a745', borderColor: '#218838', borderWidth: 1 }]
-            },
-            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false }, title: { display: true, text: '{{ __('Loan::lang.loans_by_type') }}' } } }
-        });
-
-        const paymentsCtx = document.getElementById('paymentsChart').getContext('2d');
-        new Chart(paymentsCtx, {
-            type: 'line',
-            data: {
-                labels: @json($chart_data['payment_months']),
-                datasets: [{ label: '{{ __('Loan::lang.total_payments') }}', data: @json($chart_data['payment_totals']), fill: false, borderColor: '#007bff', tension: 0.1 }]
-            },
-            options: { responsive: true, scales: { y: { beginAtZero: true }, x: {} }, plugins: { legend: { display: true }, title: { display: true, text: '{{ __('Loan::lang.total_payments_overview') }}' } } }
-        });
-    </script>
+    </section>
 
 @endsection
 
 @section('javascript')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="text/javascript">
         $(document).ready(function () {
             var startDate = '{{ request('start_date') }}';
@@ -324,6 +261,73 @@
             // Auto-submit on select2 filter changes
             $('#location_id, #loan_type, #loan_status').on('change', function () {
                 $('#dashboard_filter_form').submit();
+            });
+
+            // Status Distribution Pie Chart
+            const loanStatusCtx = document.getElementById('loanStatusChart').getContext('2d');
+            new Chart(loanStatusCtx, {
+                type: 'pie',
+                data: {
+                    labels: @json($chart_data['status_labels']),
+                    datasets: [{ 
+                        data: @json($chart_data['status_counts']), 
+                        backgroundColor: ['#28a745', '#ff9800', '#007bff'], 
+                        borderColor: '#fff', 
+                        borderWidth: 1 
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    plugins: { 
+                        legend: { position: 'bottom' }
+                    } 
+                }
+            });
+
+            // Loans by Type Bar Chart
+            const loanTypeCtx = document.getElementById('loanTypeChart').getContext('2d');
+            new Chart(loanTypeCtx, {
+                type: 'bar',
+                data: {
+                    labels: @json($chart_data['type_labels']),
+                    datasets: [{ 
+                        label: '{{ __('Loan::lang.count') }}', 
+                        data: @json($chart_data['type_counts']), 
+                        backgroundColor: '#007bff', 
+                        borderColor: '#0056b3', 
+                        borderWidth: 1 
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    scales: { y: { beginAtZero: true } }, 
+                    plugins: { 
+                        legend: { display: false }
+                    } 
+                }
+            });
+
+            // Total Payments Line Chart
+            const paymentsCtx = document.getElementById('paymentsChart').getContext('2d');
+            new Chart(paymentsCtx, {
+                type: 'line',
+                data: {
+                    labels: @json($chart_data['payment_months']),
+                    datasets: [{ 
+                        label: '{{ __('Loan::lang.total_payments') }}', 
+                        data: @json($chart_data['payment_totals']), 
+                        fill: false, 
+                        borderColor: '#28a745', 
+                        tension: 0.1 
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    scales: { y: { beginAtZero: true }, x: {} }, 
+                    plugins: { 
+                        legend: { display: true }
+                    } 
+                }
             });
         });
     </script>

@@ -133,6 +133,13 @@ class LoanManagementController extends Controller
 
         $business_id = auth()->user()->business_id;
 
+        $commonUtil = new \App\Utils\Util();
+        if ($request->has('start_date')) {
+            $request->merge([
+                'start_date' => $commonUtil->uf_date($request->start_date)
+            ]);
+        }
+
         $request->validate([
             'start_date' => 'required|date',
             'recipient_type' => 'required|in:customer,user',
@@ -349,6 +356,13 @@ class LoanManagementController extends Controller
     public function update(Request $request, $id)
     {
         $business_id = auth()->user()->business_id;
+
+        $commonUtil = new \App\Utils\Util();
+        if ($request->has('start_date')) {
+            $request->merge([
+                'start_date' => $commonUtil->uf_date($request->start_date)
+            ]);
+        }
 
         $request->validate([
             'start_date' => 'required|date',

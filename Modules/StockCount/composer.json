@@ -1,0 +1,31 @@
+{
+    "name": "nwidart/stockcount",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\StockCount\\": "",
+            "Modules\\StockCount\\App\\": "app/",
+            "Modules\\StockCount\\Database\\Factories\\": "database/factories/",
+            "Modules\\StockCount\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\StockCount\\Tests\\": "tests/"
+        }
+    }
+}

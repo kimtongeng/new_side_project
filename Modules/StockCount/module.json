@@ -1,0 +1,11 @@
+{
+    "name": "StockCount",
+    "alias": "stockcount",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\StockCount\\Providers\\StockCountServiceProvider"
+    ],
+    "files": []
+}

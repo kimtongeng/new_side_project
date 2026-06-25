@@ -21,6 +21,6 @@
     "Gym": true,
     "ZatcaIntegrationKsa": true,
     "ExchangeCurrency": true,
-    "Loan":true
-
+    "Loan": true,
+    "StockCount": true
 }

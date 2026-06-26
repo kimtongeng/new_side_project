@@ -61,7 +61,7 @@
                 <div class="form-group">
                     <label for="date_range">@lang('report.date_range'):</label>
                     {!! Form::text('date_range', null, [
-        'placeholder' => __('lang_v1.select_a_range'),
+        'placeholder' => 'Select date range',
         'class' => 'form-control',
         'id' => 'date_range',
         'readonly' => false,

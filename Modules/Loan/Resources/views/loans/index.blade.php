@@ -78,7 +78,7 @@
                     </a>
                 </div>
             @endslot
-            <div class="table-responsive" style="overflow: visible;">
+            <div class="table-responsive">
                 <table class="table table-bordered table-striped" id="loans_table">
                     <thead>
                         <tr>

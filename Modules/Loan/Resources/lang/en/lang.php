@@ -131,4 +131,5 @@ return [
     'description' => 'Description',
     'update_settings' => 'Update Settings',
     'fully_completed' => 'Fully Completed',
+    "no_description" => "No Description"
 ];

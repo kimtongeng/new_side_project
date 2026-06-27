@@ -382,6 +382,14 @@
               @show_tooltip(__('lang_v1.view_purchase_price_tooltip'))
             </div>
           </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'edit_rename', false, ['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.edit_rename') }}
+              </label>
+            </div>
+          </div>
         </div>
         </div>
         <hr>

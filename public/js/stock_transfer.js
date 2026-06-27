@@ -138,10 +138,29 @@ $(document).ready(function() {
         serverSide: true,
         fixedHeader:false,
         aaSorting: [[0, 'desc']],
-        ajax: '/stock-transfers',
+        ajax: {
+            url: '/stock-transfers',
+            data: function(d) {
+                d.status = $('#stock_transfer_list_filter_status').val();
+                d.created_by = $('#created_by').val();
+                var start = '';
+                var end = '';
+                if ($('#stock_transfer_list_filter_date_range').val()) {
+                    start = $('input#stock_transfer_list_filter_date_range')
+                        .data('daterangepicker')
+                        .startDate.format('YYYY-MM-DD');
+                    end = $('input#stock_transfer_list_filter_date_range')
+                        .data('daterangepicker')
+                        .endDate.format('YYYY-MM-DD');
+                }
+                d.start_date = start;
+                d.end_date = end;
+                d = __datatable_ajax_callback(d);
+            },
+        },
         columnDefs: [
             {
-                targets: 8,
+                targets: 9,
                 orderable: false,
                 searchable: false,
             },
@@ -155,11 +174,32 @@ $(document).ready(function() {
             { data: 'shipping_charges', name: 'shipping_charges' },
             { data: 'final_total', name: 'final_total' },
             { data: 'additional_notes', name: 'additional_notes' },
+            { data: 'added_by', name: 'u.first_name' },
             { data: 'action', name: 'action' },
         ],
         fnDrawCallback: function(oSettings) {
             __currency_convert_recursively($('#stock_transfer_table'));
         },
+    });
+
+    if ($('#stock_transfer_list_filter_date_range').length) {
+        $('#stock_transfer_list_filter_date_range').daterangepicker(
+            dateRangeSettings,
+            function(start, end) {
+                $('#stock_transfer_list_filter_date_range').val(
+                    start.format(moment_date_format) + ' ~ ' + end.format(moment_date_format)
+                );
+                stock_transfer_table.ajax.reload();
+            }
+        );
+        $('#stock_transfer_list_filter_date_range').on('cancel.daterangepicker', function(ev, picker) {
+            $('#stock_transfer_list_filter_date_range').val('');
+            stock_transfer_table.ajax.reload();
+        });
+    }
+
+    $(document).on('change', '#stock_transfer_list_filter_status, #created_by', function() {
+        stock_transfer_table.ajax.reload();
     });
     var detailRows = [];
 

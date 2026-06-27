@@ -35,6 +35,7 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'product.update'],
             ['name' => 'product.delete'],
             ['name' => 'product.upload_image'],
+            ['name' => 'edit_rename'],
 
             ['name' => 'purchase.view'],
             ['name' => 'purchase.create'],

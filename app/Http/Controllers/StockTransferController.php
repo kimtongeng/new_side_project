@@ -77,11 +77,34 @@ class StockTransferController extends Controller
                     '=',
                     'l2.id'
                 )
+                ->leftJoin('users as u', 'transactions.created_by', '=', 'u.id')
                 ->where('transactions.business_id', $business_id)
                 ->where('transactions.type', 'sell_transfer');
 
             if (! auth()->user()->can('purchase.view') && auth()->user()->can('view_own_purchase')) {
                 $stock_transfers->where('t2.created_by', request()->session()->get('user.id'));
+            }
+
+            // Filter status
+            if (! empty(request()->status)) {
+                $status = request()->status;
+                if ($status == 'completed') {
+                    $status = 'final';
+                }
+                $stock_transfers->where('transactions.status', $status);
+            }
+
+            // Filter date range
+            if (! empty(request()->start_date) && ! empty(request()->end_date)) {
+                $start = request()->start_date;
+                $end = request()->end_date;
+                $stock_transfers->whereDate('transactions.transaction_date', '>=', $start)
+                    ->whereDate('transactions.transaction_date', '<=', $end);
+            }
+
+            // Filter created by (user)
+            if (! empty(request()->created_by)) {
+                $stock_transfers->where('transactions.created_by', request()->created_by);
             }
 
             $stock_transfers->select(
@@ -94,7 +117,8 @@ class StockTransferController extends Controller
                 'transactions.shipping_charges',
                 'transactions.additional_notes',
                 'transactions.id as DT_RowId',
-                'transactions.status'
+                'transactions.status',
+                DB::raw("CONCAT(COALESCE(u.surname, ''),' ',COALESCE(u.first_name, ''),' ',COALESCE(u.last_name,'')) as added_by")
             );
 
 
@@ -153,7 +177,10 @@ class StockTransferController extends Controller
                 ->make(true);
         }
 
-        return view('stock_transfer.index')->with(compact('statuses'));
+        $business_id = request()->session()->get('user.business_id');
+        $users = \App\User::forDropdown($business_id, false, false, true);
+
+        return view('stock_transfer.index')->with(compact('statuses', 'users'));
     }
 
     /**

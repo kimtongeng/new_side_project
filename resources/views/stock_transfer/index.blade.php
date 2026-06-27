@@ -11,6 +11,27 @@
 
 <!-- Main content -->
 <section class="content no-print">
+    @component('components.filters', ['title' => __('report.filters')])
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('stock_transfer_list_filter_status', __('sale.status') . ':') !!}
+                {!! Form::select('stock_transfer_list_filter_status', $statuses, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all')]) !!}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('stock_transfer_list_filter_date_range', __('report.date_range') . ':') !!}
+                {!! Form::text('stock_transfer_list_filter_date_range', null, ['placeholder' => __('lang_v1.select_a_date_range'), 'class' => 'form-control', 'readonly']) !!}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('created_by',  __('report.user') . ':') !!}
+                {!! Form::select('created_by', $users, null, ['class' => 'form-control select2', 'style' => 'width:100%']) !!}
+            </div>
+        </div>
+    @endcomponent
+
     @component('components.widget', ['class' => 'box-primary', 'title' => __('lang_v1.all_stock_transfers')])
         @slot('tool')
             <div class="box-tools">
@@ -40,6 +61,7 @@
                         <th>@lang('lang_v1.shipping_charges')</th>
                         <th>@lang('stock_adjustment.total_amount')</th>
                         <th>@lang('purchase.additional_notes')</th>
+                        <th>@lang('lang_v1.added_by')</th>
                         <th class="tw-w-full">@lang('messages.action')</th>
                     </tr>
                 </thead>

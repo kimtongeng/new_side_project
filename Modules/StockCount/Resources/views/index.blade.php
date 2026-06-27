@@ -41,9 +41,7 @@
         @component('components.widget', ['class' => 'box-primary', 'title' => __('stockcount::lang.all_stock_counts')])
         @slot('tool')
         <div class="box-tools" style="display: flex; gap: 5px; align-items: center;">
-            <a class="btn btn-default" href="{{ url('/home') }}">
-                <i class="fa fa-arrow-left"></i> @lang('messages.back')
-            </a>
+
             @can('stock_count.create')
                 <a class="btn btn-primary"
                     href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'create']) }}">

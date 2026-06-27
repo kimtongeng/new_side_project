@@ -114,19 +114,19 @@
             </button>
         </div>
     </div>
-
     <!-- Worksheet Table -->
     @component('components.widget', ['class' => 'box-primary'])
         <div class="table-responsive">
             <table class="table table-bordered table-striped" id="worksheet_table">
                 <thead>
                     <tr>
-                        <th>Product Name</th>
-                        <th>SKU</th>
-                        @if(!$session->blind_count)
-                            <th>@lang('stockcount::lang.book_qty')</th>
-                        @endif
-                        <th style="width: 150px;">@lang('stockcount::lang.counted_qty')</th>
+                        <th>Product Name (Product Code)</th>
+                        <th>QOH</th>
+                        <th>Type</th>
+                        <th style="width: 140px;">Quantity</th>
+                        <th>Unit</th>
+                        <th>New QOH</th>
+                        <th>Unit</th>
                         <th>Note</th>
                     </tr>
                 </thead>
@@ -333,9 +333,9 @@
                             $('#worksheet_body').prepend(result.row_html);
                         }
                         // Update qty in table either way
-                        var input = $('#qty_' + result.line_id);
+                        var input = $('#new_qoh_' + result.line_id);
                         if (input.length) {
-                            input.val(result.new_qty);
+                            updateRowInputs(result.line_id, result.new_qty);
                         }
                         highlightRow(result.line_id);
                     } else {
@@ -351,6 +351,17 @@
                     if (typeof callback === 'function') callback(null);
                 }
             });
+        }
+
+        function updateRowInputs(line_id, new_qoh) {
+            var bookQty = parseFloat($('#new_qoh_' + line_id).data('book-qty')) || 0;
+            var diff = new_qoh - bookQty;
+            var type = diff >= 0 ? '+' : '-';
+            var adjustQty = Math.abs(diff);
+
+            $('#type_' + line_id).val(type);
+            $('#qty_' + line_id).val(adjustQty.toFixed(4));
+            $('#new_qoh_' + line_id).val(new_qoh.toFixed(4));
         }
 
         // ── Highlight scanned row ──────────────────────────────────────
@@ -377,12 +388,30 @@
 
         // ── Auto-save on qty / note change ────────────────────────────
         var saveTimeout = null;
-        $(document).on('change', '.input-qty, .input-note', function() {
+        $(document).on('change keyup', '.select-type, .input-adjust-qty', function() {
+            var id = $(this).data('id');
+            var type = $('#type_' + id).val();
+            var adjustQty = parseFloat($('#qty_' + id).val()) || 0;
+            var bookQty = parseFloat($('#new_qoh_' + id).data('book-qty')) || 0;
+
+            var newQoh = bookQty;
+            if (type === '+') {
+                newQoh = bookQty + adjustQty;
+            } else {
+                newQoh = bookQty - adjustQty;
+                if (newQoh < 0) newQoh = 0;
+            }
+
+            $('#new_qoh_' + id).val(newQoh.toFixed(4));
+            saveProgress(id);
+        });
+
+        $(document).on('change', '.input-note', function() {
             saveProgress($(this).data('id'));
         });
 
         function saveProgress(line_id) {
-            var qty  = $('#qty_' + line_id).val();
+            var qty  = $('#new_qoh_' + line_id).val();
             var note = $('#note_' + line_id).val();
             showSaveStatus('Saving...', 'spinner');
             if (saveTimeout) clearTimeout(saveTimeout);

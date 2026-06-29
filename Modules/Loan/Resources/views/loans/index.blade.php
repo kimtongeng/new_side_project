@@ -24,7 +24,7 @@
                         {!! Form::select('recipient_name', $recipients, request('recipient_name'), [
                             'class' => 'form-control select2',
                             'style' => 'width:100%',
-                            'placeholder' => __('messages.all'),
+                            'placeholder' => 'All',
                             'id' => 'recipient_name',
                         ]) !!}
                     </div>
@@ -53,7 +53,7 @@
                         ], request('status'), [
                             'class' => 'form-control select2',
                             'style' => 'width:100%',
-                            'placeholder' => __('Loan::lang.all_statuses'),
+                            'placeholder' => __('Loan::lang.all'),
                             'id' => 'loan_status',
                         ]) !!}
                     </div>

@@ -5055,6 +5055,42 @@ class TelegramNotification
 
         self::sendMessage($msg, $to, $location_id);
     }
+    public static function productSkuUpdatedMessage(
+        $product,
+        $old_sku,
+        array $variation_diffs = [],
+        string $to = 'product',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($product)) return;
+
+        $productName = $product->name ?? 'N/A';
+        $newSku      = $product->sku ?? 'N/A';
+        $date        = now()->format('d/m/Y H:i');
+
+        $msg  = "🏷️ <b>PRODUCT SKU UPDATED</b>\n\n";
+        $msg .= "<b>Product:</b> {$productName}\n";
+
+        if ($product->type == 'single' || $product->type == 'combo') {
+            $msg .= "📉 <b>Old SKU:</b> {$old_sku}\n";
+            $msg .= "📈 <b>New SKU:</b> {$newSku}\n";
+        }
+
+        if (!empty($variation_diffs)) {
+            $msg .= "\n<b>📋 Variation SKU Updates:</b>\n";
+            foreach ($variation_diffs as $diff) {
+                $varName = $diff['name'] ?? 'Default';
+                $oldSubSku = $diff['old_sku'] ?? 'N/A';
+                $newSubSku = $diff['new_sku'] ?? 'N/A';
+                $msg .= "• <b>{$varName}:</b> <s>{$oldSubSku}</s> → <b>{$newSubSku}</b>\n";
+            }
+        }
+
+        $msg .= "\n⏰ <b>Updated At:</b> {$date}\n";
+        $msg .= "🔁 <i>SKU updated via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
     public static function deleteJobSheetMessage(
         $job_sheet,
         string $to = 'repair',

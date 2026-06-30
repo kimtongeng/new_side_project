@@ -385,8 +385,24 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'product.edit_rename', false, ['class' => 'input-icheck']); !!}
-                {{ __('lang_v1.edit_rename') }}
+                {!! Form::checkbox('permissions[]', 'product.rename_product', false, ['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.rename_product') }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'product.rename_sku', false, ['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.rename_sku') }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'product.update_price', false, ['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.update_price') }}
               </label>
             </div>
           </div>

@@ -229,9 +229,9 @@ class ProductController extends Controller
                                 '<li><a href="' . action([\App\Http\Controllers\ProductController::class, 'edit'], [$row->id]) . '"><i class="glyphicon glyphicon-edit"></i> ' . __('messages.edit') . '</a></li>';
                         }
 
-                        if (auth()->user()->can('product.edit_rename')) {
+                        if (auth()->user()->can('product.rename_product') || auth()->user()->can('product.rename_sku') || auth()->user()->can('product.update_price')) {
                             $html .=
-                                '<li><a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editRename'], [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="glyphicon glyphicon-pencil"></i> Rename & Update Price</a></li>';
+                                '<li><a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editRename'], [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="glyphicon glyphicon-pencil"></i> ' . __('lang_v1.edit_rename') . '</a></li>';
                         }
                         if (auth()->user()->can('product.upload_image')) {
                             $html .=
@@ -295,6 +295,9 @@ class ProductController extends Controller
                     return '<div style="display: flex;"><img src="' . $row->image_url . '" alt="Product image" class="product-thumbnail-small"></div>';
                 })
                 ->editColumn('type', '@lang("lang_v1." . $type)')
+                ->editColumn('sku', function ($row) {
+                    return '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editSku'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $row->sku . '</a>';
+                })
                 ->addColumn('mass_delete', function ($row) {
                     return  '<input type="checkbox" class="row-select" value="' . $row->id . '">';
                 })
@@ -330,7 +333,7 @@ class ProductController extends Controller
                         }
                     },
                 ])
-                ->rawColumns(['action', 'image', 'mass_delete', 'product', 'selling_price', 'purchase_price', 'category', 'current_stock'])
+                ->rawColumns(['action', 'image', 'mass_delete', 'product', 'sku', 'selling_price', 'purchase_price', 'category', 'current_stock'])
                 ->make(true);
         }
 
@@ -3281,7 +3284,7 @@ class ProductController extends Controller
 
     public function editRename($id)
     {
-        if (! auth()->user()->can('product.edit_rename')) {
+        if (! (auth()->user()->can('product.rename_product') || auth()->user()->can('product.rename_sku') || auth()->user()->can('product.update_price'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -3296,7 +3299,7 @@ class ProductController extends Controller
 
     public function updateRename(Request $request, $id)
     {
-        if (! auth()->user()->can('product.edit_rename')) {
+        if (! (auth()->user()->can('product.rename_product') || auth()->user()->can('product.rename_sku') || auth()->user()->can('product.update_price'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -3320,11 +3323,12 @@ class ProductController extends Controller
                 ];
             }
 
-            $name = $request->input('name');
-
             DB::beginTransaction();
 
-            $product->name = $name;
+            if (auth()->user()->can('product.rename_product')) {
+                $name = $request->input('name');
+                $product->name = $name;
+            }
 
             // Recalculate based on tax rate if present
             $tax_rate = 0;
@@ -3339,60 +3343,19 @@ class ProductController extends Controller
                 $sku = $request->input('sku');
                 $selling_price = $this->productUtil->num_uf($request->input('selling_price'));
 
-                // Validate SKU uniqueness in products table
-                $count = Product::where('business_id', $business_id)
-                    ->where('sku', $sku)
-                    ->where('id', '!=', $id)
-                    ->count();
-
-                if ($count > 0) {
-                    return [
-                        'success' => false,
-                        'msg' => __('lang_v1.sku_already_exists')
-                    ];
-                }
-
-                // Validate SKU uniqueness in variations table
-                $count_variation = Variation::join('products', 'variations.product_id', '=', 'products.id')
-                    ->where('products.business_id', $business_id)
-                    ->where('variations.sub_sku', $sku)
-                    ->where('variations.product_id', '!=', $id)
-                    ->count();
-
-                if ($count_variation > 0) {
-                    return [
-                        'success' => false,
-                        'msg' => __('lang_v1.sku_already_exists')
-                    ];
-                }
-
-                $product->sku = $sku;
-
                 $variation = Variation::where('product_id', $id)->first();
                 if (! empty($variation)) {
-                    $variation->sub_sku = $sku;
-                    $variation->default_sell_price = $selling_price;
-                    $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
-                    $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);
-                    $variation->save();
-                }
-            } elseif ($product->type == 'variable') {
-                $variations_data = $request->input('variations');
-                if (! empty($variations_data)) {
-                    foreach ($variations_data as $variation_id => $data) {
-                        $variation = Variation::where('product_id', $id)->findOrFail($variation_id);
-                        $sku = $data['sku'];
-                        $selling_price = $this->productUtil->num_uf($data['selling_price']);
-
+                    if (auth()->user()->can('product.rename_sku')) {
                         // Validate SKU uniqueness in products table
                         $count = Product::where('business_id', $business_id)
                             ->where('sku', $sku)
+                            ->where('id', '!=', $id)
                             ->count();
 
                         if ($count > 0) {
                             return [
                                 'success' => false,
-                                'msg' => __('lang_v1.sku_already_exists') . ' (' . $sku . ')'
+                                'msg' => __('lang_v1.sku_already_exists')
                             ];
                         }
 
@@ -3400,20 +3363,73 @@ class ProductController extends Controller
                         $count_variation = Variation::join('products', 'variations.product_id', '=', 'products.id')
                             ->where('products.business_id', $business_id)
                             ->where('variations.sub_sku', $sku)
-                            ->where('variations.id', '!=', $variation_id)
+                            ->where('variations.product_id', '!=', $id)
                             ->count();
 
                         if ($count_variation > 0) {
                             return [
                                 'success' => false,
-                                'msg' => __('lang_v1.sku_already_exists') . ' (' . $sku . ')'
+                                'msg' => __('lang_v1.sku_already_exists')
                             ];
                         }
 
+                        $product->sku = $sku;
                         $variation->sub_sku = $sku;
+                    }
+
+                    if (auth()->user()->can('product.update_price')) {
                         $variation->default_sell_price = $selling_price;
                         $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
                         $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);
+                    }
+                    $variation->save();
+                }
+            } elseif ($product->type == 'variable') {
+                $variations_data = $request->input('variations');
+                if (! empty($variations_data)) {
+                    foreach ($variations_data as $variation_id => $data) {
+                        $variation = Variation::where('product_id', $id)->findOrFail($variation_id);
+
+                        if (auth()->user()->can('product.rename_sku') && isset($data['sku'])) {
+                            $sku = $data['sku'];
+
+                            // Validate SKU uniqueness in products table
+                            $count = Product::where('business_id', $business_id)
+                                ->where('sku', $sku)
+                                ->where('id', '!=', $id)
+                                ->count();
+
+                            if ($count > 0) {
+                                return [
+                                    'success' => false,
+                                    'msg' => __('lang_v1.sku_already_exists') . ' (' . $sku . ')'
+                                ];
+                            }
+
+                            // Validate SKU uniqueness in variations table
+                            $count_variation = Variation::join('products', 'variations.product_id', '=', 'products.id')
+                                ->where('products.business_id', $business_id)
+                                ->where('variations.sub_sku', $sku)
+                                ->where('variations.id', '!=', $variation_id)
+                                ->count();
+
+                            if ($count_variation > 0) {
+                                return [
+                                    'success' => false,
+                                    'msg' => __('lang_v1.sku_already_exists') . ' (' . $sku . ')'
+                                ];
+                            }
+
+                            $variation->sub_sku = $sku;
+                        }
+
+                        if (auth()->user()->can('product.update_price') && isset($data['selling_price'])) {
+                            $selling_price = $this->productUtil->num_uf($data['selling_price']);
+                            $variation->default_sell_price = $selling_price;
+                            $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
+                            $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);
+                        }
+
                         $variation->save();
                     }
                 }
@@ -3452,6 +3468,174 @@ class ProductController extends Controller
                     );
                 } catch (\Exception $te) {
                     \Log::warning('Telegram product rename notification failed: ' . $te->getMessage());
+                }
+            });
+
+            $output = [
+                'success' => true,
+                'msg' => __('lang_v1.updated_succesfully'),
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            $output = [
+                'success' => false,
+                'msg' => __('messages.something_went_wrong'),
+            ];
+        }
+
+        return $output;
+    }
+
+    public function editSku($id)
+    {
+        if (! auth()->user()->can('product.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $product = Product::where('business_id', $business_id)
+            ->with(['variations', 'variations.product_variation'])
+            ->findOrFail($id);
+
+        return view('product.edit_sku_modal')
+            ->with(compact('product'));
+    }
+
+    public function updateSku(Request $request, $id)
+    {
+        if (! auth()->user()->can('product.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = $request->session()->get('user.business_id');
+            $product = Product::where('business_id', $business_id)
+                ->where('id', $id)
+                ->with(['variations', 'product_locations'])
+                ->firstOrFail();
+
+            $old_sku = $product->sku;
+
+            // Load variations and their original values
+            $old_variations = [];
+            foreach ($product->variations as $var) {
+                $old_variations[$var->id] = [
+                    'name' => $var->name,
+                    'sku' => $var->sub_sku
+                ];
+            }
+
+            DB::beginTransaction();
+
+            if ($product->type == 'single' || $product->type == 'combo') {
+                $sku = $request->input('sku');
+
+                // Validate SKU uniqueness in products table
+                $count = Product::where('business_id', $business_id)
+                    ->where('sku', $sku)
+                    ->where('id', '!=', $id)
+                    ->count();
+
+                if ($count > 0) {
+                    return [
+                        'success' => false,
+                        'msg' => __('lang_v1.sku_already_exists')
+                    ];
+                }
+
+                // Validate SKU uniqueness in variations table
+                $count_variation = Variation::join('products', 'variations.product_id', '=', 'products.id')
+                    ->where('products.business_id', $business_id)
+                    ->where('variations.sub_sku', $sku)
+                    ->where('variations.product_id', '!=', $id)
+                    ->count();
+
+                if ($count_variation > 0) {
+                    return [
+                        'success' => false,
+                        'msg' => __('lang_v1.sku_already_exists')
+                    ];
+                }
+
+                $product->sku = $sku;
+
+                $variation = Variation::where('product_id', $id)->first();
+                if (! empty($variation)) {
+                    $variation->sub_sku = $sku;
+                    $variation->save();
+                }
+            } elseif ($product->type == 'variable') {
+                $variations_data = $request->input('variations');
+                if (! empty($variations_data)) {
+                    foreach ($variations_data as $variation_id => $data) {
+                        $variation = Variation::where('product_id', $id)->findOrFail($variation_id);
+                        $sku = $data['sku'];
+
+                        // Validate SKU uniqueness in products table
+                        $count = Product::where('business_id', $business_id)
+                            ->where('sku', $sku)
+                            ->where('id', '!=', $id)
+                            ->count();
+
+                        if ($count > 0) {
+                            return [
+                                'success' => false,
+                                'msg' => __('lang_v1.sku_already_exists') . ' (' . $sku . ')'
+                            ];
+                        }
+
+                        // Validate SKU uniqueness in variations table
+                        $count_variation = Variation::join('products', 'variations.product_id', '=', 'products.id')
+                            ->where('products.business_id', $business_id)
+                            ->where('variations.sub_sku', $sku)
+                            ->where('variations.id', '!=', $variation_id)
+                            ->count();
+
+                        if ($count_variation > 0) {
+                            return [
+                                'success' => false,
+                                'msg' => __('lang_v1.sku_already_exists') . ' (' . $sku . ')'
+                            ];
+                        }
+
+                        $variation->sub_sku = $sku;
+                        $variation->save();
+                    }
+                }
+            }
+
+            $product->save();
+            DB::commit();
+
+            // Calculate variation diffs for Telegram notification
+            $product->refresh();
+            $variation_diffs = [];
+            foreach ($product->variations as $var) {
+                $old = $old_variations[$var->id] ?? null;
+                if ($old && $old['sku'] !== $var->sub_sku) {
+                    $variation_diffs[] = [
+                        'name' => $old['name'] !== 'DUMMY' ? $old['name'] : 'Single',
+                        'old_sku' => $old['sku'],
+                        'new_sku' => $var->sub_sku
+                    ];
+                }
+            }
+
+            // Send Telegram Notification after response
+            $tg_location_id = $product->product_locations->first()->location_id ?? 'PT1001';
+            app()->terminating(function () use ($product, $old_sku, $variation_diffs, $tg_location_id) {
+                try {
+                    \App\Notifications\TelegramNotification::productSkuUpdatedMessage(
+                        $product,
+                        $old_sku,
+                        $variation_diffs,
+                        'product',
+                        $tg_location_id
+                    );
+                } catch (\Exception $te) {
+                    \Log::warning('Telegram product SKU update notification failed: ' . $te->getMessage());
                 }
             });
 

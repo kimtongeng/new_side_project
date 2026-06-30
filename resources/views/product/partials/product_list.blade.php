@@ -9,6 +9,7 @@
             <th class="tw-w-full">{{__('lang_v1.product_image')}} </th>
             <th>@lang('messages.action')</th>
             <th>@lang('sale.product')</th>
+            <th>@lang('product.sku')</th>
             <th>@lang('purchase.business_location') @show_tooltip(__('lang_v1.product_business_location_tooltip'))</th>
             @can('view_purchase_price')
                 @php 
@@ -27,7 +28,6 @@
             <th>@lang('product.category')</th>
             <th>@lang('product.brand')</th>
             <th>@lang('product.tax')</th>
-            <th>@lang('product.sku')</th>
             <th id="cf_1">{{ $custom_labels['product']['custom_field_1'] ?? '' }}</th>
             <th id="cf_2">{{ $custom_labels['product']['custom_field_2'] ?? '' }}</th>
             <th id="cf_3">{{ $custom_labels['product']['custom_field_3'] ?? '' }}</th>

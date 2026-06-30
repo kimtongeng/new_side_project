@@ -189,6 +189,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/products/toggle-woocommerce-sync', [ProductController::class, 'toggleWooCommerceSync']);
     Route::get('/products/edit-rename/{id}', [ProductController::class, 'editRename']);
     Route::post('/products/update-rename/{id}', [ProductController::class, 'updateRename']);
+    Route::get('/products/edit-sku/{id}', [ProductController::class, 'editSku']);
+    Route::post('/products/update-sku/{id}', [ProductController::class, 'updateSku']);
 
     Route::resource('products', ProductController::class);
     Route::get('/toggle-subscription/{id}', 'SellPosController@toggleRecurringInvoices');
@@ -549,3 +551,4 @@ Route::get('/run-permissions-seeder', function() {
         return "Error running seeder: " . $e->getMessage();
     }
 });
+

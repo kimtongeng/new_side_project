@@ -283,6 +283,10 @@
                         name: 'products.name'
                     },
                     {
+                        data: 'sku',
+                        name: 'products.sku'
+                    },
+                    {
                         data: 'product_locations',
                         name: 'product_locations'
                     },
@@ -319,10 +323,6 @@
                         data: 'tax',
                         name: 'tax_rates.name',
                         searchable: false
-                    },
-                    {
-                        data: 'sku',
-                        name: 'products.sku'
                     },
                     {
                         data: 'product_custom_field1',

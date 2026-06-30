@@ -205,6 +205,9 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 
     Route::post('/import-purchase-products', [PurchaseController::class, 'importPurchaseProducts']);
     Route::post('/purchases/update-status', [PurchaseController::class, 'updateStatus']);
+    Route::get('/purchases/receive-modal/{id}', [PurchaseController::class, 'getReceiveModal']);
+    Route::post('/purchases/save-receive-record', [PurchaseController::class, 'saveReceiveRecord']);
+    Route::delete('/purchases/delete-receive-record/{id}', [PurchaseController::class, 'deleteReceiveRecord']);
     Route::get('/purchases/get_products', [PurchaseController::class, 'getProducts']);
     Route::get('/purchases/get_suppliers', [PurchaseController::class, 'getSuppliers']);
     Route::post('/purchases/get_purchase_entry_row', [PurchaseController::class, 'getPurchaseEntryRow']);
@@ -532,5 +535,17 @@ Route::get('/run-migrations', function() {
         return "Migrations run successfully!<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
     } catch (\Exception $e) {
         return "Error running migrations: " . $e->getMessage();
+    }
+});
+
+Route::get('/run-permissions-seeder', function() {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('db:seed', [
+            '--class' => 'Database\Seeders\PermissionsTableSeeder',
+            '--force' => true
+        ]);
+        return "Permissions table seeded successfully!<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
+    } catch (\Exception $e) {
+        return "Error running seeder: " . $e->getMessage();
     }
 });

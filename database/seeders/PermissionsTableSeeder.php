@@ -35,7 +35,7 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'product.update'],
             ['name' => 'product.delete'],
             ['name' => 'product.upload_image'],
-            ['name' => 'edit_rename'],
+            ['name' => 'product.edit_rename'],
 
             ['name' => 'purchase.view'],
             ['name' => 'purchase.create'],
@@ -85,13 +85,11 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'dashboard.data'],
         ];
 
-        $insert_data = [];
-        $time_stamp = \Carbon::now()->toDateTimeString();
         foreach ($data as $d) {
-            $d['guard_name'] = 'web';
-            $d['created_at'] = $time_stamp;
-            $insert_data[] = $d;
+            Permission::firstOrCreate([
+                'name' => $d['name'],
+                'guard_name' => 'web'
+            ]);
         }
-        Permission::insert($insert_data);
     }
 }

@@ -176,6 +176,10 @@ class PurchaseController extends Controller
                             '" data-status="' . $row->status . '" class="update_status"><i class="fas fa-edit" aria-hidden="true" ></i>' . __('lang_v1.update_status') . '</a></li>';
                     }
 
+                    if (auth()->user()->can('purchase.update')) {
+                        $html .= '<li><a href="#" data-purchase_id="' . $row->id . '" class="btn_receive_product"><i class="fas fa-arrow-circle-down" aria-hidden="true"></i> Receive Products</a></li>';
+                    }
+
                     if ($row->status == 'ordered') {
                         $html .= '<li><a href="#" data-href="' . action([\App\Http\Controllers\NotificationController::class, 'getTemplate'], ['transaction_id' => $row->id, 'template_for' => 'new_order']) . '" class="btn-modal" data-container=".view_modal"><i class="fas fa-envelope" aria-hidden="true"></i> ' . __('lang_v1.new_order_notification') . '</a></li>';
                     } elseif ($row->status == 'received') {
@@ -1700,16 +1704,40 @@ class PurchaseController extends Controller
             $transaction->update($update_data);
 
             $currency_details = $this->transactionUtil->purchaseCurrencyDetails($business_id);
-            foreach ($transaction->purchase_lines as $purchase_line) {
-                $this->productUtil->updateProductStock(
-                    $before_status,
-                    $transaction,
-                    $purchase_line->product_id,
-                    $purchase_line->variation_id,
-                    $purchase_line->quantity,
-                    $purchase_line->quantity,
-                    $currency_details
-                );
+            if ($transaction->status == 'received' && $before_status != 'received') {
+                foreach ($transaction->purchase_lines as $purchase_line) {
+                    $already_received = $purchase_line->receipts()->sum('quantity');
+                    $remaining = $purchase_line->quantity - $already_received;
+                    if ($remaining > 0) {
+                        \App\PurchaseLineReceipt::create([
+                            'transaction_id' => $transaction->id,
+                            'purchase_line_id' => $purchase_line->id,
+                            'quantity' => $remaining,
+                            'received_date' => \Carbon\Carbon::now(),
+                        ]);
+                        $this->productUtil->updateProductQuantity($transaction->location_id, $purchase_line->product_id, $purchase_line->variation_id, $remaining, 0, null, false);
+                    }
+                }
+            } elseif ($transaction->status != 'received' && $before_status == 'received') {
+                foreach ($transaction->purchase_lines as $purchase_line) {
+                    $receipts = $purchase_line->receipts;
+                    foreach ($receipts as $receipt) {
+                        $this->productUtil->decreaseProductQuantity($purchase_line->product_id, $purchase_line->variation_id, $transaction->location_id, $receipt->quantity);
+                        $receipt->delete();
+                    }
+                }
+            } else {
+                foreach ($transaction->purchase_lines as $purchase_line) {
+                    $this->productUtil->updateProductStock(
+                        $before_status,
+                        $transaction,
+                        $purchase_line->product_id,
+                        $purchase_line->variation_id,
+                        $purchase_line->quantity,
+                        $purchase_line->quantity,
+                        $currency_details
+                    );
+                }
             }
 
             //Update mapping of purchase & Sell.
@@ -1778,5 +1806,237 @@ class PurchaseController extends Controller
             $none_payment_account = $this->transactionUtil->num_f($transaction->final_total - $total_amount, true);
         }
         return $none_payment_account;
+    }
+
+    public function getReceiveModal($id)
+    {
+        if (! auth()->user()->can('purchase.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $transaction = Transaction::where('business_id', $business_id)
+            ->where('type', 'purchase')
+            ->with([
+                'purchase_lines',
+                'purchase_lines.product',
+                'purchase_lines.variations',
+                'purchase_lines.receipts'
+            ])
+            ->findOrFail($id);
+
+        return view('purchase.partials.receive_product_modal')
+            ->with(compact('transaction'));
+    }
+
+    public function saveReceiveRecord(Request $request)
+    {
+        if (! auth()->user()->can('purchase.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = $request->session()->get('user.business_id');
+            $transaction = Transaction::where('business_id', $business_id)
+                ->where('type', 'purchase')
+                ->with([
+                    'purchase_lines', 
+                    'purchase_lines.receipts',
+                    'purchase_lines.product',
+                    'purchase_lines.product.unit',
+                    'purchase_lines.variations'
+                ])
+                ->findOrFail($request->input('purchase_id'));
+
+            $received_date = !empty($request->input('received_date')) 
+                ? \Carbon\Carbon::parse($request->input('received_date')) 
+                : \Carbon\Carbon::now();
+
+            DB::beginTransaction();
+
+            $receive_type = $request->input('receive_type', 'all');
+            $received_items = [];
+
+            if ($receive_type == 'all') {
+                foreach ($transaction->purchase_lines as $purchase_line) {
+                    $already_received = $purchase_line->receipts->sum('quantity');
+                    $remaining = $purchase_line->quantity - $already_received;
+
+                    if ($remaining > 0) {
+                        \App\PurchaseLineReceipt::create([
+                            'transaction_id' => $transaction->id,
+                            'purchase_line_id' => $purchase_line->id,
+                            'quantity' => $remaining,
+                            'received_date' => $received_date,
+                        ]);
+
+                        // Update stock
+                        $this->productUtil->updateProductQuantity($transaction->location_id, $purchase_line->product_id, $purchase_line->variation_id, $remaining, 0, null, false);
+
+                        $received_items[] = [
+                            'product_name' => $purchase_line->product->name . (($purchase_line->variations && $purchase_line->variations->name !== 'DUMMY') ? ' (' . $purchase_line->variations->name . ')' : ''),
+                            'quantity' => $remaining,
+                            'unit_name' => $purchase_line->product->unit->short_name ?? 'Pc(s)'
+                        ];
+                    }
+                }
+            } else {
+                $quantities = $request->input('qty', []);
+                foreach ($transaction->purchase_lines as $purchase_line) {
+                    if (isset($quantities[$purchase_line->id])) {
+                        $qty_to_receive = (float)$quantities[$purchase_line->id];
+                        if ($qty_to_receive > 0) {
+                            \App\PurchaseLineReceipt::create([
+                                'transaction_id' => $transaction->id,
+                                'purchase_line_id' => $purchase_line->id,
+                                'quantity' => $qty_to_receive,
+                                'received_date' => $received_date,
+                            ]);
+
+                            // Update stock
+                            $this->productUtil->updateProductQuantity($transaction->location_id, $purchase_line->product_id, $purchase_line->variation_id, $qty_to_receive, 0, null, false);
+
+                            $received_items[] = [
+                                'product_name' => $purchase_line->product->name . (($purchase_line->variations && $purchase_line->variations->name !== 'DUMMY') ? ' (' . $purchase_line->variations->name . ')' : ''),
+                                'quantity' => $qty_to_receive,
+                                'unit_name' => $purchase_line->product->unit->short_name ?? 'Pc(s)'
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Check if fully received to automatically update transaction status
+            $transaction->refresh();
+            $total_ordered = 0;
+            $total_received = 0;
+            foreach ($transaction->purchase_lines as $purchase_line) {
+                $total_ordered += $purchase_line->quantity;
+                $total_received += $purchase_line->receipts->sum('quantity');
+            }
+
+            if ($total_received >= $total_ordered && $transaction->status != 'received') {
+                $transaction->update(['status' => 'received']);
+            }
+
+            DB::commit();
+
+            // Send Telegram Notification
+            if (!empty($received_items)) {
+                try {
+                    $transaction->load(['contact', 'location']);
+                    \App\Notifications\TelegramNotification::purchaseReceiptMessage(
+                        $transaction,
+                        $received_items,
+                        $received_date->toDateTimeString(),
+                        'saved'
+                    );
+                } catch (\Exception $te) {
+                    \Log::warning('Telegram purchase receipt notification failed: ' . $te->getMessage());
+                }
+            }
+
+            $output = [
+                'success' => true,
+                'msg' => 'Products received successfully.'
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+            $output = [
+                'success' => false,
+                'msg' => $e->getMessage()
+            ];
+        }
+
+        return $output;
+    }
+
+    public function deleteReceiveRecord($id)
+    {
+        if (! auth()->user()->can('purchase.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = request()->session()->get('user.business_id');
+            $receipt = \App\PurchaseLineReceipt::with([
+                'transaction', 
+                'purchase_line',
+                'purchase_line.product',
+                'purchase_line.product.unit',
+                'purchase_line.variations'
+            ])->findOrFail($id);
+            
+            if ($receipt->transaction->business_id != $business_id) {
+                abort(403, 'Unauthorized action.');
+            }
+
+            DB::beginTransaction();
+
+            // Decrease stock
+            $this->productUtil->decreaseProductQuantity(
+                $receipt->purchase_line->product_id,
+                $receipt->purchase_line->variation_id,
+                $receipt->transaction->location_id,
+                $receipt->quantity
+            );
+
+            $transaction = $receipt->transaction;
+            
+            // Build received item details for notification before deleting
+            $received_items = [
+                [
+                    'product_name' => $receipt->purchase_line->product->name . (($receipt->purchase_line->variations && $receipt->purchase_line->variations->name !== 'DUMMY') ? ' (' . $receipt->purchase_line->variations->name . ')' : ''),
+                    'quantity' => $receipt->quantity,
+                    'unit_name' => $receipt->purchase_line->product->unit->short_name ?? 'Pc(s)'
+                ]
+            ];
+            $received_date = $receipt->received_date;
+
+            $receipt->delete();
+
+            // If status is 'received' but now not fully received, change status to 'ordered'
+            $transaction->refresh();
+            $total_ordered = 0;
+            $total_received = 0;
+            foreach ($transaction->purchase_lines as $purchase_line) {
+                $total_ordered += $purchase_line->quantity;
+                $total_received += $purchase_line->receipts->sum('quantity');
+            }
+
+            if ($total_received < $total_ordered && $transaction->status == 'received') {
+                $transaction->update(['status' => 'ordered']);
+            }
+
+            DB::commit();
+
+            // Send Telegram Notification
+            try {
+                $transaction->load(['contact', 'location']);
+                \App\Notifications\TelegramNotification::purchaseReceiptMessage(
+                    $transaction,
+                    $received_items,
+                    $received_date,
+                    'deleted'
+                );
+            } catch (\Exception $te) {
+                \Log::warning('Telegram purchase receipt deletion notification failed: ' . $te->getMessage());
+            }
+
+            $output = [
+                'success' => true,
+                'msg' => 'Receipt record deleted successfully.'
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+            $output = [
+                'success' => false,
+                'msg' => $e->getMessage()
+            ];
+        }
+
+        return $output;
     }
 }

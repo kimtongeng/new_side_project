@@ -3282,6 +3282,123 @@ class TelegramNotification
         }
         self::sendMessage($msg, $to, $location_id);
     }
+
+    public static function purchaseReceiptMessage(
+        $transaction,
+        array $received_items,
+        string $received_date,
+        string $action = 'saved', // 'saved' or 'deleted'
+        string $to = 'purchase',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($transaction)) return;
+
+        $location_id = $transaction->location->location_id ?? $location_id;
+        $all_account = self::fetchAccounts($location_id);
+
+        $supplier       = $transaction->contact;
+        $location       = $transaction->location;
+        $supplierName   = filled($supplier->name ?? '') ? $supplier->name : ($supplier->supplier_business_name ?? 'N/A');
+        $supplierMobile = $supplier->mobile ?? null;
+        $locationName   = $location->name ?? 'N/A';
+
+        $refNo      = $transaction->ref_no ?? 'N/A';
+        $payStatus  = ucfirst($transaction->payment_status ?? 'N/A');
+        $finalTotal = number_format($transaction->final_total, 2);
+
+        $date = \Carbon\Carbon::parse($received_date)->format('d/m/Y H:i');
+
+        if ($action == 'saved') {
+            $msg  = "📥 <b>PURCHASE PRODUCTS RECEIVED</b>\n\n";
+        } else {
+            $msg  = "🗑️ <b>PURCHASE RECEIPT DELETED</b>\n\n";
+        }
+
+        $msg .= "<b>📍 Business Location:</b> {$locationName}\n\n";
+        $msg .= "<b>🤝 Supplier:</b> {$supplierName}\n";
+        if ($supplierMobile) $msg .= "<b>📱 Mobile:</b> {$supplierMobile}\n";
+        $msg .= "\n";
+
+        $msg .= "<b>🔖 Reference No:</b> #{$refNo}\n";
+        $msg .= "<b>🕒 Receipt Date:</b> {$date}\n";
+        $msg .= "<b>💳 Payment Status:</b> {$payStatus}\n";
+        $msg .= "<b>💵 Purchase Total:</b> \${$finalTotal}\n\n";
+
+        $msg .= "<b>🛒 Received Items:</b>\n";
+        foreach ($received_items as $item) {
+            $productName = $item['product_name'] ?? 'N/A';
+            $qty         = number_format($item['quantity'], 2);
+            $unitName    = $item['unit_name'] ?? 'Pc(s)';
+            $msg .= "• <b>{$productName}</b>\n";
+            $msg .= "  Qty: {$qty} {$unitName}\n";
+        }
+
+        $msg .= "\n⏰ <b>Recorded At:</b> " . now()->format('d/m/Y H:i') . "\n";
+        $msg .= "📥 <i>Recorded via Shoper POS</i>\n\n";
+
+        if (!empty($all_account)) {
+            $msg .= "<b>🏦 LIST ACCOUNT:</b>\n";
+            foreach ($all_account as $account) {
+                $msg .= "  • <b>{$account['name']}:</b> {$account['balance']}\n";
+            }
+            $msg .= "\n";
+        }
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+
+    public static function productRenameUpdatedMessage(
+        $product,
+        $old_name,
+        $old_sku,
+        array $variation_diffs,
+        string $to = 'product',
+        string $location_id = 'PT1001'
+    ): void {
+        if (empty($product)) return;
+
+        $date = now()->format('d/m/Y H:i');
+        $newName = $product->name;
+        $newSku  = $product->sku;
+
+        $msg  = "🏷️ <b>PRODUCT RENAMED & UPDATED</b>\n\n";
+
+        if ($old_name !== $newName) {
+            $msg .= "<b>📛 Name:</b> <s>{$old_name}</s> → <b>{$newName}</b>\n";
+        } else {
+            $msg .= "<b>📛 Name:</b> {$newName}\n";
+        }
+
+        if ($old_sku !== $newSku) {
+            $msg .= "<b>🔖 SKU:</b> <s>{$old_sku}</s> → <b>{$newSku}</b>\n";
+        } else {
+            $msg .= "<b>🔖 SKU:</b> {$newSku}\n";
+        }
+        $msg .= "\n";
+
+        if (!empty($variation_diffs)) {
+            $msg .= "<b>💲 Variation & Price Updates:</b>\n";
+            foreach ($variation_diffs as $diff) {
+                $varName = $diff['name'] ?? 'Default';
+                $oldPrice = number_format($diff['old_price'], 2);
+                $newPrice = number_format($diff['new_price'], 2);
+                $oldSubSku = $diff['old_sku'] ?? 'N/A';
+                $newSubSku = $diff['new_sku'] ?? 'N/A';
+
+                $msg .= "• <b>{$varName}</b>\n";
+                if ($oldSubSku !== $newSubSku) {
+                    $msg .= "  Sub-SKU: <s>{$oldSubSku}</s> → <b>{$newSubSku}</b>\n";
+                }
+                $msg .= "  Price: \${$oldPrice} → <b>\${$newPrice}</b>\n";
+            }
+        }
+
+        $msg .= "\n⏰ <b>Updated At:</b> {$date}\n";
+        $msg .= "✏️ <i>Product updated via Shoper POS</i>";
+
+        self::sendMessage($msg, $to, $location_id);
+    }
+
     // STOCK ADJUSTMENT
     public static function addStockAdjustmentMessage(
         $stock_adjustment,

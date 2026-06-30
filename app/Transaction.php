@@ -407,5 +407,8 @@ class Transaction extends Model
         return $sales_orders;
     }
 
-   
+    public function purchase_line_receipts()
+    {
+        return $this->hasMany(\App\PurchaseLineReceipt::class, 'transaction_id');
+    }
 }

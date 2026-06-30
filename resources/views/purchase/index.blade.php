@@ -108,6 +108,9 @@
 
         @include('purchase.partials.update_purchase_status_modal')
 
+        <div class="modal fade receive_product_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
+        </div>
+
     </section>
 
     <section id="receipt_section" class="print_section"></section>
@@ -165,6 +168,80 @@
                     }
                 },
             });
+        });
+
+        $(document).on('click', '.btn_receive_product', function(e) {
+            e.preventDefault();
+            var purchase_id = $(this).data('purchase_id');
+            $.ajax({
+                url: '/purchases/receive-modal/' + purchase_id,
+                dataType: 'html',
+                success: function(result) {
+                    $('.receive_product_modal')
+                        .html(result)
+                        .modal('show');
+                },
+            });
+        });
+
+        $(document).on('change', '#receive_type', function() {
+            if ($(this).val() == 'custom') {
+                $('#custom_qty_container').show();
+            } else {
+                $('#custom_qty_container').hide();
+            }
+        });
+
+        $(document).on('submit', '#save_receive_record_form', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var data = form.serialize();
+
+            $.ajax({
+                method: 'POST',
+                url: $(this).attr('action'),
+                dataType: 'json',
+                data: data,
+                beforeSend: function(xhr) {
+                    __disable_submit_button(form.find('button[type="submit"]'));
+                },
+                success: function(result) {
+                    if (result.success == true) {
+                        $('.receive_product_modal').modal('hide');
+                        toastr.success(result.msg);
+                        purchase_table.ajax.reload();
+                    } else {
+                        toastr.error(result.msg);
+                        form.find('button[type="submit"]').attr('disabled', false);
+                    }
+                },
+            });
+        });
+
+        $(document).on('click', '.btn-delete-receipt', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            var href = btn.data('href');
+
+            if (confirm('Are you sure you want to delete this receipt? This will undo the stock adjustment.')) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: href,
+                    dataType: 'json',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(result) {
+                        if (result.success == true) {
+                            $('.receive_product_modal').modal('hide');
+                            toastr.success(result.msg);
+                            purchase_table.ajax.reload();
+                        } else {
+                            toastr.error(result.msg);
+                        }
+                    }
+                });
+            }
         });
     </script>
 

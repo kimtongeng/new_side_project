@@ -229,7 +229,7 @@ class ProductController extends Controller
                                 '<li><a href="' . action([\App\Http\Controllers\ProductController::class, 'edit'], [$row->id]) . '"><i class="glyphicon glyphicon-edit"></i> ' . __('messages.edit') . '</a></li>';
                         }
 
-                        if (auth()->user()->can('edit_rename')) {
+                        if (auth()->user()->can('product.edit_rename')) {
                             $html .=
                                 '<li><a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editRename'], [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="glyphicon glyphicon-pencil"></i> Rename & Update Price</a></li>';
                         }
@@ -799,7 +799,7 @@ class ProductController extends Controller
         if (! auth()->user()->can('product.view')) {
             abort(403, 'Unauthorized action.');
         }
-        
+
 
         $business_id = request()->session()->get('user.business_id');
         $details = $this->productUtil->getRackDetails($business_id, $id, true);
@@ -3281,7 +3281,7 @@ class ProductController extends Controller
 
     public function editRename($id)
     {
-        if (! auth()->user()->can('edit_rename')) {
+        if (! auth()->user()->can('product.edit_rename')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -3296,7 +3296,7 @@ class ProductController extends Controller
 
     public function updateRename(Request $request, $id)
     {
-        if (! auth()->user()->can('edit_rename')) {
+        if (! auth()->user()->can('product.edit_rename')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -3304,10 +3304,24 @@ class ProductController extends Controller
             $business_id = $request->session()->get('user.business_id');
             $product = Product::where('business_id', $business_id)
                 ->where('id', $id)
+                ->with(['variations'])
                 ->firstOrFail();
 
+            $old_name = $product->name;
+            $old_sku = $product->sku;
+
+            // Load variations and their original values
+            $old_variations = [];
+            foreach ($product->variations as $var) {
+                $old_variations[$var->id] = [
+                    'name' => $var->name,
+                    'sku' => $var->sub_sku,
+                    'sell_price_inc_tax' => $var->sell_price_inc_tax
+                ];
+            }
+
             $name = $request->input('name');
-            
+
             DB::beginTransaction();
 
             $product->name = $name;
@@ -3407,6 +3421,39 @@ class ProductController extends Controller
 
             $product->save();
             DB::commit();
+
+            // Calculate variation diffs for Telegram notification
+            $product->refresh();
+            $variation_diffs = [];
+            foreach ($product->variations as $var) {
+                $old = $old_variations[$var->id] ?? null;
+                if ($old) {
+                    if ($old['sku'] !== $var->sub_sku || (float)$old['sell_price_inc_tax'] !== (float)$var->sell_price_inc_tax) {
+                        $variation_diffs[] = [
+                            'name' => $old['name'] !== 'DUMMY' ? $old['name'] : 'Single',
+                            'old_sku' => $old['sku'],
+                            'new_sku' => $var->sub_sku,
+                            'old_price' => $old['sell_price_inc_tax'],
+                            'new_price' => $var->sell_price_inc_tax
+                        ];
+                    }
+                }
+            }
+
+            // Send Telegram Notification after response
+            app()->terminating(function () use ($product, $old_name, $old_sku, $variation_diffs) {
+
+                try {
+                    \App\Notifications\TelegramNotification::productRenameUpdatedMessage(
+                        $product,
+                        $old_name,
+                        $old_sku,
+                        $variation_diffs
+                    );
+                } catch (\Exception $te) {
+                    \Log::warning('Telegram product rename notification failed: ' . $te->getMessage());
+                }
+            });
 
             $output = [
                 'success' => true,

@@ -82,4 +82,9 @@ class PurchaseLine extends Model
     {
         return $this->belongsTo(\App\PurchaseLine::class, 'purchase_requisition_line_id');
     }
+
+    public function receipts()
+    {
+        return $this->hasMany(\App\PurchaseLineReceipt::class, 'purchase_line_id');
+    }
 }

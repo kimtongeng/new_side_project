@@ -382,7 +382,7 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'edit_rename', in_array('edit_rename', $role_permissions), ['class' => 'input-icheck']); !!}
+                {!! Form::checkbox('permissions[]', 'product.edit_rename', in_array('product.edit_rename', $role_permissions), ['class' => 'input-icheck']); !!}
                 {{ __('lang_v1.edit_rename') }}
               </label>
             </div>

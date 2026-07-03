@@ -129,7 +129,13 @@ class Util
     //Returns all avilable purchase statuses
     public function orderStatuses()
     {
-        return ['received' => __('lang_v1.received'), 'pending' => __('lang_v1.pending'), 'ordered' => __('lang_v1.ordered')];
+        return [
+            'received' => __('lang_v1.received'),
+            'pending' => __('lang_v1.pending'),
+            'ordered' => __('lang_v1.ordered'),
+            'amount' => __('lang_v1.amount'),
+            'over_received' => __('lang_v1.over_received')
+        ];
     }
 
     /**

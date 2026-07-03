@@ -752,7 +752,7 @@ class ReportController extends Controller
             }
             if ($type == 'purchase') {
                 $sells->where('transactions.type', 'purchase')
-                    ->where('transactions.status', 'received')
+                    ->whereIn('transactions.status', ['received', 'amount', 'over_received'])
                     ->where(function ($query) {
                         $query->whereHas('purchase_lines', function ($q) {
                             $q->whereNotNull('purchase_lines.tax_id');
@@ -1748,19 +1748,19 @@ class ReportController extends Controller
                         DB::raw("( (CASE 
                             WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id) > 0 
                                 THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id)
-                            WHEN t.status = 'received' 
+                            WHEN t.status IN ('received', 'amount', 'over_received') 
                                 THEN purchase_lines.quantity
                             ELSE 0 
                         END) - purchase_lines.quantity_returned) as purchase_qty"),
                         'purchase_lines.quantity_adjusted',
                         'u.short_name as unit',
-                        DB::raw("( ((CASE 
+                        DB::raw("( (LEAST((CASE 
                             WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id) > 0 
                                 THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id)
-                            WHEN t.status = 'received' 
+                            WHEN t.status IN ('received', 'amount', 'over_received') 
                                 THEN purchase_lines.quantity
                             ELSE 0 
-                        END) - purchase_lines.quantity_returned - purchase_lines.quantity_adjusted) * purchase_lines.purchase_price_inc_tax ) as subtotal")
+                        END), purchase_lines.quantity) - purchase_lines.quantity_returned - purchase_lines.quantity_adjusted) * purchase_lines.purchase_price_inc_tax ) as subtotal")
                     )
                     ->groupBy('purchase_lines.id');
             if (! empty($variation_id)) {
@@ -3991,7 +3991,7 @@ class ReportController extends Controller
                 ->leftjoin('units as u', 'p.unit_id', '=', 'u.id')
                 ->where('t.business_id', $business_id)
                 ->where('t.type', 'purchase')
-                ->where('t.status', 'received')
+                ->whereIn('t.status', ['received', 'amount', 'over_received'])
                 ->select(
                     'c.name as supplier',
                     'c.supplier_business_name',
@@ -4003,14 +4003,26 @@ class ReportController extends Controller
                     't.transaction_date as transaction_date',
                     'purchase_lines.pp_without_discount as unit_price',
                     'purchase_lines.purchase_price as unit_price_after_discount',
-                    DB::raw('(purchase_lines.quantity - purchase_lines.quantity_returned) as purchase_qty'),
+                    DB::raw("( (CASE 
+                        WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id) > 0 
+                            THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id)
+                        WHEN t.status IN ('received', 'amount', 'over_received') 
+                            THEN purchase_lines.quantity
+                        ELSE 0 
+                    END) - purchase_lines.quantity_returned) as purchase_qty"),
                     'purchase_lines.discount_percent',
                     'purchase_lines.item_tax',
                     'tr.amount as tax_percent',
                     'tr.is_tax_group',
                     'purchase_lines.tax_id',
                     'u.short_name as unit',
-                    DB::raw('((purchase_lines.quantity- purchase_lines.quantity_returned) * purchase_lines.purchase_price_inc_tax) as line_total')
+                    DB::raw("( (LEAST((CASE 
+                        WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id) > 0 
+                            THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id)
+                        WHEN t.status IN ('received', 'amount', 'over_received') 
+                            THEN purchase_lines.quantity
+                        ELSE 0 
+                    END), purchase_lines.quantity) - purchase_lines.quantity_returned) * purchase_lines.purchase_price_inc_tax) as line_total")
                 )
                 ->groupBy('purchase_lines.id');
 

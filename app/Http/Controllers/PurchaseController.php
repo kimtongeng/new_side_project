@@ -1062,7 +1062,7 @@ class PurchaseController extends Controller
                 $this->transactionUtil->activityLog($transaction, 'purchase_deleted', $log_properities);
 
                 $transaction_status = $transaction->status;
-                if ($transaction_status != 'received') {
+                if (!in_array($transaction_status, ['received', 'amount', 'over_received'])) {
                     $transaction->delete();
                 } else {
                     //Delete purchase lines first
@@ -1704,7 +1704,11 @@ class PurchaseController extends Controller
             $transaction->update($update_data);
 
             $currency_details = $this->transactionUtil->purchaseCurrencyDetails($business_id);
-            if ($transaction->status == 'received' && $before_status != 'received') {
+            $received_statuses = ['received', 'amount', 'over_received'];
+            $is_before_received = in_array($before_status, $received_statuses);
+            $is_after_received = in_array($transaction->status, $received_statuses);
+
+            if ($is_after_received && !$is_before_received) {
                 foreach ($transaction->purchase_lines as $purchase_line) {
                     $already_received = $purchase_line->receipts()->sum('quantity');
                     $remaining = $purchase_line->quantity - $already_received;
@@ -1718,7 +1722,7 @@ class PurchaseController extends Controller
                         $this->productUtil->updateProductQuantity($transaction->location_id, $purchase_line->product_id, $purchase_line->variation_id, $remaining, 0, null, false);
                     }
                 }
-            } elseif ($transaction->status != 'received' && $before_status == 'received') {
+            } elseif (!$is_after_received && $is_before_received) {
                 foreach ($transaction->purchase_lines as $purchase_line) {
                     $receipts = $purchase_line->receipts;
                     foreach ($receipts as $receipt) {
@@ -1915,8 +1919,12 @@ class PurchaseController extends Controller
                 $total_received += $purchase_line->receipts->sum('quantity');
             }
 
-            if ($total_received >= $total_ordered && $transaction->status != 'received') {
+            if ($total_received > $total_ordered && $transaction->status != 'over_received') {
+                $transaction->update(['status' => 'over_received']);
+            } elseif ($total_received == $total_ordered && $transaction->status != 'received') {
                 $transaction->update(['status' => 'received']);
+            } elseif ($total_received < $total_ordered && $total_received > 0 && $transaction->status != 'amount') {
+                $transaction->update(['status' => 'amount']);
             }
 
             DB::commit();
@@ -2005,7 +2013,13 @@ class PurchaseController extends Controller
                 $total_received += $purchase_line->receipts->sum('quantity');
             }
 
-            if ($total_received < $total_ordered && $transaction->status == 'received') {
+            if ($total_received > $total_ordered && $transaction->status != 'over_received') {
+                $transaction->update(['status' => 'over_received']);
+            } elseif ($total_received == $total_ordered && $transaction->status != 'received') {
+                $transaction->update(['status' => 'received']);
+            } elseif ($total_received < $total_ordered && $total_received > 0 && $transaction->status != 'amount') {
+                $transaction->update(['status' => 'amount']);
+            } elseif ($total_received == 0 && $transaction->status != 'ordered') {
                 $transaction->update(['status' => 'ordered']);
             }
 

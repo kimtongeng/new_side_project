@@ -62,7 +62,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     {!! Form::label('received_date', 'Receive Date & Time:*') !!}
-                                    <input type="datetime-local" class="form-control" name="received_date" id="received_date" required value="{{ \Carbon\Carbon::now()->format('Y-m-d\TH:i') }}" @if($total_remaining <= 0) disabled @endif>
+                                    <input type="datetime-local" class="form-control" name="received_date" id="received_date" required value="{{ \Carbon\Carbon::now()->format('Y-m-d\TH:i') }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -70,9 +70,6 @@
                                     {!! Form::label('receive_type', 'Receive Mode:*') !!}
                                     @php
                                         $receive_type_attrs = ['class' => 'form-control', 'id' => 'receive_type', 'required'];
-                                        if ($total_remaining <= 0) {
-                                            $receive_type_attrs['disabled'] = 'disabled';
-                                        }
                                     @endphp
                                     {!! Form::select('receive_type', ['all' => 'Receive All Items', 'custom' => 'Enter Amount and Date'], 'all', $receive_type_attrs) !!}
                                 </div>
@@ -108,7 +105,7 @@
                                                 <td>{{ number_format($already_received, 2) }}</td>
                                                 <td>{{ number_format($remaining, 2) }}</td>
                                                 <td>
-                                                    <input type="number" step="any" min="0" max="{{ $remaining }}" class="form-control receive-qty-input" name="qty[{{ $line->id }}]" value="{{ $remaining > 0 ? $remaining : 0 }}" disabled>
+                                                    <input type="number" step="any" min="0" class="form-control receive-qty-input" name="qty[{{ $line->id }}]" value="{{ $remaining > 0 ? $remaining : 0 }}" disabled>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -165,9 +162,7 @@
         </div>
 
         <div class="modal-footer">
-            @if($total_remaining > 0)
-                <button type="submit" form="save_receive_record_form" id="save_receive_record_btn" class="tw-dw-btn tw-dw-btn-primary tw-text-white">Save Receipt</button>
-            @endif
+            <button type="submit" form="save_receive_record_form" id="save_receive_record_btn" class="tw-dw-btn tw-dw-btn-primary tw-text-white">Save Receipt</button>
             <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white" data-dismiss="modal">Close</button>
         </div>
     </div>

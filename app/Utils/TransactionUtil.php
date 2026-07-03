@@ -3315,7 +3315,7 @@ class TransactionUtil extends Util
                     'opening_stock',
                     'production_purchase',
                 ])
-                ->where('transactions.status', 'received')
+                ->whereIn('transactions.status', ['received', 'amount', 'over_received'])
                 ->whereRaw("( $qty_sum_query ) < PL.quantity")
                 ->where('PL.product_id', $line->product_id)
                 ->where('PL.variation_id', $line->variation_id);
@@ -3680,9 +3680,13 @@ class TransactionUtil extends Util
      */
     public function adjustMappingPurchaseSellAfterEditingPurchase($before_status, $transaction, $delete_purchase_lines)
     {
-        if ($before_status == 'received' && $transaction->status == 'received') {
-            //Check if there is some irregularities between purchase & sell and make appropiate adjustment.
+        $received_statuses = ['received', 'amount', 'over_received'];
+        $is_before_received = in_array($before_status, $received_statuses);
+        $is_after_received = in_array($transaction->status, $received_statuses);
 
+        if ($is_before_received && $is_after_received) {
+            //Check if there is some irregularities between purchase & sell and make appropiate adjustment.
+ 
             //Get all purchase line having irregularities.
             $purchase_lines = Transaction::join(
                 'purchase_lines AS PL',
@@ -3706,7 +3710,7 @@ class TransactionUtil extends Util
                 ])
                 ->get()
                 ->toArray();
-        } elseif ($before_status == 'received' && $transaction->status != 'received') {
+        } elseif ($is_before_received && !$is_after_received) {
             //Delete sell for those & add new sell or throw error.
             $purchase_lines = Transaction::join(
                 'purchase_lines AS PL',

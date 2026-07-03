@@ -299,7 +299,7 @@ class ProductUtil extends Util
                 'T.id'
                 )
                   ->where('T.type', 'purchase')
-                  ->where('T.status', 'received')
+                  ->whereIn('T.status', ['received', 'amount', 'over_received'])
                   ->where('T.business_id', $product->business_id)
                   ->where('purchase_lines.product_id', $product->id)
                   ->where('purchase_lines.variation_id', $removed_variation_id)
@@ -1232,7 +1232,7 @@ class ProductUtil extends Util
                 $purchase_line->variation_id = $data['variation_id'];
 
                 //Increase quantity only if status is received
-                if ($transaction->status == 'received') {
+                if (in_array($transaction->status, ['received', 'amount', 'over_received'])) {
                     $this->updateProductQuantity($transaction->location_id, $data['product_id'], $data['variation_id'], $new_quantity_f, 0, $currency_details);
                 }
             }
@@ -1291,7 +1291,7 @@ class ProductUtil extends Util
                     $delete_purchase_line_ids[] = $delete_purchase_line->id;
 
                     //decrease deleted only if previous status was received
-                    if ($before_status == 'received') {
+                    if (in_array($before_status, ['received', 'amount', 'over_received'])) {
                         $this->decreaseProductQuantity(
                             $delete_purchase_line->product_id,
                             $delete_purchase_line->variation_id,
@@ -1358,10 +1358,14 @@ class ProductUtil extends Util
         $new_quantity_f = $this->num_f($new_quantity);
         $old_qty = $this->num_f($old_quantity);
         //Update quantity for existing products
-        if ($status_before == 'received' && $transaction->status == 'received') {
+        $received_statuses = ['received', 'amount', 'over_received'];
+        $is_before_received = in_array($status_before, $received_statuses);
+        $is_after_received = in_array($transaction->status, $received_statuses);
+
+        if ($is_before_received && $is_after_received) {
             //if status received update existing quantity
             $this->updateProductQuantity($transaction->location_id, $product_id, $variation_id, $new_quantity_f, $old_qty, $currency_details);
-        } elseif ($status_before == 'received' && $transaction->status != 'received') {
+        } elseif ($is_before_received && !$is_after_received) {
             //decrease quantity only if status changed from received to not received
             $this->decreaseProductQuantity(
                 $product_id,
@@ -1369,7 +1373,7 @@ class ProductUtil extends Util
                 $transaction->location_id,
                 $old_quantity
             );
-        } elseif ($status_before != 'received' && $transaction->status == 'received') {
+        } elseif (!$is_before_received && $is_after_received) {
             $this->updateProductQuantity($transaction->location_id, $product_id, $variation_id, $new_quantity_f, 0, $currency_details);
         }
     }
@@ -1471,7 +1475,7 @@ class ProductUtil extends Util
      */
     public function adjustStockOverSelling($transaction)
     {
-        if ($transaction->status != 'received') {
+        if (!in_array($transaction->status, ['received', 'amount', 'over_received'])) {
             return false;
         }
 
@@ -1836,13 +1840,13 @@ class ProductUtil extends Util
                   JOIN stock_adjustment_lines AS SAL ON transactions.id=SAL.transaction_id
                   WHERE transactions.type='stock_adjustment' AND transactions.location_id=vld.location_id 
                     AND (SAL.variation_id=variations.id)) as total_adjusted"),
-            DB::raw("(SELECT SUM( COALESCE( (CASE 
+            DB::raw("(SELECT SUM( COALESCE( LEAST((CASE 
                 WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = pl.id) > 0 
                     THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = pl.id)
-                WHEN transactions.status = 'received' 
+                WHEN transactions.status IN ('received', 'amount', 'over_received') 
                     THEN pl.quantity
                 ELSE 0 
-            END) - ($pl_query_string), 0) * purchase_price_inc_tax) FROM transactions 
+            END), pl.quantity) - ($pl_query_string), 0) * purchase_price_inc_tax) FROM transactions 
                   JOIN purchase_lines AS pl ON transactions.id=pl.transaction_id
                   WHERE (transactions.type='purchase' OR transactions.type='purchase_return')  AND transactions.location_id=vld.location_id 
                   AND (pl.variation_id=variations.id)) as stock_price"),
@@ -1933,7 +1937,7 @@ class ProductUtil extends Util
                     ->where('p.business_id', $business_id)
                     ->where('variations.id', $variation_id)
                     ->select(
-                        DB::raw("SUM(IF(t.type='purchase' AND t.status='received', pl.quantity, 0)) as total_purchase"),
+                        DB::raw("SUM(IF(t.type='purchase' AND t.status IN ('received', 'amount', 'over_received'), pl.quantity, 0)) as total_purchase"),
                         DB::raw("SUM(IF(t.type='purchase' OR t.type='purchase_return', pl.quantity_returned, 0)) as total_purchase_return"),
                         DB::raw('SUM(pl.quantity_adjusted) as total_adjusted'),
                         DB::raw("SUM(IF(t.type='opening_stock', pl.quantity, 0)) as total_opening_stock"),
@@ -2074,7 +2078,7 @@ class ProductUtil extends Util
                 ]);
             } elseif ($stock_line->transaction_type == 'purchase') {
                 if (is_null($stock_line->receipt_quantity)) {
-                    if ($stock_line->status != 'received') {
+                    if (!in_array($stock_line->status, ['received', 'amount', 'over_received'])) {
                         continue;
                     }
                     $quantity_change = $stock_line->purchase_line_quantity;
@@ -2237,13 +2241,20 @@ class ProductUtil extends Util
                     LEFT JOIN stock_adjustment_lines AS SAL ON transactions.id=SAL.transaction_id
                     WHERE transactions.type='stock_adjustment' AND transactions.location_id=$location_id 
                     AND SAL.variation_id=variations.id) as total_adjusted"),
-            DB::raw("(SELECT SUM(COALESCE(PL.quantity, 0)) FROM transactions 
+            DB::raw("(SELECT SUM(COALESCE(
+                (CASE 
+                    WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = PL.id) > 0 
+                        THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = PL.id)
+                    WHEN transactions.status IN ('received', 'amount', 'over_received') 
+                        THEN PL.quantity
+                    ELSE 0 
+                END), 0)) FROM transactions 
                     LEFT JOIN purchase_lines AS PL ON transactions.id=PL.transaction_id
-                    WHERE transactions.status='received' AND transactions.type='purchase' AND transactions.location_id=$location_id
+                    WHERE transactions.status IN ('received', 'amount', 'over_received') AND transactions.type='purchase' AND transactions.location_id=$location_id
                     AND PL.variation_id=variations.id) as total_purchased"),
             DB::raw("(SELECT SUM(COALESCE(PL.quantity_returned, 0)) FROM transactions 
                     LEFT JOIN purchase_lines AS PL ON transactions.id=PL.transaction_id
-                    WHERE transactions.status='received' AND transactions.type='purchase' AND transactions.location_id=$location_id
+                    WHERE transactions.status IN ('received', 'amount', 'over_received') AND transactions.type='purchase' AND transactions.location_id=$location_id
                     AND PL.variation_id=variations.id) as total_purchase_return"),
             DB::raw("(SELECT SUM(COALESCE(PL.quantity_returned, 0)) FROM transactions 
                     LEFT JOIN purchase_lines AS PL ON transactions.id=PL.transaction_id
@@ -2255,7 +2266,7 @@ class ProductUtil extends Util
                     AND PL.variation_id=variations.id) as total_opening_stock"),
             DB::raw("(SELECT SUM(COALESCE(PL.quantity, 0)) FROM transactions 
                     LEFT JOIN purchase_lines AS PL ON transactions.id=PL.transaction_id
-                    WHERE transactions.status='received' AND transactions.type='production_purchase' AND transactions.location_id=$location_id
+                    WHERE transactions.status IN ('received', 'amount', 'over_received') AND transactions.type='production_purchase' AND transactions.location_id=$location_id
                     AND PL.variation_id=variations.id) as total_manufactured"),
             DB::raw("(SELECT SUM(COALESCE(TSL.quantity, 0)) FROM transactions 
                     LEFT JOIN transaction_sell_lines AS TSL ON transactions.id=TSL.transaction_id

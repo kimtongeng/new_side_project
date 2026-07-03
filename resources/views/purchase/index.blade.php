@@ -189,12 +189,7 @@
             if ($(this).val() == 'all') {
                 $('.receive-qty-input').prop('disabled', true);
             } else {
-                $('.receive-qty-input').each(function() {
-                    var max = parseFloat($(this).attr('max')) || 0;
-                    if (max > 0) {
-                        $(this).prop('disabled', false);
-                    }
-                });
+                $('.receive-qty-input').prop('disabled', false);
             }
         });
 

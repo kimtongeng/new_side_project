@@ -1471,10 +1471,11 @@ class ContactController extends Controller
         $received_qty_sql = "CASE 
             WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id) > 0 
                 THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id)
-            WHEN t.status = 'received' 
+            WHEN t.status IN ('received', 'amount', 'over_received') 
                 THEN purchase_lines.quantity
             ELSE 0 
         END";
+        $paid_qty_sql = "LEAST($received_qty_sql, purchase_lines.quantity)";
 
         $query = PurchaseLine::join('transactions as t', 't.id', '=', 'purchase_lines.transaction_id')
                         ->join('products as p', 'p.id', '=', 'purchase_lines.product_id')
@@ -1503,7 +1504,7 @@ class ContactController extends Controller
                               JOIN transactions AS sell ON sell.id=TSL.transaction_id
                               WHERE sell.status='final' AND sell.type='sell_transfer'
                               AND TSLPL.purchase_line_id=purchase_lines.id)) as total_quantity_transfered"),
-                            DB::raw("SUM( COALESCE(($received_qty_sql) - ($pl_query_string), 0) * purchase_price_inc_tax) as stock_price"),
+                            DB::raw("SUM( COALESCE(($paid_qty_sql) - ($pl_query_string), 0) * purchase_price_inc_tax) as stock_price"),
                             DB::raw("SUM( COALESCE(($received_qty_sql) - ($pl_query_string), 0)) as current_stock")
                         )->groupBy('purchase_lines.variation_id');
 

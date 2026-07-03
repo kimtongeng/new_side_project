@@ -3405,6 +3405,13 @@ class ProductController extends Controller
                     }
 
                     if (auth()->user()->can('product.update_price')) {
+                        if ($selling_price < $variation->default_purchase_price) {
+                            DB::rollBack();
+                            return [
+                                'success' => false,
+                                'msg' => __('lang_v1.selling_price_less_than_cost_price')
+                            ];
+                        }
                         $variation->default_sell_price = $selling_price;
                         $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
                         $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);
@@ -3452,6 +3459,13 @@ class ProductController extends Controller
 
                         if (auth()->user()->can('product.update_price') && isset($data['selling_price'])) {
                             $selling_price = $this->productUtil->num_uf($data['selling_price']);
+                            if ($selling_price < $variation->default_purchase_price) {
+                                DB::rollBack();
+                                return [
+                                    'success' => false,
+                                    'msg' => __('lang_v1.selling_price_less_than_cost_price')
+                                ];
+                            }
                             $variation->default_sell_price = $selling_price;
                             $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
                             $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);
@@ -3739,6 +3753,13 @@ class ProductController extends Controller
                 $selling_price = $this->productUtil->num_uf($request->input('selling_price'));
                 $variation = Variation::where('product_id', $id)->first();
                 if (! empty($variation)) {
+                    if ($selling_price < $variation->default_purchase_price) {
+                        DB::rollBack();
+                        return [
+                            'success' => false,
+                            'msg' => __('lang_v1.selling_price_less_than_cost_price')
+                        ];
+                    }
                     $variation->default_sell_price = $selling_price;
                     $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
                     $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);
@@ -3751,6 +3772,13 @@ class ProductController extends Controller
                         $variation = Variation::where('product_id', $id)->findOrFail($variation_id);
                         if (isset($data['selling_price'])) {
                             $selling_price = $this->productUtil->num_uf($data['selling_price']);
+                            if ($selling_price < $variation->default_purchase_price) {
+                                DB::rollBack();
+                                return [
+                                    'success' => false,
+                                    'msg' => __('lang_v1.selling_price_less_than_cost_price')
+                                ];
+                            }
                             $variation->default_sell_price = $selling_price;
                             $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
                             $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);

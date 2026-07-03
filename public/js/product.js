@@ -686,7 +686,6 @@ $(document).on('submit', 'form#edit_rename_form', function (e) {
                 toastr.success(result.msg);
                 product_table.ajax.reload();
             } else {
-                alert(result.msg);
                 toastr.error(result.msg);
                 form.find('button[type="submit"]').attr('disabled', false);
             }
@@ -750,7 +749,6 @@ $(document).on('submit', 'form#edit_selling_price_form', function (e) {
                 toastr.success(result.msg);
                 product_table.ajax.reload();
             } else {
-                alert(result.msg);
                 toastr.error(result.msg);
                 form.find('button[type="submit"]').attr('disabled', false);
             }

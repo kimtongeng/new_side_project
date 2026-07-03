@@ -121,6 +121,8 @@ return [
     'received' => 'Received',
     'pending' => 'Pending',
     'ordered' => 'Ordered',
+    'amount' => 'Add amount',
+    'over_received' => 'Over Received',
     'search_product_placeholder' => 'Enter Product name / SKU / Scan bar code',
     'fixed' => 'Fixed',
     'percentage' => 'Percentage',
@@ -1580,5 +1582,6 @@ return [
     'customer_display_instraction' => "For customer display screen to work, make sure it's opened in same browser as POS screen in new tab. And that tab is mirrored to another customer-facing display monitor.",
     "edit_rename" => "Edit Rename",
     "selling_price" => "Selling price",
-    "edit_selling_price" => "Edit Selling Price"
+    "edit_selling_price" => "Edit Selling Price",
+    "selling_price_less_than_cost_price" => "Selling price cannot be less than cost price"
 ];

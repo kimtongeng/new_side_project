@@ -181,6 +181,7 @@ class TelegramNotification
 
     public static function sendMessage(string $message, string $to = '', $location_id = "PT1001"): void
     {
+        return;
         // $botToken = self::PRODUCTION_BOT;
         // $groups = self::PRODUCTION_GROUP;
         $botToken = self::LOCAL_BOT;

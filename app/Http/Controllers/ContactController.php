@@ -1468,6 +1468,14 @@ class ContactController extends Controller
     {
         //TODO: current stock not calculating stock transferred from other location
         $pl_query_string = $this->commonUtil->get_pl_quantity_sum_string();
+        $received_qty_sql = "CASE 
+            WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id) > 0 
+                THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id)
+            WHEN t.status = 'received' 
+                THEN purchase_lines.quantity
+            ELSE 0 
+        END";
+
         $query = PurchaseLine::join('transactions as t', 't.id', '=', 'purchase_lines.transaction_id')
                         ->join('products as p', 'p.id', '=', 'purchase_lines.product_id')
                         ->join('variations as v', 'v.id', '=', 'purchase_lines.variation_id')
@@ -1483,6 +1491,7 @@ class ContactController extends Controller
                             'u.short_name as product_unit',
                             'v.sub_sku',
                             DB::raw('SUM(quantity) as purchase_quantity'),
+                            DB::raw("SUM($received_qty_sql) as received_quantity"),
                             DB::raw('SUM(quantity_returned) as total_quantity_returned'),
                             DB::raw("SUM((SELECT SUM(TSL.quantity - TSL.quantity_returned) FROM transaction_sell_lines_purchase_lines as TSLPL 
                               JOIN transaction_sell_lines AS TSL ON TSLPL.sell_line_id=TSL.id
@@ -1494,8 +1503,8 @@ class ContactController extends Controller
                               JOIN transactions AS sell ON sell.id=TSL.transaction_id
                               WHERE sell.status='final' AND sell.type='sell_transfer'
                               AND TSLPL.purchase_line_id=purchase_lines.id)) as total_quantity_transfered"),
-                            DB::raw("SUM( COALESCE(quantity - ($pl_query_string), 0) * purchase_price_inc_tax) as stock_price"),
-                            DB::raw("SUM( COALESCE(quantity - ($pl_query_string), 0)) as current_stock")
+                            DB::raw("SUM( COALESCE(($received_qty_sql) - ($pl_query_string), 0) * purchase_price_inc_tax) as stock_price"),
+                            DB::raw("SUM( COALESCE(($received_qty_sql) - ($pl_query_string), 0)) as current_stock")
                         )->groupBy('purchase_lines.variation_id');
 
         if (! empty(request()->location_id)) {
@@ -1503,6 +1512,9 @@ class ContactController extends Controller
         }
 
         $product_stocks = Datatables::of($query)
+                            ->orderColumn('received_quantity', function ($query, $order) use ($received_qty_sql) {
+                                $query->orderByRaw("SUM($received_qty_sql) $order");
+                            })
                             ->editColumn('product_name', function ($row) {
                                 $name = $row->product_name;
                                 if ($row->product_type == 'variable') {
@@ -1518,6 +1530,14 @@ class ContactController extends Controller
                                 }
 
                                 return '<span data-is_quantity="true" class="display_currency" data-currency_symbol=false  data-orig-value="'.$purchase_quantity.'" data-unit="'.$row->product_unit.'" >'.$purchase_quantity.'</span> '.$row->product_unit;
+                            })
+                            ->addColumn('received_quantity', function ($row) {
+                                $received_quantity = 0;
+                                if ($row->received_quantity) {
+                                    $received_quantity = (float) $row->received_quantity;
+                                }
+
+                                return '<span data-is_quantity="true" class="display_currency" data-currency_symbol=false  data-orig-value="'.$received_quantity.'" data-unit="'.$row->product_unit.'" >'.$received_quantity.'</span> '.$row->product_unit;
                             })
                             ->editColumn('total_quantity_sold', function ($row) {
                                 $total_quantity_sold = 0;
@@ -1552,7 +1572,7 @@ class ContactController extends Controller
                                 return '<span data-is_quantity="true" class="display_currency" data-currency_symbol=false  data-orig-value="'.$current_stock.'" data-unit="'.$row->product_unit.'" >'.$current_stock.'</span> '.$row->product_unit;
                             });
 
-        return $product_stocks->rawColumns(['current_stock', 'stock_price', 'total_quantity_sold', 'purchase_quantity', 'total_quantity_transfered'])->make(true);
+        return $product_stocks->rawColumns(['current_stock', 'stock_price', 'total_quantity_sold', 'purchase_quantity', 'received_quantity', 'total_quantity_transfered'])->make(true);
     }
 
     public function updateStatus($id)

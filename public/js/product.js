@@ -725,3 +725,35 @@ $(document).on('submit', 'form#edit_sku_form', function (e) {
         },
     });
 });
+
+$(document).on('submit', 'form#edit_selling_price_form', function (e) {
+    e.preventDefault();
+    var form = $(this);
+
+    if (!form.valid()) {
+        return false;
+    }
+
+    var data = form.serialize();
+
+    $.ajax({
+        method: 'POST',
+        url: form.attr('action'),
+        dataType: 'json',
+        data: data,
+        beforeSend: function (xhr) {
+            __disable_submit_button(form.find('button[type="submit"]'));
+        },
+        success: function (result) {
+            if (result.success == true) {
+                $('div.view_modal').modal('hide');
+                toastr.success(result.msg);
+                product_table.ajax.reload();
+            } else {
+                alert(result.msg);
+                toastr.error(result.msg);
+                form.find('button[type="submit"]').attr('disabled', false);
+            }
+        },
+    });
+});

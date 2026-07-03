@@ -6,12 +6,13 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
         <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">@lang('sale.products')
-            <small class="tw-text-sm md:tw-text-base tw-text-gray-700 tw-font-semibold">@lang('lang_v1.manage_products')</small>
+            <small
+                class="tw-text-sm md:tw-text-base tw-text-gray-700 tw-font-semibold">@lang('lang_v1.manage_products')</small>
         </h1>
         <!-- <ol class="breadcrumb">
-                    <li><a href="#"><i class="fa fa-dashboard"></i> Level</a></li>
-                    <li class="active">Here</li>
-                </ol> -->
+                        <li><a href="#"><i class="fa fa-dashboard"></i> Level</a></li>
+                        <li class="active">Here</li>
+                    </ol> -->
     </section>
 
     <!-- Main content -->
@@ -19,121 +20,123 @@
         <div class="row">
             <div class="col-md-12">
                 @component('components.filters', ['title' => __('report.filters')])
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            {!! Form::label('type', __('product.product_type') . ':') !!}
-                            {!! Form::select(
-                                'type',
-                                ['single' => __('lang_v1.single'), 'variable' => __('lang_v1.variable'), 'combo' => __('lang_v1.combo')],
-                                null,
-                                [
-                                    'class' => 'form-control select2',
-                                    'style' => 'width:100%',
-                                    'id' => 'product_list_filter_type',
-                                    'placeholder' => __('lang_v1.all'),
-                                ],
-                            ) !!}
-                        </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('type', __('product.product_type') . ':') !!}
+                        {!! Form::select(
+        'type',
+        ['single' => __('lang_v1.single'), 'variable' => __('lang_v1.variable'), 'combo' => __('lang_v1.combo')],
+        null,
+        [
+            'class' => 'form-control select2',
+            'style' => 'width:100%',
+            'id' => 'product_list_filter_type',
+            'placeholder' => __('lang_v1.all'),
+        ],
+    ) !!}
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            {!! Form::label('category_id', __('product.category') . ':') !!}
-                            {!! Form::select('category_id', $categories, null, [
-                                'class' => 'form-control select2',
-                                'style' => 'width:100%',
-                                'id' => 'product_list_filter_category_id',
-                                'placeholder' => __('lang_v1.all'),
-                            ]) !!}
-                        </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('category_id', __('product.category') . ':') !!}
+                        {!! Form::select('category_id', $categories, null, [
+        'class' => 'form-control select2',
+        'style' => 'width:100%',
+        'id' => 'product_list_filter_category_id',
+        'placeholder' => __('lang_v1.all'),
+    ]) !!}
                     </div>
+                </div>
 
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            {!! Form::label('unit_id', __('product.unit') . ':') !!}
-                            {!! Form::select('unit_id', $units, null, [
-                                'class' => 'form-control select2',
-                                'style' => 'width:100%',
-                                'id' => 'product_list_filter_unit_id',
-                                'placeholder' => __('lang_v1.all'),
-                            ]) !!}
-                        </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('unit_id', __('product.unit') . ':') !!}
+                        {!! Form::select('unit_id', $units, null, [
+        'class' => 'form-control select2',
+        'style' => 'width:100%',
+        'id' => 'product_list_filter_unit_id',
+        'placeholder' => __('lang_v1.all'),
+    ]) !!}
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            {!! Form::label('tax_id', __('product.tax') . ':') !!}
-                            {!! Form::select('tax_id', $taxes, null, [
-                                'class' => 'form-control select2',
-                                'style' => 'width:100%',
-                                'id' => 'product_list_filter_tax_id',
-                                'placeholder' => __('lang_v1.all'),
-                            ]) !!}
-                        </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('tax_id', __('product.tax') . ':') !!}
+                        {!! Form::select('tax_id', $taxes, null, [
+        'class' => 'form-control select2',
+        'style' => 'width:100%',
+        'id' => 'product_list_filter_tax_id',
+        'placeholder' => __('lang_v1.all'),
+    ]) !!}
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            {!! Form::label('brand_id', __('product.brand') . ':') !!}
-                            {!! Form::select('brand_id', $brands, null, [
-                                'class' => 'form-control select2',
-                                'style' => 'width:100%',
-                                'id' => 'product_list_filter_brand_id',
-                                'placeholder' => __('lang_v1.all'),
-                            ]) !!}
-                        </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('brand_id', __('product.brand') . ':') !!}
+                        {!! Form::select('brand_id', $brands, null, [
+        'class' => 'form-control select2',
+        'style' => 'width:100%',
+        'id' => 'product_list_filter_brand_id',
+        'placeholder' => __('lang_v1.all'),
+    ]) !!}
                     </div>
-                    <div class="col-md-3" id="location_filter">
-                        <div class="form-group">
-                            {!! Form::label('location_id', __('purchase.business_location') . ':') !!}
-                            {!! Form::select('location_id', $business_locations, null, [
-                                'class' => 'form-control select2',
-                                'style' => 'width:100%',
-                                'placeholder' => __('lang_v1.all'),
-                            ]) !!}
-                        </div>
+                </div>
+                <div class="col-md-3" id="location_filter">
+                    <div class="form-group">
+                        {!! Form::label('location_id', __('purchase.business_location') . ':') !!}
+                        {!! Form::select('location_id', $business_locations, null, [
+        'class' => 'form-control select2',
+        'style' => 'width:100%',
+        'placeholder' => __('lang_v1.all'),
+    ]) !!}
                     </div>
-                    <div class="col-md-3">
+                </div>
+                <div class="col-md-3">
+                    <br>
+                    <div class="form-group">
+                        {!! Form::select(
+        'active_state',
+        ['active' => __('business.is_active'), 'inactive' => __('lang_v1.inactive')],
+        null,
+        [
+            'class' => 'form-control select2',
+            'style' => 'width:100%',
+            'id' => 'active_state',
+            'placeholder' => __('lang_v1.all'),
+        ],
+    ) !!}
+                    </div>
+                </div>
+
+                <!-- include module filter -->
+                @if (!empty($pos_module_data))
+                    @foreach ($pos_module_data as $key => $value)
+                        @if (!empty($value['view_path']))
+                            @includeIf($value['view_path'], ['view_data' => $value['view_data']])
+                        @endif
+                    @endforeach
+                @endif
+
+                <div class="col-md-3">
+                    <div class="form-group">
                         <br>
-                        <div class="form-group">
-                            {!! Form::select(
-                                'active_state',
-                                ['active' => __('business.is_active'), 'inactive' => __('lang_v1.inactive')],
-                                null,
-                                [
-                                    'class' => 'form-control select2',
-                                    'style' => 'width:100%',
-                                    'id' => 'active_state',
-                                    'placeholder' => __('lang_v1.all'),
-                                ],
-                            ) !!}
-                        </div>
+                        <label>
+                            {!! Form::checkbox('not_for_selling', 1, false, ['class' => 'input-icheck', 'id' => 'not_for_selling']) !!}
+                            <strong>@lang('lang_v1.not_for_selling')</strong>
+                        </label>
                     </div>
-
-                    <!-- include module filter -->
-                    @if (!empty($pos_module_data))
-                        @foreach ($pos_module_data as $key => $value)
-                            @if (!empty($value['view_path']))
-                                @includeIf($value['view_path'], ['view_data' => $value['view_data']])
-                            @endif
-                        @endforeach
-                    @endif
-
+                </div>
+                @if ($is_woocommerce)
                     <div class="col-md-3">
                         <div class="form-group">
                             <br>
                             <label>
-                                {!! Form::checkbox('not_for_selling', 1, false, ['class' => 'input-icheck', 'id' => 'not_for_selling']) !!} <strong>@lang('lang_v1.not_for_selling')</strong>
+                                {!! Form::checkbox('woocommerce_enabled', 1, false, ['class' => 'input-icheck', 'id' => 'woocommerce_enabled']) !!}
+                                {{ __('lang_v1.woocommerce_enabled') }}
                             </label>
                         </div>
                     </div>
-                    @if ($is_woocommerce)
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <br>
-                                <label>
-                                    {!! Form::checkbox('woocommerce_enabled', 1, false, ['class' => 'input-icheck', 'id' => 'woocommerce_enabled']) !!} {{ __('lang_v1.woocommerce_enabled') }}
-                                </label>
-                            </div>
-                        </div>
-                    @endif
+                @endif
                 @endcomponent
             </div>
         </div>
@@ -151,7 +154,7 @@
                                 <li>
                                     <a href="#product_stock_report" class="product_stock_report" data-toggle="tab"
                                         aria-expanded="true"><i class="fa fa-hourglass-half" aria-hidden="true"></i>
-                                     @lang('report.stock_report')</a>
+                                        @lang('report.stock_report')</a>
                                 </li>
                             @endcan
                         </ul>
@@ -162,9 +165,9 @@
 
                                     <a class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full pull-right tw-m-2"
                                         href="{{ action([\App\Http\Controllers\ProductController::class, 'downloadExcel']) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round"
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round"
                                             class="icon icon-tabler icons-tabler-outline icon-tabler-download">
                                             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                             <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
@@ -204,14 +207,11 @@
         <div class="modal fade product_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
         </div>
 
-        <div class="modal fade" id="view_product_modal" tabindex="-1" role="dialog"
-            aria-labelledby="gridSystemModalLabel">
+        <div class="modal fade" id="view_product_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
         </div>
-         <div class="modal fade" id="edit_image" tabindex="-1" role="dialog"
-            aria-labelledby="gridSystemModalLabel">
+        <div class="modal fade" id="edit_image" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
         </div>
-        <div class="modal fade" id="opening_stock_modal" tabindex="-1" role="dialog"
-            aria-labelledby="gridSystemModalLabel">
+        <div class="modal fade" id="opening_stock_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
         </div>
 
         @if ($is_woocommerce)
@@ -228,11 +228,11 @@
     <script src="{{ asset('js/product.js?v=' . $asset_v) }}"></script>
     <script src="{{ asset('js/opening_stock.js?v=' . $asset_v) }}"></script>
     <script type="text/javascript">
-        $(document).ready(function() {
+        $(document).ready(function () {
             product_table = $('#product_table').DataTable({
                 processing: true,
                 serverSide: true,
-                fixedHeader:false,
+                fixedHeader: false,
                 aaSorting: [
                     [3, 'asc']
                 ],
@@ -241,7 +241,7 @@
                 scrollCollapse: true,
                 "ajax": {
                     "url": "/products",
-                    "data": function(d) {
+                    "data": function (d) {
                         d.type = $('#product_list_filter_type').val();
                         d.category_id = $('#product_list_filter_category_id').val();
                         d.brand_id = $('#product_list_filter_brand_id').val();
@@ -255,7 +255,7 @@
                         }
 
                         if ($('#woocommerce_enabled').length == 1 && $('#woocommerce_enabled').is(
-                                ':checked')) {
+                            ':checked')) {
                             d.woocommerce_enabled = 1;
                         }
 
@@ -263,104 +263,104 @@
                     }
                 },
                 columnDefs: [{
-                    "targets": [0,2],
+                    "targets": [0, 2],
                     "orderable": false,
                     "searchable": false
                 }],
                 columns: [{
-                        data: 'mass_delete'
-                    },
-                    {
-                        data: 'image',
-                        name: 'products.image'
-                    },
-                    {
-                        data: 'action',
-                        name: 'action'
-                    },
-                    {
-                        data: 'product',
-                        name: 'products.name'
-                    },
-                    {
-                        data: 'sku',
-                        name: 'products.sku'
-                    },
-                    {
-                        data: 'product_locations',
-                        name: 'product_locations'
-                    },
+                    data: 'mass_delete'
+                },
+                {
+                    data: 'image',
+                    name: 'products.image'
+                },
+                {
+                    data: 'action',
+                    name: 'action'
+                },
+                {
+                    data: 'product',
+                    name: 'products.name'
+                },
+                {
+                    data: 'sku',
+                    name: 'products.sku'
+                },
+                {
+                    data: 'product_locations',
+                    name: 'product_locations'
+                },
                     @can('view_purchase_price')
-                        {
+                                    {
                             data: 'purchase_price',
                             name: 'max_purchase_price',
                             searchable: false
                         },
                     @endcan
-                    @can('access_default_selling_price')
-                        {
-                            data: 'selling_price',
-                            name: 'max_price',
-                            searchable: false
-                        },
-                    @endcan {
-                        data: 'current_stock',
-                        searchable: false
-                    },
-                    {
-                        data: 'type',
-                        name: 'products.type'
-                    },
-                    {
-                        data: 'category',
-                        name: 'c1.name'
-                    },
-                    {
-                        data: 'brand',
-                        name: 'brands.name'
-                    },
-                    {
-                        data: 'tax',
-                        name: 'tax_rates.name',
-                        searchable: false
-                    },
-                    {
-                        data: 'product_custom_field1',
-                        name: 'products.product_custom_field1',
-                        visible: $('#cf_1').text().length > 0
-                    },
-                    {
-                        data: 'product_custom_field2',
-                        name: 'products.product_custom_field2',
-                        visible: $('#cf_2').text().length > 0
-                    },
-                    {
-                        data: 'product_custom_field3',
-                        name: 'products.product_custom_field3',
-                        visible: $('#cf_3').text().length > 0
-                    },
-                    {
-                        data: 'product_custom_field4',
-                        name: 'products.product_custom_field4',
-                        visible: $('#cf_4').text().length > 0
-                    },
-                    {
-                        data: 'product_custom_field5',
-                        name: 'products.product_custom_field5',
-                        visible: $('#cf_5').text().length > 0
-                    },
-                    {
-                        data: 'product_custom_field6',
-                        name: 'products.product_custom_field6',
-                        visible: $('#cf_6').text().length > 0
-                    },
-                    {
-                        data: 'product_custom_field7',
-                        name: 'products.product_custom_field7',
-                        visible: $('#cf_7').text().length > 0
-                    },
+
+                {
+                    data: 'selling_price',
+                    name: 'max_price',
+                    searchable: false
+                },
+                {
+                    data: 'current_stock',
+                    searchable: false
+                },
+                {
+                    data: 'type',
+                    name: 'products.type'
+                },
+                {
+                    data: 'category',
+                    name: 'c1.name'
+                },
+                {
+                    data: 'brand',
+                    name: 'brands.name'
+                },
+                {
+                    data: 'tax',
+                    name: 'tax_rates.name',
+                    searchable: false
+                },
+                {
+                    data: 'product_custom_field1',
+                    name: 'products.product_custom_field1',
+                    visible: $('#cf_1').text().length > 0
+                },
+                {
+                    data: 'product_custom_field2',
+                    name: 'products.product_custom_field2',
+                    visible: $('#cf_2').text().length > 0
+                },
+                {
+                    data: 'product_custom_field3',
+                    name: 'products.product_custom_field3',
+                    visible: $('#cf_3').text().length > 0
+                },
+                {
+                    data: 'product_custom_field4',
+                    name: 'products.product_custom_field4',
+                    visible: $('#cf_4').text().length > 0
+                },
+                {
+                    data: 'product_custom_field5',
+                    name: 'products.product_custom_field5',
+                    visible: $('#cf_5').text().length > 0
+                },
+                {
+                    data: 'product_custom_field6',
+                    name: 'products.product_custom_field6',
+                    visible: $('#cf_6').text().length > 0
+                },
+                {
+                    data: 'product_custom_field7',
+                    name: 'products.product_custom_field7',
+                    visible: $('#cf_7').text().length > 0
+                },
                 ],
-                createdRow: function(row, data, dataIndex) {
+                createdRow: function (row, data, dataIndex) {
                     if ($('input#is_rack_enabled').val() == 1) {
                         var target_col = 0;
                         @can('product.delete')
@@ -372,14 +372,14 @@
                     }
                     $(row).find('td:eq(0)').attr('class', 'selectable_td');
                 },
-                fnDrawCallback: function(oSettings) {
+                fnDrawCallback: function (oSettings) {
                     __currency_convert_recursively($('#product_table'));
                 },
             });
             // Array to track the ids of the details displayed rows
             var detailRows = [];
 
-            $('#product_table tbody').on('click', 'tr i.rack-details', function() {
+            $('#product_table tbody').on('click', 'tr i.rack-details', function () {
                 var i = $(this);
                 var tr = $(this).closest('tr');
                 var row = product_table.row(tr);
@@ -406,11 +406,11 @@
                 }
             });
 
-            $('#opening_stock_modal').on('hidden.bs.modal', function(e) {
+            $('#opening_stock_modal').on('hidden.bs.modal', function (e) {
                 product_table.ajax.reload();
             });
 
-            $('table#product_table tbody').on('click', 'a.delete-product', function(e) {
+            $('table#product_table tbody').on('click', 'a.delete-product', function (e) {
                 e.preventDefault();
                 swal({
                     title: LANG.sure,
@@ -424,7 +424,7 @@
                             method: "DELETE",
                             url: href,
                             dataType: "json",
-                            success: function(result) {
+                            success: function (result) {
                                 if (result.success == true) {
                                     toastr.success(result.msg);
                                     product_table.ajax.reload();
@@ -437,7 +437,7 @@
                 });
             });
 
-            $(document).on('click', '#delete-selected', function(e) {
+            $(document).on('click', '#delete-selected', function (e) {
                 e.preventDefault();
                 var selected_rows = getSelectedRows();
 
@@ -459,7 +459,7 @@
                 }
             });
 
-            $(document).on('click', '#deactivate-selected', function(e) {
+            $(document).on('click', '#deactivate-selected', function (e) {
                 e.preventDefault();
                 var selected_rows = getSelectedRows();
 
@@ -480,7 +480,7 @@
                                 url: form.attr('action'),
                                 dataType: 'json',
                                 data: data,
-                                success: function(result) {
+                                success: function (result) {
                                     if (result.success == true) {
                                         toastr.success(result.msg);
                                         product_table.ajax.reload();
@@ -500,7 +500,7 @@
                 }
             })
 
-            $(document).on('click', '#edit-selected', function(e) {
+            $(document).on('click', '#edit-selected', function (e) {
                 e.preventDefault();
                 var selected_rows = getSelectedRows();
 
@@ -513,14 +513,14 @@
                 }
             })
 
-            $('table#product_table tbody').on('click', 'a.activate-product', function(e) {
+            $('table#product_table tbody').on('click', 'a.activate-product', function (e) {
                 e.preventDefault();
                 var href = $(this).attr('href');
                 $.ajax({
                     method: "get",
                     url: href,
                     dataType: "json",
-                    success: function(result) {
+                    success: function (result) {
                         if (result.success == true) {
                             toastr.success(result.msg);
                             product_table.ajax.reload();
@@ -533,7 +533,7 @@
 
             $(document).on('change',
                 '#product_list_filter_type, #product_list_filter_category_id, #product_list_filter_brand_id, #product_list_filter_unit_id, #product_list_filter_tax_id, #location_id, #active_state, #repair_model_id',
-                function() {
+                function () {
                     if ($("#product_list_tab").hasClass('active')) {
                         product_table.ajax.reload();
                     }
@@ -543,7 +543,7 @@
                     }
                 });
 
-            $(document).on('ifChanged', '#not_for_selling, #woocommerce_enabled', function() {
+            $(document).on('ifChanged', '#not_for_selling, #woocommerce_enabled', function () {
                 if ($("#product_list_tab").hasClass('active')) {
                     product_table.ajax.reload();
                 }
@@ -558,7 +558,7 @@
             });
 
             @if ($is_woocommerce)
-                $(document).on('click', '.toggle_woocomerce_sync', function(e) {
+                $(document).on('click', '.toggle_woocomerce_sync', function (e) {
                     e.preventDefault();
                     var selected_rows = getSelectedRows();
                     if (selected_rows.length > 0) {
@@ -570,7 +570,7 @@
                     }
                 });
 
-                $(document).on('submit', 'form#toggle_woocommerce_sync_form', function(e) {
+                $(document).on('submit', 'form#toggle_woocommerce_sync_form', function (e) {
                     e.preventDefault();
                     var url = $('form#toggle_woocommerce_sync_form').attr('action');
                     var method = $('form#toggle_woocommerce_sync_form').attr('method');
@@ -582,7 +582,7 @@
                         dataType: "json",
                         url: url,
                         data: data,
-                        success: function(result) {
+                        success: function (result) {
                             ladda.stop();
                             if (result.success) {
                                 $("input#woocommerce_products_sync").val('');
@@ -596,17 +596,17 @@
                     });
                 });
             @endif
-        });
+            });
 
         $(document).on('shown.bs.modal', 'div.view_product_modal, div.view_modal, #view_product_modal',
-            function() {
+            function () {
                 var div = $(this).find('#view_product_stock_details');
                 if (div.length) {
                     $.ajax({
                         url: "{{ action([\App\Http\Controllers\ReportController::class, 'getStockReport']) }}" +
                             '?for=view_product&product_id=' + div.data('product_id'),
                         dataType: 'html',
-                        success: function(result) {
+                        success: function (result) {
                             div.html(result);
                             __currency_convert_recursively(div);
                         },
@@ -615,45 +615,45 @@
                 __currency_convert_recursively($(this));
             });
         var data_table_initailized = false;
-        $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+        $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
             if ($(e.target).attr('href') == '#product_stock_report') {
                 if (!data_table_initailized) {
                     //Stock report table
                     var stock_report_cols = [{
-                            data: 'action',
-                            name: 'action',
-                            searchable: false,
-                            orderable: false
-                        },
-                        {
-                            data: 'sku',
-                            name: 'variations.sub_sku'
-                        },
-                        {
-                            data: 'product',
-                            name: 'p.name'
-                        },
-                        {
-                            data: 'variation',
-                            name: 'variation'
-                        },
-                        {
-                            data: 'category_name',
-                            name: 'c.name'
-                        },
-                        {
-                            data: 'location_name',
-                            name: 'l.name'
-                        },
-                        {
-                            data: 'unit_price',
-                            name: 'variations.sell_price_inc_tax'
-                        },
-                        {
-                            data: 'stock',
-                            name: 'stock',
-                            searchable: false
-                        },
+                        data: 'action',
+                        name: 'action',
+                        searchable: false,
+                        orderable: false
+                    },
+                    {
+                        data: 'sku',
+                        name: 'variations.sub_sku'
+                    },
+                    {
+                        data: 'product',
+                        name: 'p.name'
+                    },
+                    {
+                        data: 'variation',
+                        name: 'variation'
+                    },
+                    {
+                        data: 'category_name',
+                        name: 'c.name'
+                    },
+                    {
+                        data: 'location_name',
+                        name: 'l.name'
+                    },
+                    {
+                        data: 'unit_price',
+                        name: 'variations.sell_price_inc_tax'
+                    },
+                    {
+                        data: 'stock',
+                        name: 'stock',
+                        searchable: false
+                    },
                     ];
                     if ($('th.stock_price').length) {
                         stock_report_cols.push({
@@ -723,10 +723,10 @@
                         scrollY: "75vh",
                         scrollX: true,
                         scrollCollapse: true,
-                        fixedHeader:false,
+                        fixedHeader: false,
                         ajax: {
                             url: '/reports/stock-report',
-                            data: function(d) {
+                            data: function (d) {
                                 d.location_id = $('#location_id').val();
                                 d.category_id = $('#product_list_filter_category_id').val();
                                 d.brand_id = $('#product_list_filter_brand_id').val();
@@ -740,10 +740,10 @@
                             }
                         },
                         columns: stock_report_cols,
-                        fnDrawCallback: function(oSettings) {
+                        fnDrawCallback: function (oSettings) {
                             __currency_convert_recursively($('#stock_report_table'));
                         },
-                        "footerCallback": function(row, data, start, end, display) {
+                        "footerCallback": function (row, data, start, end, display) {
                             var footer_total_stock = 0;
                             var footer_total_sold = 0;
                             var footer_total_transfered = 0;
@@ -760,7 +760,7 @@
                                     parseFloat($(data[r].total_sold).data('orig-value')) : 0;
 
                                 footer_total_transfered += $(data[r].total_transfered).data(
-                                        'orig-value') ?
+                                    'orig-value') ?
                                     parseFloat($(data[r].total_transfered).data('orig-value')) : 0;
 
                                 total_adjusted += $(data[r].total_adjusted).data('orig-value') ?
@@ -775,11 +775,11 @@
                                         'orig-value')) : 0;
 
                                 total_potential_profit += $(data[r].potential_profit).data(
-                                        'orig-value') ?
+                                    'orig-value') ?
                                     parseFloat($(data[r].potential_profit).data('orig-value')) : 0;
 
                                 footer_total_mfg_stock += $(data[r].total_mfg_stock).data(
-                                        'orig-value') ?
+                                    'orig-value') ?
                                     parseFloat($(data[r].total_mfg_stock).data('orig-value')) : 0;
                             }
 
@@ -816,7 +816,7 @@
             $('.tw-dw-btn-outline').removeClass('btn');
         });
 
-        $(document).on('click', '.update_product_location', function(e) {
+        $(document).on('click', '.update_product_location', function (e) {
             e.preventDefault();
             var selected_rows = getSelectedRows();
 
@@ -845,7 +845,7 @@
             }
         });
 
-        $(document).on('submit', 'form#edit_product_location_form', function(e) {
+        $(document).on('submit', 'form#edit_product_location_form', function (e) {
             e.preventDefault();
             var form = $(this);
             var data = form.serialize();
@@ -855,10 +855,10 @@
                 url: $(this).attr('action'),
                 dataType: 'json',
                 data: data,
-                beforeSend: function(xhr) {
+                beforeSend: function (xhr) {
                     __disable_submit_button(form.find('button[type="submit"]'));
                 },
-                success: function(result) {
+                success: function (result) {
                     if (result.success == true) {
                         $('div#edit_product_location_modal').modal('hide');
                         toastr.success(result.msg);

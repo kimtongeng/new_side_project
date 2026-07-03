@@ -180,15 +180,21 @@
                     $('.receive_product_modal')
                         .html(result)
                         .modal('show');
+                    __currency_convert_recursively($('.receive_product_modal'));
                 },
             });
         });
 
         $(document).on('change', '#receive_type', function() {
-            if ($(this).val() == 'custom') {
-                $('#custom_qty_container').show();
+            if ($(this).val() == 'all') {
+                $('.receive-qty-input').prop('disabled', true);
             } else {
-                $('#custom_qty_container').hide();
+                $('.receive-qty-input').each(function() {
+                    var max = parseFloat($(this).attr('max')) || 0;
+                    if (max > 0) {
+                        $(this).prop('disabled', false);
+                    }
+                });
             }
         });
 
@@ -241,6 +247,12 @@
                         }
                     }
                 });
+            }
+        });
+
+        $(document).on('hidden.bs.modal', '.modal', function () {
+            if ($('.modal:visible').length) {
+                $('body').addClass('modal-open');
             }
         });
     </script>

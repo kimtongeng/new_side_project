@@ -218,7 +218,7 @@ class ProductUtil extends Util
                         'default_sell_price' => $this->num_uf($v['default_sell_price']),
                         'sell_price_inc_tax' => $this->num_uf($v['sell_price_inc_tax']),
                     ];
-                    if (! empty($v['sub_sku'])) {
+                    if (! empty($v['sub_sku']) && auth()->user()->can('product.rename_sku')) {
                         $data['sub_sku'] = $v['sub_sku'];
                     }
                     $variation = Variation::where('id', $k)
@@ -1836,9 +1836,15 @@ class ProductUtil extends Util
                   JOIN stock_adjustment_lines AS SAL ON transactions.id=SAL.transaction_id
                   WHERE transactions.type='stock_adjustment' AND transactions.location_id=vld.location_id 
                     AND (SAL.variation_id=variations.id)) as total_adjusted"),
-            DB::raw("(SELECT SUM( COALESCE(pl.quantity - ($pl_query_string), 0) * purchase_price_inc_tax) FROM transactions 
+            DB::raw("(SELECT SUM( COALESCE( (CASE 
+                WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = pl.id) > 0 
+                    THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = pl.id)
+                WHEN transactions.status = 'received' 
+                    THEN pl.quantity
+                ELSE 0 
+            END) - ($pl_query_string), 0) * purchase_price_inc_tax) FROM transactions 
                   JOIN purchase_lines AS pl ON transactions.id=pl.transaction_id
-                  WHERE (transactions.status='received' OR transactions.type='purchase_return')  AND transactions.location_id=vld.location_id 
+                  WHERE (transactions.type='purchase' OR transactions.type='purchase_return')  AND transactions.location_id=vld.location_id 
                   AND (pl.variation_id=variations.id)) as stock_price"),
             DB::raw('SUM(vld.qty_available) as stock'),
             'variations.sub_sku as sku',
@@ -1994,21 +2000,23 @@ class ProductUtil extends Util
             'sl.transaction_id', '=', 'transactions.id')
                                 ->leftjoin('purchase_lines as pl',
                                     'pl.transaction_id', '=', 'transactions.id')
+                                ->leftjoin('purchase_line_receipts as plr',
+                                    'plr.purchase_line_id', '=', 'pl.id')
                                 ->leftjoin('stock_adjustment_lines as al',
                                     'al.transaction_id', '=', 'transactions.id')
                                 ->leftjoin('transactions as return', 'transactions.return_parent_id', '=', 'return.id')
                                 ->leftjoin('purchase_lines as rpl',
                                     'rpl.transaction_id', '=', 'return.id')
                                 ->leftjoin('transaction_sell_lines as rsl',
-                                        'rsl.transaction_id', '=', 'return.id')
+                                         'rsl.transaction_id', '=', 'return.id')
                                 ->leftjoin('contacts as c', 'transactions.contact_id', '=', 'c.id')
                                 ->where('transactions.location_id', $location_id)
                                 ->where(function ($q) use ($variation_id) {
                                     $q->where('sl.variation_id', $variation_id)
-                                        ->orWhere('pl.variation_id', $variation_id)
-                                        ->orWhere('al.variation_id', $variation_id)
-                                        ->orWhere('rpl.variation_id', $variation_id)
-                                        ->orWhere('rsl.variation_id', $variation_id);
+                                         ->orWhere('pl.variation_id', $variation_id)
+                                         ->orWhere('al.variation_id', $variation_id)
+                                         ->orWhere('rpl.variation_id', $variation_id)
+                                         ->orWhere('rsl.variation_id', $variation_id);
                                 })
                                 ->whereIn('transactions.type', ['sell', 'purchase', 'stock_adjustment', 'opening_stock', 'sell_transfer', 'purchase_transfer', 'production_purchase', 'purchase_return', 'sell_return', 'production_sell'])
                                 ->select(
@@ -2016,6 +2024,8 @@ class ProductUtil extends Util
                                     'transactions.type as transaction_type',
                                     'sl.quantity as sell_line_quantity',
                                     'pl.quantity as purchase_line_quantity',
+                                    'plr.quantity as receipt_quantity',
+                                    'plr.received_date as receipt_date',
                                     'rsl.quantity_returned as sell_return',
                                     'rpl.quantity_returned as purchase_return',
                                     'al.quantity as stock_adjusted',
@@ -2029,9 +2039,10 @@ class ProductUtil extends Util
                                     'c.name as contact_name',
                                     'c.supplier_business_name',
                                     'pl.secondary_unit_quantity as purchase_secondary_unit_quantity',
-                                    'sl.secondary_unit_quantity as sell_secondary_unit_quantity'
+                                    'sl.secondary_unit_quantity as sell_secondary_unit_quantity',
+                                    DB::raw('COALESCE(plr.received_date, transactions.transaction_date) as effective_date')
                                 )
-                                ->orderBy('transactions.transaction_date', 'asc')
+                                ->orderBy(DB::raw('COALESCE(plr.received_date, transactions.transaction_date)'), 'asc')
                                 ->get();
 
         $stock_history_array = [];
@@ -2039,7 +2050,7 @@ class ProductUtil extends Util
         $stock_in_second_unit = 0;
         foreach ($stock_history as $stock_line) {
             $temp_array = [
-                'date' => $stock_line->transaction_date,
+                'date' => $stock_line->effective_date,
                 'transaction_id' => $stock_line->transaction_id,
                 'contact_name' => $stock_line->contact_name,
                 'supplier_business_name' => $stock_line->supplier_business_name,
@@ -2062,10 +2073,14 @@ class ProductUtil extends Util
                     'stock_in_second_unit' => $this->roundQuantity($stock_in_second_unit),
                 ]);
             } elseif ($stock_line->transaction_type == 'purchase') {
-                if ($stock_line->status != 'received') {
-                    continue;
+                if (is_null($stock_line->receipt_quantity)) {
+                    if ($stock_line->status != 'received') {
+                        continue;
+                    }
+                    $quantity_change = $stock_line->purchase_line_quantity;
+                } else {
+                    $quantity_change = $stock_line->receipt_quantity;
                 }
-                $quantity_change = $stock_line->purchase_line_quantity;
                 $stock += $quantity_change;
                 $stock_in_second_unit += $stock_line->purchase_secondary_unit_quantity;
                 $stock_history_array[] = array_merge($temp_array, [

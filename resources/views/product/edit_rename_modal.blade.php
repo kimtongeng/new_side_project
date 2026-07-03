@@ -1,79 +1,91 @@
 <div class="modal-dialog" role="document">
     <div class="modal-content">
-        {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'updateRename'], [$product->id]), 'method' => 'post', 'id' => 'edit_rename_form' ]) !!}
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title">{{ __('lang_v1.edit_rename') }} - {{ $product->name }}</h4>
+        {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'updateRename'], [$product->id]), 'method' => 'post', 'id' => 'edit_rename_form']) !!}
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                    aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">{{ __('lang_v1.edit_rename') }} - {{ $product->name }}</h4>
+        </div>
+        <div class="modal-body">
+            <div id="barcode-reader-container"
+                style="display: none; margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+                <div id="barcode-reader" style="width: 100%;"></div>
+                <input type="file" id="barcode-image-input" accept="image/*" style="display: none;">
+                <button type="button" class="btn btn-warning btn-block" id="btn-stop-scan"
+                    style="margin-top: 10px;">Cancel Scan</button>
             </div>
-            <div class="modal-body">
-                <div id="barcode-reader-container" style="display: none; margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
-                    <div id="barcode-reader" style="width: 100%;"></div>
-                    <button type="button" class="btn btn-warning btn-block" id="btn-stop-scan" style="margin-top: 10px;">Cancel Scan</button>
-                </div>
 
+            <div class="form-group">
+                {!! Form::label('name', __('product.product_name') . ':*') !!}
+                {!! Form::text('name', $product->name, ['class' => 'form-control', 'required', 'placeholder' => __('product.product_name'), 'readonly' => !auth()->user()->can('product.rename_product')]) !!}
+            </div>
+
+            @if($product->type == 'single' || $product->type == 'combo')
+                @php
+                    $variation = $product->variations->first();
+                @endphp
                 <div class="form-group">
-                    {!! Form::label('name', __('product.product_name') . ':*') !!}
-                    {!! Form::text('name', $product->name, ['class' => 'form-control', 'required', 'placeholder' => __('product.product_name'), 'readonly' => !auth()->user()->can('product.rename_product')]) !!}
-                </div>
-
-                @if($product->type == 'single' || $product->type == 'combo')
-                    @php
-                        $variation = $product->variations->first();
-                    @endphp
-                     <div class="form-group">
-                         {!! Form::label('sku', __('product.sku') . ':*') !!}
-                         <div class="input-group">
-                             {!! Form::text('sku', $product->sku, ['class' => 'form-control', 'required', 'placeholder' => __('product.sku'), 'id' => 'sku', 'readonly' => !auth()->user()->can('product.rename_sku')]) !!}
-                             <span class="input-group-btn">
-                                 <button type="button" class="btn btn-default btn-scan-barcode" data-target="#sku" @if(!auth()->user()->can('product.rename_sku')) disabled @endif><i class="fa fa-camera"></i> Scan</button>
-                             </span>
-                         </div>
-                     </div>
-                    <div class="form-group">
-                        {!! Form::label('selling_price', __('product.selling_price') . ' (Exc. Tax):*') !!}
-                        {!! Form::text('selling_price', @num_format($variation->default_sell_price), ['class' => 'form-control input_number', 'required', 'placeholder' => __('product.selling_price'), 'readonly' => !auth()->user()->can('product.update_price')]) !!}
+                    {!! Form::label('sku', __('product.sku') . ':*') !!}
+                    <div class="input-group">
+                        {!! Form::text('sku', $product->sku, ['class' => 'form-control', 'required', 'placeholder' => __('product.sku'), 'id' => 'sku', 'readonly' => !auth()->user()->can('product.rename_sku')]) !!}
+                        <span class="input-group-btn">
+                            <button type="button" class="btn btn-default btn-scan-barcode" data-target="#sku"
+                                @if(!auth()->user()->can('product.rename_sku')) disabled @endif><i class="fa fa-camera"></i>
+                                Scan</button>
+                        </span>
                     </div>
-                    {!! Form::hidden('variation_id', $variation->id) !!}
-                @elseif($product->type == 'variable')
-                    <table class="table table-bordered table-striped">
-                        <thead>
+                </div>
+                <div class="form-group">
+                    {!! Form::label('selling_price', 'Selling price (Exc. Tax):*') !!}
+                    {!! Form::text('selling_price', @num_format($variation->default_sell_price), ['class' => 'form-control input_number', 'required', 'placeholder' => __('product.selling_price'), 'readonly' => !auth()->user()->can('product.update_price')]) !!}
+                </div>
+                {!! Form::hidden('variation_id', $variation->id) !!}
+            @elseif($product->type == 'variable')
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>@lang('lang_v1.variation')</th>
+                            <th>@lang('product.sku')</th>
+                            <th>@lang('product.selling_price') (Exc. Tax)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($product->variations as $variation)
                             <tr>
-                                <th>@lang('lang_v1.variation')</th>
-                                <th>@lang('product.sku')</th>
-                                <th>@lang('product.selling_price') (Exc. Tax)</th>
+                                <td>{{ optional($variation->product_variation)->name }} - {{ $variation->name }}</td>
+                                <td>
+                                    <div class="input-group">
+                                        {!! Form::text('variations[' . $variation->id . '][sku]', $variation->sub_sku, ['class' => 'form-control', 'required', 'id' => 'sku_' . $variation->id, 'readonly' => !auth()->user()->can('product.rename_sku')]) !!}
+                                        <span class="input-group-btn">
+                                            <button type="button" class="btn btn-default btn-scan-barcode"
+                                                data-target="#sku_{{ $variation->id }}"
+                                                @if(!auth()->user()->can('product.rename_sku')) disabled @endif><i
+                                                    class="fa fa-camera"></i> Scan</button>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {!! Form::text('variations[' . $variation->id . '][selling_price]',
+                                    @num_format($variation->default_sell_price), ['class' => 'form-control input_number', 'required', 'readonly' => !auth()->user()->can('product.update_price')]) !!}
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                             @foreach($product->variations as $variation)
-                                <tr>
-                                    <td>{{ optional($variation->product_variation)->name }} - {{ $variation->name }}</td>
-                                     <td>
-                                         <div class="input-group">
-                                             {!! Form::text('variations[' . $variation->id . '][sku]', $variation->sub_sku, ['class' => 'form-control', 'required', 'id' => 'sku_' . $variation->id, 'readonly' => !auth()->user()->can('product.rename_sku')]) !!}
-                                             <span class="input-group-btn">
-                                                 <button type="button" class="btn btn-default btn-scan-barcode" data-target="#sku_{{ $variation->id }}" @if(!auth()->user()->can('product.rename_sku')) disabled @endif><i class="fa fa-camera"></i> Scan</button>
-                                             </span>
-                                         </div>
-                                     </td>
-                                    <td>
-                                        {!! Form::text('variations[' . $variation->id . '][selling_price]', @num_format($variation->default_sell_price), ['class' => 'form-control input_number', 'required', 'readonly' => !auth()->user()->can('product.update_price')]) !!}
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                @endif
-            </div>
-            <div class="modal-footer">
-                <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white" id="update_rename_btn">@lang( 'messages.save' )</button>
-                <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white" data-dismiss="modal">@lang( 'messages.close' )</button>
-            </div>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white"
+                id="update_rename_btn">@lang('messages.save')</button>
+            <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white"
+                data-dismiss="modal">@lang('messages.close')</button>
+        </div>
         {!! Form::close() !!}
     </div>
 </div>
 
 <script type="text/javascript">
-    $(document).ready(function() {
+    $(document).ready(function () {
         $('form#edit_rename_form').validate({
             rules: {
                 sku: {
@@ -96,7 +108,7 @@
             },
         });
 
-        $('form#edit_rename_form').find('[name^="variations"]').each(function() {
+        $('form#edit_rename_form').find('[name^="variations"]').each(function () {
             var element = $(this);
             var var_id = element.attr('id').replace('sku_', '');
             element.rules('add', {
@@ -127,29 +139,47 @@
         var html5QrcodeScanner = null;
         var activeInputTarget = null;
 
-        $(document).on('click', '.btn-scan-barcode', function() {
+        $(document).off('click', '.btn-scan-barcode').on('click', '.btn-scan-barcode', function () {
             activeInputTarget = $(this).data('target');
             $('#barcode-reader-container').show();
-            
+
             if (html5QrcodeScanner) {
                 try {
                     html5QrcodeScanner.clear();
-                } catch(e) {}
+                } catch (e) { }
             }
 
-            html5QrcodeScanner = new Html5Qrcode("barcode-reader");
-            
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 150 }
+            var formats = [];
+            if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+                formats = [
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E
+                ];
+            }
+
+            html5QrcodeScanner = new Html5Qrcode("barcode-reader", {
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
                 },
-                function(decodedText, decodedResult) {
+                formatsToSupport: formats
+            });
+
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                {
+                    fps: 25,
+                    qrbox: { width: 300, height: 180 }
+                },
+                function (decodedText, decodedResult) {
                     $(activeInputTarget).val(decodedText);
                     stopScanning();
                 },
-                function(errorMessage) {
+                function (errorMessage) {
                     // ignore failure to decode
                 }
             ).catch(err => {
@@ -173,7 +203,46 @@
             }
         }
 
-        $('#btn-stop-scan').click(function() {
+        $(document).off('click', '.btn-upload-barcode-img').on('click', '.btn-upload-barcode-img', function () {
+            $('#barcode-image-input').trigger('click');
+        });
+
+        $(document).off('change', '#barcode-image-input').on('change', '#barcode-image-input', function (e) {
+            if (e.target.files.length == 0) {
+                return;
+            }
+            var file = e.target.files[0];
+
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(ignore => {
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = new Html5Qrcode("barcode-reader");
+                    scanFile(file);
+                }).catch(err => {
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = new Html5Qrcode("barcode-reader");
+                    scanFile(file);
+                });
+            } else {
+                html5QrcodeScanner = new Html5Qrcode("barcode-reader");
+                scanFile(file);
+            }
+        });
+
+        function scanFile(file) {
+            html5QrcodeScanner.scanFile(file, true)
+                .then(decodedText => {
+                    $(activeInputTarget).val(decodedText);
+                    html5QrcodeScanner.clear();
+                    $('#barcode-reader-container').hide();
+                })
+                .catch(err => {
+                    console.error("Error scanning file: ", err);
+                    alert("Could not scan barcode from image. Please ensure it is clear and try again.");
+                });
+        }
+
+        $('#btn-stop-scan').click(function () {
             stopScanning();
         });
 
@@ -182,8 +251,8 @@
                 try {
                     html5QrcodeScanner.stop().then(ignore => {
                         html5QrcodeScanner.clear();
-                    }).catch(e => {});
-                } catch(e) {}
+                    }).catch(e => { });
+                } catch (e) { }
             }
         });
     });

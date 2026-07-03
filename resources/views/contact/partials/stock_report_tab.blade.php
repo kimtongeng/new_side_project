@@ -16,7 +16,8 @@
                     <tr>
                         <th>@lang('sale.product')</th>
                         <th>@lang('product.sku')</th>
-                        <th>@lang('purchase.purchase_quantity')</th>
+                         <th>@lang('purchase.purchase_quantity')</th>
+                         <th>Quantity Received</th>
                         <th>@lang('lang_v1.total_sold')</th>
                         <th>@lang('lang_v1.total_unit_transfered')</th>
                         <th>@lang('lang_v1.total_returned')</th>

@@ -191,6 +191,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/products/update-rename/{id}', [ProductController::class, 'updateRename']);
     Route::get('/products/edit-sku/{id}', [ProductController::class, 'editSku']);
     Route::post('/products/update-sku/{id}', [ProductController::class, 'updateSku']);
+    Route::get('/products/edit-selling-price/{id}', [ProductController::class, 'editSellingPrice']);
+    Route::post('/products/update-selling-price/{id}', [ProductController::class, 'updateSellingPrice']);
 
     Route::resource('products', ProductController::class);
     Route::get('/toggle-subscription/{id}', 'SellPosController@toggleRecurringInvoices');

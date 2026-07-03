@@ -1745,10 +1745,22 @@ class ReportController extends Controller
                         't.ref_no',
                         't.transaction_date as transaction_date',
                         'purchase_lines.purchase_price_inc_tax as unit_purchase_price',
-                        DB::raw('(purchase_lines.quantity - purchase_lines.quantity_returned) as purchase_qty'),
+                        DB::raw("( (CASE 
+                            WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id) > 0 
+                                THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id)
+                            WHEN t.status = 'received' 
+                                THEN purchase_lines.quantity
+                            ELSE 0 
+                        END) - purchase_lines.quantity_returned) as purchase_qty"),
                         'purchase_lines.quantity_adjusted',
                         'u.short_name as unit',
-                        DB::raw('((purchase_lines.quantity - purchase_lines.quantity_returned - purchase_lines.quantity_adjusted) * purchase_lines.purchase_price_inc_tax) as subtotal')
+                        DB::raw("( ((CASE 
+                            WHEN (SELECT COUNT(*) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id) > 0 
+                                THEN (SELECT COALESCE(SUM(plr.quantity), 0) FROM purchase_line_receipts as plr WHERE plr.purchase_line_id = purchase_lines.id)
+                            WHEN t.status = 'received' 
+                                THEN purchase_lines.quantity
+                            ELSE 0 
+                        END) - purchase_lines.quantity_returned - purchase_lines.quantity_adjusted) * purchase_lines.purchase_price_inc_tax ) as subtotal")
                     )
                     ->groupBy('purchase_lines.id');
             if (! empty($variation_id)) {

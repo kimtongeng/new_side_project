@@ -72,7 +72,7 @@
                         @if($action != 'duplicate')
                             <input type="hidden" class="row_variation_id" value="{{$variation->id}}">
                         @endif
-                        {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][sub_sku]', $action == 'edit' ? $variation->sub_sku : null, ['class' => 'form-control input-sm input_sub_sku', $sub_sku_required]); !!}
+                        {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][sub_sku]', $action == 'edit' ? $variation->sub_sku : null, ['class' => 'form-control input-sm input_sub_sku', $sub_sku_required, 'readonly' => ($action == 'edit' && !auth()->user()->can('product.rename_sku')) ? 'readonly' : null]); !!}
                     </td>
                     <td>
                         {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][value]', $variation->name, ['class' => 'form-control input-sm variation_value_name', 'required', 'readonly']); !!}

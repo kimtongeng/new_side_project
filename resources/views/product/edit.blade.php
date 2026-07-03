@@ -35,8 +35,8 @@
             <div class="col-sm-4">
               <div class="form-group">
                 {!! Form::label('sku', __('product.sku')  . ':*') !!} @show_tooltip(__('tooltip.sku'))
-                {!! Form::text('sku', $product->sku, ['class' => 'form-control',
-                'placeholder' => __('product.sku'), 'required']); !!}
+                 {!! Form::text('sku', $product->sku, ['class' => 'form-control',
+                 'placeholder' => __('product.sku'), 'required', 'readonly' => !auth()->user()->can('product.rename_sku')]); !!}
               </div>
             </div>
 

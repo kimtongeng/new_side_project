@@ -17,12 +17,10 @@
                 @endphp
                 <th>@lang('lang_v1.unit_perchase_price')</th>
             @endcan
-            @can('access_default_selling_price')
-                @php 
-                    $colspan++;
-                @endphp
-                <th>@lang('lang_v1.selling_price')</th>
-            @endcan
+            @php 
+                $colspan++;
+            @endphp
+            <th>@lang('lang_v1.selling_price')</th>
             <th>@lang('report.current_stock')</th>
             <th>@lang('product.product_type')</th>
             <th>@lang('product.category')</th>

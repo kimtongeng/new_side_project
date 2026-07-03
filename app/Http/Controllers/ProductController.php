@@ -233,6 +233,10 @@ class ProductController extends Controller
                             $html .=
                                 '<li><a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editRename'], [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="glyphicon glyphicon-pencil"></i> ' . __('lang_v1.edit_rename') . '</a></li>';
                         }
+                        if (auth()->user()->can('product.update_price')) {
+                            $html .=
+                                '<li><a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editSellingPrice'], [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="glyphicon glyphicon-tag"></i> ' . __('lang_v1.edit_selling_price') . '</a></li>';
+                        }
                         if (auth()->user()->can('product.upload_image')) {
                             $html .=
                                 '<li><a href="' . action([\App\Http\Controllers\ProductController::class, 'edit_product_image'], [$row->id]) . '" class="edit_image"><i class="glyphicon glyphicon-picture"></i>Edit product image</a></li>';
@@ -296,7 +300,10 @@ class ProductController extends Controller
                 })
                 ->editColumn('type', '@lang("lang_v1." . $type)')
                 ->editColumn('sku', function ($row) {
-                    return '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editSku'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $row->sku . '</a>';
+                    if (auth()->user()->can('product.rename_sku')) {
+                        return '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editSku'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $row->sku . '</a>';
+                    }
+                    return $row->sku;
                 })
                 ->addColumn('mass_delete', function ($row) {
                     return  '<input type="checkbox" class="row-select" value="' . $row->id . '">';
@@ -316,7 +323,25 @@ class ProductController extends Controller
                 )
                 ->addColumn(
                     'selling_price',
-                    '<div style="white-space: nowrap;">@format_currency($min_price) @if($max_price != $min_price && $type == "variable") -  @format_currency($max_price)@endif </div>'
+                    function ($row) {
+                        $min_price = $row->min_price;
+                        $max_price = $row->max_price;
+                        $type = $row->type;
+
+                        $price_text = $this->productUtil->num_f($min_price, true);
+                        if ($type == 'variable' && $min_price != $max_price) {
+                            $price_text .= ' - ' . $this->productUtil->num_f($max_price, true);
+                        }
+
+                        $html = '<div style="white-space: nowrap;">';
+                        if (auth()->user()->can('product.update_price')) {
+                            $html .= '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editSellingPrice'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $price_text . '</a>';
+                        } else {
+                            $html .= $price_text;
+                        }
+                        $html .= '</div>';
+                        return $html;
+                    }
                 )
                 ->filterColumn('products.sku', function ($query, $keyword) {
                     $query->whereHas('variations', function ($q) use ($keyword) {
@@ -1195,7 +1220,9 @@ class ProductController extends Controller
             $product->category_id = $product_details['category_id'];
             $product->tax = $product_details['tax'];
             $product->barcode_type = $product_details['barcode_type'];
-            $product->sku = $product_details['sku'];
+            if (auth()->user()->can('product.rename_sku')) {
+                $product->sku = $product_details['sku'];
+            }
             $product->alert_quantity = ! empty($product_details['alert_quantity']) ? $this->productUtil->num_uf($product_details['alert_quantity']) : $product_details['alert_quantity'];
             $product->tax_type = $product_details['tax_type'];
             $product->weight = $product_details['weight'];
@@ -3490,7 +3517,7 @@ class ProductController extends Controller
 
     public function editSku($id)
     {
-        if (! auth()->user()->can('product.update')) {
+        if (! auth()->user()->can('product.rename_sku')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -3505,7 +3532,7 @@ class ProductController extends Controller
 
     public function updateSku(Request $request, $id)
     {
-        if (! auth()->user()->can('product.update')) {
+        if (! auth()->user()->can('product.rename_sku')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -3636,6 +3663,138 @@ class ProductController extends Controller
                     );
                 } catch (\Exception $te) {
                     \Log::warning('Telegram product SKU update notification failed: ' . $te->getMessage());
+                }
+            });
+
+            $output = [
+                'success' => true,
+                'msg' => __('lang_v1.updated_succesfully'),
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            $output = [
+                'success' => false,
+                'msg' => __('messages.something_went_wrong'),
+            ];
+        }
+
+        return $output;
+    }
+
+    public function editSellingPrice($id)
+    {
+        if (! auth()->user()->can('product.update_price')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $product = Product::where('business_id', $business_id)
+            ->with(['variations', 'variations.product_variation'])
+            ->findOrFail($id);
+
+        return view('product.edit_selling_price_modal')
+            ->with(compact('product'));
+    }
+
+    public function updateSellingPrice(Request $request, $id)
+    {
+        if (! auth()->user()->can('product.update_price')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = $request->session()->get('user.business_id');
+            $product = Product::where('business_id', $business_id)
+                ->where('id', $id)
+                ->with(['variations', 'product_locations'])
+                ->firstOrFail();
+
+            $old_name = $product->name;
+            $old_sku = $product->sku;
+
+            // Load variations and their original values
+            $old_variations = [];
+            foreach ($product->variations as $var) {
+                $old_variations[$var->id] = [
+                    'name' => $var->name,
+                    'sku' => $var->sub_sku,
+                    'sell_price_inc_tax' => $var->sell_price_inc_tax
+                ];
+            }
+
+            // Recalculate based on tax rate if present
+            $tax_rate = 0;
+            if (! empty($product->tax)) {
+                $tax_rate_obj = TaxRate::find($product->tax);
+                if (! empty($tax_rate_obj)) {
+                    $tax_rate = $tax_rate_obj->amount;
+                }
+            }
+
+            DB::beginTransaction();
+
+            if ($product->type == 'single' || $product->type == 'combo') {
+                $selling_price = $this->productUtil->num_uf($request->input('selling_price'));
+                $variation = Variation::where('product_id', $id)->first();
+                if (! empty($variation)) {
+                    $variation->default_sell_price = $selling_price;
+                    $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
+                    $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);
+                    $variation->save();
+                }
+            } elseif ($product->type == 'variable') {
+                $variations_data = $request->input('variations');
+                if (! empty($variations_data)) {
+                    foreach ($variations_data as $variation_id => $data) {
+                        $variation = Variation::where('product_id', $id)->findOrFail($variation_id);
+                        if (isset($data['selling_price'])) {
+                            $selling_price = $this->productUtil->num_uf($data['selling_price']);
+                            $variation->default_sell_price = $selling_price;
+                            $variation->sell_price_inc_tax = $selling_price + ($selling_price * $tax_rate / 100);
+                            $variation->profit_percent = $this->productUtil->get_percent($variation->default_purchase_price, $selling_price);
+                            $variation->save();
+                        }
+                    }
+                }
+            }
+
+            $product->save();
+            DB::commit();
+
+            // Calculate variation diffs for Telegram notification
+            $product->refresh();
+            $variation_diffs = [];
+            foreach ($product->variations as $var) {
+                $old = $old_variations[$var->id] ?? null;
+                if ($old) {
+                    if ((float)$old['sell_price_inc_tax'] !== (float)$var->sell_price_inc_tax) {
+                        $variation_diffs[] = [
+                            'name' => $old['name'] !== 'DUMMY' ? $old['name'] : 'Single',
+                            'old_sku' => $old['sku'],
+                            'new_sku' => $var->sub_sku,
+                            'old_price' => $old['sell_price_inc_tax'],
+                            'new_price' => $var->sell_price_inc_tax
+                        ];
+                    }
+                }
+            }
+
+            // Send Telegram Notification after response
+            $tg_location_id = $product->product_locations->first()->location_id ?? 'PT1001';
+            app()->terminating(function () use ($product, $old_name, $old_sku, $variation_diffs, $tg_location_id) {
+                try {
+                    \App\Notifications\TelegramNotification::productRenameUpdatedMessage(
+                        $product,
+                        $old_name,
+                        $old_sku,
+                        $variation_diffs,
+                        'product',
+                        $tg_location_id
+                    );
+                } catch (\Exception $te) {
+                    \Log::warning('Telegram product price update notification failed: ' . $te->getMessage());
                 }
             });
 

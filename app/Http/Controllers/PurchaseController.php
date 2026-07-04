@@ -1706,9 +1706,8 @@ class PurchaseController extends Controller
             $currency_details = $this->transactionUtil->purchaseCurrencyDetails($business_id);
             $received_statuses = ['received', 'amount', 'over_received'];
             $is_before_received = in_array($before_status, $received_statuses);
-            $is_after_received = in_array($transaction->status, $received_statuses);
 
-            if ($is_after_received && !$is_before_received) {
+            if ($transaction->status == 'received') {
                 foreach ($transaction->purchase_lines as $purchase_line) {
                     $already_received = $purchase_line->receipts()->sum('quantity');
                     $remaining = $purchase_line->quantity - $already_received;
@@ -1720,27 +1719,34 @@ class PurchaseController extends Controller
                             'received_date' => \Carbon\Carbon::now(),
                         ]);
                         $this->productUtil->updateProductQuantity($transaction->location_id, $purchase_line->product_id, $purchase_line->variation_id, $remaining, 0, null, false);
+                    } elseif ($remaining < 0) {
+                        $to_reduce = abs($remaining);
+                        $receipts = $purchase_line->receipts()->orderBy('id', 'desc')->get();
+                        foreach ($receipts as $receipt) {
+                            if ($to_reduce <= 0) {
+                                break;
+                            }
+                            $reduce_qty = min($receipt->quantity, $to_reduce);
+                            $this->productUtil->decreaseProductQuantity($purchase_line->product_id, $purchase_line->variation_id, $transaction->location_id, $reduce_qty);
+                            
+                            if ($receipt->quantity <= $to_reduce) {
+                                $to_reduce -= $receipt->quantity;
+                                $receipt->delete();
+                            } else {
+                                $receipt->quantity -= $to_reduce;
+                                $receipt->save();
+                                $to_reduce = 0;
+                            }
+                        }
                     }
                 }
-            } elseif (!$is_after_received && $is_before_received) {
+            } elseif (!in_array($transaction->status, $received_statuses) && $is_before_received) {
                 foreach ($transaction->purchase_lines as $purchase_line) {
                     $receipts = $purchase_line->receipts;
                     foreach ($receipts as $receipt) {
                         $this->productUtil->decreaseProductQuantity($purchase_line->product_id, $purchase_line->variation_id, $transaction->location_id, $receipt->quantity);
                         $receipt->delete();
                     }
-                }
-            } else {
-                foreach ($transaction->purchase_lines as $purchase_line) {
-                    $this->productUtil->updateProductStock(
-                        $before_status,
-                        $transaction,
-                        $purchase_line->product_id,
-                        $purchase_line->variation_id,
-                        $purchase_line->quantity,
-                        $purchase_line->quantity,
-                        $currency_details
-                    );
                 }
             }
 

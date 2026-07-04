@@ -121,7 +121,7 @@ return [
     'received' => 'Received',
     'pending' => 'Pending',
     'ordered' => 'Ordered',
-    'amount' => 'Add amount',
+    'amount' => 'Partially Received',
     'over_received' => 'Over Received',
     'search_product_placeholder' => 'Enter Product name / SKU / Scan bar code',
     'fixed' => 'Fixed',

@@ -77,7 +77,15 @@
               <div class="form-group">
                 {!! Form::label('status', __('purchase.purchase_status') . ':*') !!}
                 @show_tooltip(__('tooltip.order_status'))
-                {!! Form::select('status', $orderStatuses, $purchase->status, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select') , 'required']); !!}
+                @php
+                  $filtered_statuses = $orderStatuses;
+                  foreach (['amount', 'over_received'] as $status_key) {
+                    if ($status_key !== $purchase->status) {
+                      unset($filtered_statuses[$status_key]);
+                    }
+                  }
+                @endphp
+                {!! Form::select('status', $filtered_statuses, $purchase->status, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select') , 'required']); !!}
               </div>
             </div>
             <div class="col-sm-3">

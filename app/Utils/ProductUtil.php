@@ -1329,6 +1329,51 @@ class ProductUtil extends Util
             $transaction->purchase_lines()->saveMany($updated_purchase_lines);
         }
 
+        // Handle automatic receipt creation/adjustment if transaction is a purchase
+        if ($transaction->type == 'purchase') {
+            if (in_array($transaction->status, ['received', 'amount', 'over_received'])) {
+                foreach ($transaction->purchase_lines as $purchase_line) {
+                    if (!empty($purchase_line->id)) {
+                        $already_received = \App\PurchaseLineReceipt::where('purchase_line_id', $purchase_line->id)->sum('quantity');
+                        $remaining = $purchase_line->quantity - $already_received;
+                        if ($remaining > 0) {
+                            \App\PurchaseLineReceipt::create([
+                                'transaction_id' => $transaction->id,
+                                'purchase_line_id' => $purchase_line->id,
+                                'quantity' => $remaining,
+                                'received_date' => \Carbon\Carbon::now(),
+                            ]);
+                        } elseif ($remaining < 0) {
+                            $to_reduce = abs($remaining);
+                            $receipts = \App\PurchaseLineReceipt::where('purchase_line_id', $purchase_line->id)
+                                ->orderBy('id', 'desc')
+                                ->get();
+                            foreach ($receipts as $receipt) {
+                                if ($to_reduce <= 0) {
+                                    break;
+                                }
+                                if ($receipt->quantity <= $to_reduce) {
+                                    $to_reduce -= $receipt->quantity;
+                                    $receipt->delete();
+                                } else {
+                                    $receipt->quantity -= $to_reduce;
+                                    $receipt->save();
+                                    $to_reduce = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // If status changed to a non-received status, delete all receipts
+                \App\PurchaseLineReceipt::where('transaction_id', $transaction->id)->delete();
+            }
+
+            if (!empty($delete_purchase_line_ids)) {
+                \App\PurchaseLineReceipt::whereIn('purchase_line_id', $delete_purchase_line_ids)->delete();
+            }
+        }
+
         return $delete_purchase_lines;
     }
 

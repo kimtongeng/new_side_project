@@ -13,7 +13,12 @@
 		<div class="modal-body">
 			<div class="form-group">
 				{!! Form::label('status', __('purchase.purchase_status') . ':*') !!} 
-				{!! Form::select('status', $orderStatuses, null, ['class' => 'form-control', 'placeholder' => __('messages.please_select'), 'required']); !!}
+				@php
+					$filtered_statuses = $orderStatuses;
+					unset($filtered_statuses['amount']);
+					unset($filtered_statuses['over_received']);
+				@endphp
+				{!! Form::select('status', $filtered_statuses, null, ['class' => 'form-control', 'placeholder' => __('messages.please_select'), 'required']); !!}
 
 				{!! Form::hidden('purchase_id', null, ['id' => 'purchase_id']); !!}
 			</div>

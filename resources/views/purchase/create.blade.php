@@ -64,7 +64,12 @@
 			<div class="col-sm-3 @if(!empty($default_purchase_status)) hide @endif">
 				<div class="form-group">
 					{!! Form::label('status', __('purchase.purchase_status') . ':*') !!} @show_tooltip(__('tooltip.order_status'))
-					{!! Form::select('status', $orderStatuses, $default_purchase_status, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'required']); !!}
+					@php
+						$filtered_statuses = $orderStatuses;
+						unset($filtered_statuses['amount']);
+						unset($filtered_statuses['over_received']);
+					@endphp
+					{!! Form::select('status', $filtered_statuses, $default_purchase_status, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'required']); !!}
 				</div>
 			</div>			
 			@if(count($business_locations) == 1)

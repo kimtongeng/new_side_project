@@ -184,8 +184,8 @@ class TelegramNotification
         return;
         // $botToken = self::PRODUCTION_BOT;
         // $groups = self::PRODUCTION_GROUP;
-        $botToken = self::LOCAL_BOT;
-        $groups = self::LOCAL_GROUP;
+        // $botToken = self::LOCAL_BOT;
+        // $groups = self::LOCAL_GROUP;
 
         // if (app()->environment("local")) {
         //     $botToken = self::LOCAL_BOT;

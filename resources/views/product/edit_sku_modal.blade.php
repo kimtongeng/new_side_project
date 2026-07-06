@@ -56,7 +56,7 @@
         </div>
         <div class="modal-footer">
             <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white"
-                id="update_sku_btn">@lang('messages.save')</button>
+                id="update_sku_btn" disabled>@lang('messages.save')</button>
             <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white"
                 data-dismiss="modal">@lang('messages.close')</button>
         </div>
@@ -66,6 +66,29 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
+        var $skuInputs = $('form#edit_sku_form').find('input[name="sku"], input[name^="variations"]');
+        $skuInputs.each(function() {
+            var $this = $(this);
+            $this.data('original-val', $this.val());
+        });
+
+        function checkSkuChanges() {
+            var changed = false;
+            $skuInputs.each(function() {
+                var $this = $(this);
+                if ($this.val() !== $this.data('original-val')) {
+                    changed = true;
+                }
+            });
+            $('#update_sku_btn').prop('disabled', !changed);
+        }
+
+        $skuInputs.on('input change keyup paste', function() {
+            checkSkuChanges();
+        });
+
+        checkSkuChanges();
+
         $('form#edit_sku_form').validate({
             rules: {
                 sku: {
@@ -156,7 +179,7 @@
                     qrbox: { width: 300, height: 180 }
                 },
                 function (decodedText, decodedResult) {
-                    $(activeInputTarget).val(decodedText);
+                    $(activeInputTarget).val(decodedText).trigger('change');
                     stopScanning();
                 },
                 function (errorMessage) {
@@ -187,7 +210,7 @@
         function scanFile(file) {
             html5QrcodeScanner.scanFile(file, true)
                 .then(decodedText => {
-                    $(activeInputTarget).val(decodedText);
+                    $(activeInputTarget).val(decodedText).trigger('change');
                     html5QrcodeScanner.clear();
                     $('#barcode-reader-container').hide();
                 })

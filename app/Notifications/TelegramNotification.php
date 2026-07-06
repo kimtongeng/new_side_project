@@ -57,7 +57,13 @@ class TelegramNotification
                 "draft" => 17,
             ]
         ],
-
+        'PT1002' => [
+            "name" => "ultimate_pos_work_2",
+            "chat_id" => "-1003712515829",
+            "topic" => [
+                "product" => 2,
+            ]
+        ],
     ];
     // private const PRODUCTION_BOT = '8152281759:AAFEN2PObxW-S8Jck251--mxQEEuNJYCanQ';
     private const PRODUCTION_BOT = '8841464720:AAGLHIGlPDTUhUP52LnAh_0XKfO6qDk8rKo';
@@ -181,11 +187,11 @@ class TelegramNotification
 
     public static function sendMessage(string $message, string $to = '', $location_id = "PT1001"): void
     {
-        return;
+        // return;
         // $botToken = self::PRODUCTION_BOT;
         // $groups = self::PRODUCTION_GROUP;
-        // $botToken = self::LOCAL_BOT;
-        // $groups = self::LOCAL_GROUP;
+        $botToken = self::LOCAL_BOT;
+        $groups = self::LOCAL_GROUP;
 
         // if (app()->environment("local")) {
         //     $botToken = self::LOCAL_BOT;
@@ -1222,7 +1228,8 @@ class TelegramNotification
         string $tg_tax = 'N/A',
         string $tg_locations = 'N/A',
         string $to = 'product',
-        $location_id = 'PT1001'
+        $location_id = 'PT1001',
+        string $action_type = 'delete'
     ) {
         if (empty($product)) return;
 
@@ -1233,7 +1240,11 @@ class TelegramNotification
             default    => '📦',
         };
 
-        $msg  = "🗑 <b>PRODUCT DELETED</b>\n\n";
+        if ($action_type === 'remove') {
+            $msg  = "🗑 <b>PRODUCT REMOVED FROM LOCATION</b>\n\n";
+        } else {
+            $msg  = "🗑 <b>PRODUCT DELETED</b>\n\n";
+        }
         $msg .= "<b>📍 Business Locations:</b> {$tg_locations}\n";
         $msg .= "<b>📦 Product Name:</b> {$product->name}\n";
         $msg .= "<b>🔢 SKU:</b> {$product->sku}\n";
@@ -1318,8 +1329,13 @@ class TelegramNotification
             }
         }
 
-        $msg .= "\n⏰ <b>Date Deleted:</b> " . now()->format('d/m/Y H:i') . "\n";
-        $msg .= "🗑 <i>Deleted via Shoper POS</i>";
+        if ($action_type === 'remove') {
+            $msg .= "\n⏰ <b>Date Removed:</b> " . now()->format('d/m/Y H:i') . "\n";
+            $msg .= "🗑 <i>Removed via Shoper POS</i>";
+        } else {
+            $msg .= "\n⏰ <b>Date Deleted:</b> " . now()->format('d/m/Y H:i') . "\n";
+            $msg .= "🗑 <i>Deleted via Shoper POS</i>";
+        }
 
         // ── Send with image if available ──
         $hasImage = !empty($product->image) && $product->image !== 'default.png';

@@ -751,35 +751,43 @@ class ProductController extends Controller
             DB::commit();
 
             // ── Telegram Notification ──────────────────────────────
-            try {
-                $product->load([
-                    'brand',
-                    'unit',
-                    'category',
-                    'sub_category',
-                    'product_tax',
-                    'variations',
-                    'variations.product_variation',
-                    'variations.group_prices',
-                    'variations.media',
-                    'product_locations',
-                    'warranty',
-                ]);
+            $productUtil = $this->productUtil;
+            dispatch(function () use ($product, $business_id, $productUtil) {
+                try {
+                    $product->load([
+                        'brand',
+                        'unit',
+                        'category',
+                        'sub_category',
+                        'product_tax',
+                        'variations',
+                        'variations.product_variation',
+                        'variations.group_prices',
+                        'variations.media',
+                        'product_locations',
+                        'warranty',
+                    ]);
 
-                $combo_variations_for_tg = [];
-                if ($product->type === 'combo') {
-                    $combo_variations_for_tg = $this->productUtil->__getComboProductDetails(
-                        $product->variations->first()->combo_variations,
-                        $business_id
-                    );
+                    $combo_variations_for_tg = [];
+                    if ($product->type === 'combo') {
+                        $combo_variations_for_tg = $productUtil->__getComboProductDetails(
+                            $product->variations->first()->combo_variations,
+                            $business_id
+                        );
+                    }
+
+                    $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
+                    if ($location_ids->isEmpty()) {
+                        $location_ids = collect(['PT1001']);
+                    }
+
+                    foreach ($location_ids as $location_id) {
+                        TelegramNotification::addProductMessage($product, $combo_variations_for_tg, 'product', $location_id);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Telegram product notification failed: File:' . $e->getFile() . ' Line:' . $e->getLine() . ' Message:' . $e->getMessage());
                 }
-
-                $location_id = $product->product_locations->first()->location_id ?? 'PT1001';
-
-                TelegramNotification::addProductMessage($product, $combo_variations_for_tg, 'product', $location_id);
-            } catch (\Exception $e) {
-                \Log::error('Telegram product notification failed: File:' . $e->getFile() . ' Line:' . $e->getLine() . ' Message:' . $e->getMessage());
-            }
+            })->afterResponse();
             // ──────────────────────────────────────────────────────
 
             $output = [
@@ -1388,35 +1396,43 @@ class ProductController extends Controller
             DB::commit();
 
             // ── Telegram Notification ──────────────────────────────
-            try {
-                $product->load([
-                    'brand',
-                    'unit',
-                    'category',
-                    'sub_category',
-                    'product_tax',
-                    'variations',
-                    'variations.product_variation',
-                    'variations.group_prices',
-                    'variations.media',
-                    'product_locations',
-                    'warranty',
-                ]);
+            $productUtil = $this->productUtil;
+            dispatch(function () use ($product, $old_data, $business_id, $productUtil) {
+                try {
+                    $product->load([
+                        'brand',
+                        'unit',
+                        'category',
+                        'sub_category',
+                        'product_tax',
+                        'variations',
+                        'variations.product_variation',
+                        'variations.group_prices',
+                        'variations.media',
+                        'product_locations',
+                        'warranty',
+                    ]);
 
-                $combo_variations_for_tg = [];
-                if ($product->type === 'combo') {
-                    $combo_variations_for_tg = $this->productUtil->__getComboProductDetails(
-                        $product->variations[0]->combo_variations,
-                        $business_id
-                    );
+                    $combo_variations_for_tg = [];
+                    if ($product->type === 'combo') {
+                        $combo_variations_for_tg = $productUtil->__getComboProductDetails(
+                            $product->variations->first()->combo_variations,
+                            $business_id
+                        );
+                    }
+
+                    $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
+                    if ($location_ids->isEmpty()) {
+                        $location_ids = collect(['PT1001']);
+                    }
+
+                    foreach ($location_ids as $location_id) {
+                        TelegramNotification::updateProductMessage($product, $old_data, $combo_variations_for_tg, 'product', $location_id);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Telegram product update notification failed: File:' . $e->getFile() . ' Line:' . $e->getLine() . ' Message:' . $e->getMessage());
                 }
-
-                $location_id = $product->product_locations->first()->location_id ?? 'PT1001';
-
-                TelegramNotification::updateProductMessage($product, $old_data, $combo_variations_for_tg, 'product', $location_id);
-            } catch (\Exception $e) {
-                \Log::error('Telegram product update notification failed: File:' . $e->getFile() . ' Line:' . $e->getLine() . ' Message:' . $e->getMessage());
-            }
+            })->afterResponse();
             // ──────────────────────────────────────────────────────
 
             $output = [
@@ -3091,14 +3107,77 @@ class ProductController extends Controller
                 ->whereIn('id', $product_ids)
                 ->with(['product_locations'])
                 ->get();
+
+            $notifications_to_send = [];
+            $notifications_to_send_remove = [];
+
             DB::beginTransaction();
             foreach ($products as $product) {
-                $product_locations = $product->product_locations->pluck('id')->toArray();
+                $existing_location_ids = $product->product_locations->pluck('id')->toArray();
 
                 if ($update_type == 'add') {
-                    $product_locations = array_unique(array_merge($location_ids, $product_locations));
+                    $newly_added_location_db_ids = array_diff($location_ids, $existing_location_ids);
+                    
+                    $product_locations = array_unique(array_merge($location_ids, $existing_location_ids));
                     $product->product_locations()->sync($product_locations);
+
+                    if (!empty($newly_added_location_db_ids)) {
+                        $notifications_to_send[] = [
+                            'product_id' => $product->id,
+                            'newly_added_location_db_ids' => $newly_added_location_db_ids
+                        ];
+                    }
                 } elseif ($update_type == 'remove') {
+                    // Identify which locations are being removed
+                    $locations_being_removed_db_ids = array_intersect($location_ids, $existing_location_ids);
+                    
+                    if (!empty($locations_being_removed_db_ids)) {
+                        $product->load([
+                            'brand',
+                            'unit',
+                            'category',
+                            'sub_category',
+                            'product_tax',
+                            'variations',
+                            'variations.product_variation',
+                            'product_locations'
+                        ]);
+                        
+                        $tg_unit = $product->unit->actual_name ?? 'N/A';
+                        $tg_brand = $product->brand->name ?? 'N/A';
+                        $tg_category = $product->category->name ?? 'N/A';
+                        $tg_sub_cat = $product->sub_category->name ?? 'N/A';
+                        $tg_tax = $product->product_tax->name ?? 'N/A';
+                        $tg_locations = $product->product_locations->pluck('name')->implode(', ') ?: 'N/A';
+
+                        $combo_for_tg = [];
+                        if ($product->type === 'combo') {
+                            $combo_for_tg = $this->productUtil->__getComboProductDetails(
+                                $product->variations->first()->combo_variations,
+                                $business_id
+                            );
+                        }
+
+                        $locations_to_notify = BusinessLocation::whereIn('id', $locations_being_removed_db_ids)
+                            ->pluck('location_id')
+                            ->filter()
+                            ->unique()
+                            ->toArray();
+
+                        $notifications_to_send_remove[] = [
+                            'product' => clone $product,
+                            'combo_for_tg' => $combo_for_tg,
+                            'tg_unit' => $tg_unit,
+                            'tg_brand' => $tg_brand,
+                            'tg_category' => $tg_category,
+                            'tg_sub_cat' => $tg_sub_cat,
+                            'tg_tax' => $tg_tax,
+                            'tg_locations' => $tg_locations,
+                            'locations_to_notify' => $locations_to_notify
+                        ];
+                    }
+
+                    $product_locations = $existing_location_ids;
                     foreach ($product_locations as $key => $value) {
                         if (in_array($value, $location_ids)) {
                             unset($product_locations[$key]);
@@ -3108,6 +3187,81 @@ class ProductController extends Controller
                 }
             }
             DB::commit();
+
+            $productUtil = $this->productUtil;
+            if (!empty($notifications_to_send)) {
+                dispatch(function () use ($notifications_to_send, $business_id, $productUtil) {
+                    try {
+                        foreach ($notifications_to_send as $item) {
+                            $product = Product::where('business_id', $business_id)
+                                ->where('id', $item['product_id'])
+                                ->with([
+                                    'brand',
+                                    'unit',
+                                    'category',
+                                    'sub_category',
+                                    'product_tax',
+                                    'variations',
+                                    'variations.product_variation',
+                                    'product_locations',
+                                ])
+                                ->first();
+
+                            if ($product) {
+                                $combo_variations_for_tg = [];
+                                if ($product->type === 'combo') {
+                                    $combo_variations_for_tg = $productUtil->__getComboProductDetails(
+                                        $product->variations->first()->combo_variations,
+                                        $business_id
+                                    );
+                                }
+
+                                $location_ids_to_notify = BusinessLocation::whereIn('id', $item['newly_added_location_db_ids'])
+                                    ->pluck('location_id')
+                                    ->filter()
+                                    ->unique();
+
+                                foreach ($location_ids_to_notify as $location_id) {
+                                    TelegramNotification::addProductMessage($product, $combo_variations_for_tg, 'product', $location_id);
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Telegram product location addition notification failed: File:' . $e->getFile() . ' Line:' . $e->getLine() . ' Message:' . $e->getMessage());
+                    }
+                })->afterResponse();
+            }
+
+            if (!empty($notifications_to_send_remove)) {
+                dispatch(function () use ($notifications_to_send_remove) {
+                    try {
+                        foreach ($notifications_to_send_remove as $item) {
+                            foreach ($item['locations_to_notify'] as $location_id) {
+                                try {
+                                    TelegramNotification::deleteProductMessage(
+                                        $item['product'],
+                                        $item['combo_for_tg'],
+                                        $item['tg_unit'],
+                                        $item['tg_brand'],
+                                        $item['tg_category'],
+                                        $item['tg_sub_cat'],
+                                        $item['tg_tax'],
+                                        $item['tg_locations'],
+                                        'product',
+                                        $location_id,
+                                        'remove'
+                                    );
+                                } catch (\Exception $ne) {
+                                    \Log::error('Telegram product location remove notification failed: ' . $ne->getMessage());
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Telegram product location removal notification dispatch failed: ' . $e->getMessage());
+                    }
+                })->afterResponse();
+            }
+
             $output = [
                 'success' => 1,
                 'msg' => __('lang_v1.updated_success'),
@@ -3334,7 +3488,7 @@ class ProductController extends Controller
             $business_id = $request->session()->get('user.business_id');
             $product = Product::where('business_id', $business_id)
                 ->where('id', $id)
-                ->with(['variations'])
+                ->with(['variations', 'product_locations'])
                 ->firstOrFail();
 
             $old_name = $product->name;
@@ -3498,17 +3652,24 @@ class ProductController extends Controller
             }
 
             // Send Telegram Notification after response
-            app()->terminating(function () use ($product, $old_name, $old_sku, $variation_diffs) {
-
-                try {
-                    \App\Notifications\TelegramNotification::productRenameUpdatedMessage(
-                        $product,
-                        $old_name,
-                        $old_sku,
-                        $variation_diffs
-                    );
-                } catch (\Exception $te) {
-                    \Log::warning('Telegram product rename notification failed: ' . $te->getMessage());
+            $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
+            if ($location_ids->isEmpty()) {
+                $location_ids = collect(['PT1001']);
+            }
+            app()->terminating(function () use ($product, $old_name, $old_sku, $variation_diffs, $location_ids) {
+                foreach ($location_ids as $location_id) {
+                    try {
+                        \App\Notifications\TelegramNotification::productRenameUpdatedMessage(
+                            $product,
+                            $old_name,
+                            $old_sku,
+                            $variation_diffs,
+                            'product',
+                            $location_id
+                        );
+                    } catch (\Exception $te) {
+                        \Log::warning("Telegram product rename notification failed for location {$location_id}: " . $te->getMessage());
+                    }
                 }
             });
 
@@ -3665,18 +3826,23 @@ class ProductController extends Controller
             }
 
             // Send Telegram Notification after response
-            $tg_location_id = $product->product_locations->first()->location_id ?? 'PT1001';
-            app()->terminating(function () use ($product, $old_sku, $variation_diffs, $tg_location_id) {
-                try {
-                    \App\Notifications\TelegramNotification::productSkuUpdatedMessage(
-                        $product,
-                        $old_sku,
-                        $variation_diffs,
-                        'product',
-                        $tg_location_id
-                    );
-                } catch (\Exception $te) {
-                    \Log::warning('Telegram product SKU update notification failed: ' . $te->getMessage());
+            $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
+            if ($location_ids->isEmpty()) {
+                $location_ids = collect(['PT1001']);
+            }
+            app()->terminating(function () use ($product, $old_sku, $variation_diffs, $location_ids) {
+                foreach ($location_ids as $location_id) {
+                    try {
+                        \App\Notifications\TelegramNotification::productSkuUpdatedMessage(
+                            $product,
+                            $old_sku,
+                            $variation_diffs,
+                            'product',
+                            $location_id
+                        );
+                    } catch (\Exception $te) {
+                        \Log::warning("Telegram product SKU update notification failed for location {$location_id}: " . $te->getMessage());
+                    }
                 }
             });
 
@@ -3810,19 +3976,24 @@ class ProductController extends Controller
             }
 
             // Send Telegram Notification after response
-            $tg_location_id = $product->product_locations->first()->location_id ?? 'PT1001';
-            app()->terminating(function () use ($product, $old_name, $old_sku, $variation_diffs, $tg_location_id) {
-                try {
-                    \App\Notifications\TelegramNotification::productRenameUpdatedMessage(
-                        $product,
-                        $old_name,
-                        $old_sku,
-                        $variation_diffs,
-                        'product',
-                        $tg_location_id
-                    );
-                } catch (\Exception $te) {
-                    \Log::warning('Telegram product price update notification failed: ' . $te->getMessage());
+            $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
+            if ($location_ids->isEmpty()) {
+                $location_ids = collect(['PT1001']);
+            }
+            app()->terminating(function () use ($product, $old_name, $old_sku, $variation_diffs, $location_ids) {
+                foreach ($location_ids as $location_id) {
+                    try {
+                        \App\Notifications\TelegramNotification::productRenameUpdatedMessage(
+                            $product,
+                            $old_name,
+                            $old_sku,
+                            $variation_diffs,
+                            'product',
+                            $location_id
+                        );
+                    } catch (\Exception $te) {
+                        \Log::warning("Telegram product price update notification failed for location {$location_id}: " . $te->getMessage());
+                    }
                 }
             });
 

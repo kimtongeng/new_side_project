@@ -57,34 +57,34 @@ class ProductCatalogueController extends Controller
         $customer_field_settings = $this->getCustomerFieldSettings($settings);
 
         $products = Product::where('business_id', $business_id)
-                ->whereHas('product_locations', function ($q) use ($location_id) {
-                    $q->where('product_locations.location_id', $location_id);
-                })
-                ->ProductForSales()
-                ->with(['variations', 'variations.product_variation', 'category']);
-                if($is_show == 0){
-                    $products = $products->havingRaw('
+            ->whereHas('product_locations', function ($q) use ($location_id) {
+                $q->where('product_locations.location_id', $location_id);
+            })
+            ->ProductForSales()
+            ->with(['variations', 'variations.product_variation', 'category']);
+        if ($is_show == 0) {
+            $products = $products->havingRaw('
                     (SELECT CASE WHEN enable_stock = 0 THEN 1 
                         ELSE SUM(variation_location_details.qty_available) END
                         FROM variation_location_details 
                         WHERE variation_location_details.product_id = products.id) > 0');
-                }
+        }
 
         $products = $products->select('products.*', DB::raw('(SELECT SUM(variation_location_details.qty_available) FROM variation_location_details WHERE variation_location_details.product_id = products.id) as stock'))
-                            ->get()
-                            ->groupBy('category_id');
+            ->get()
+            ->groupBy('category_id');
 
         $business = Business::with(['currency'])->findOrFail($business_id);
         $business_location = BusinessLocation::where('business_id', $business_id)->findOrFail($location_id);
 
         $now = \Carbon::now()->toDateTimeString();
         $discounts = Discount::where('business_id', $business_id)
-                                ->where('location_id', $location_id)
-                                ->where('is_active', 1)
-                                ->where('starts_at', '<=', $now)
-                                ->where('ends_at', '>=', $now)
-                                ->orderBy('priority', 'desc')
-                                ->get();
+            ->where('location_id', $location_id)
+            ->where('is_active', 1)
+            ->where('starts_at', '<=', $now)
+            ->where('ends_at', '>=', $now)
+            ->orderBy('priority', 'desc')
+            ->get();
         foreach ($discounts as $key => $value) {
             $discounts[$key]->discount_amount = $this->productUtil->num_f($value->discount_amount, false, $business);
         }
@@ -123,10 +123,12 @@ class ProductCatalogueController extends Controller
      */
     public function show($business_id, $id)
     {
+
+
         $product = Product::with(['brand', 'unit', 'category', 'sub_category', 'product_tax', 'variations', 'variations.product_variation', 'variations.group_prices', 'variations.media', 'product_locations', 'warranty', 'variations.variation_location_details'])->where('business_id', $business_id)
-                    ->select('products.*', DB::raw('(SELECT SUM(variation_location_details.qty_available) FROM variation_location_details WHERE variation_location_details.product_id = products.id) as stock'))
-                    ->findOrFail($id);
-        
+            ->select('products.*', DB::raw('(SELECT SUM(variation_location_details.qty_available) FROM variation_location_details WHERE variation_location_details.product_id = products.id) as stock'))
+            ->findOrFail($id);
+
 
         $price_groups = SellingPriceGroup::where('business_id', $product->business_id)->active()->pluck('name', 'id');
 
@@ -151,7 +153,7 @@ class ProductCatalogueController extends Controller
         }
 
         $business = Business::findOrFail($business_id);
-        
+
         $settings = json_decode($business->productcatalogue_settings, true);
         $enable_whatsapp_ordering = $settings['enable_whatsapp_ordering'] ?? 0;
 
@@ -178,22 +180,23 @@ class ProductCatalogueController extends Controller
         $business = Business::findOrFail($business_id);
 
         return view('productcatalogue::catalogue.generate_qr')
-                    ->with(compact('business_locations', 'business'));
+            ->with(compact('business_locations', 'business'));
     }
-    
-/**
- * update product Catalogue Setting
- * @param Request $request
- */
 
-    public function productCatalogueSetting(Request $request){
+    /**
+     * update product Catalogue Setting
+     * @param Request $request
+     */
+
+    public function productCatalogueSetting(Request $request)
+    {
 
         $business_id = request()->session()->get('user.business_id');
-        
+
         if (! (auth()->user()->can('superadmin') || $this->moduleUtil->hasThePermissionInSubscription($business_id, 'productcatalogue_module'))) {
             abort(403, 'Unauthorized action.');
         }
-        
+
         try {
             $busines = Business::findOrFail($business_id);
 
@@ -222,18 +225,17 @@ class ProductCatalogueController extends Controller
             }
 
             $busines->productcatalogue_settings = json_encode($settings);
-  
+
             $busines->update();
-    
+
             $output = [
                 'success' => 1,
                 'msg' => __('lang_v1.success'),
             ];
-    
+
             return redirect()
                 ->action([\Modules\ProductCatalogue\Http\Controllers\ProductCatalogueController::class, 'generateQr'])
                 ->with('status', $output);
-                
         } catch (\Exception $e) {
             \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
 

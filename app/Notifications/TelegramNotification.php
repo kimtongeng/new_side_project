@@ -185,6 +185,16 @@ class TelegramNotification
     //     ]
     // ];
 
+    private static function getUpdatedBy(): string
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return 'System';
+        }
+        $name = trim(implode(' ', array_filter([$user->surname, $user->first_name, $user->last_name])));
+        return !empty($name) ? $name : $user->username;
+    }
+
     public static function sendMessage(string $message, string $to = '', $location_id = "PT1001"): void
     {
         // return;
@@ -1348,11 +1358,11 @@ class TelegramNotification
     }
     public static function sendPhoto(string $imageUrl, string $caption, string $to = '', $location_id = 'PT1001'): void
     {
-        $botToken = self::PRODUCTION_BOT;
-        if (app()->environment("local")) {
-            $botToken = self::LOCAL_BOT;
-            $groups   = self::LOCAL_GROUP;
-        }
+        // $botToken = self::PRODUCTION_BOT;
+        $botToken = self::LOCAL_BOT;
+        $groups   = self::LOCAL_GROUP;
+        // if (app()->environment("local")) {
+        // }
 
         $group    = $groups[$location_id];
         $chat_id  = $group["chat_id"];
@@ -3410,7 +3420,9 @@ class TelegramNotification
             }
         }
 
-        $msg .= "\n⏰ <b>Updated At:</b> {$date}\n";
+        $updated_by = self::getUpdatedBy();
+        $msg .= "\n👤 <b>Updated By:</b> {$updated_by}\n";
+        $msg .= "⏰ <b>Updated At:</b> {$date}\n";
         $msg .= "✏️ <i>Product updated via Shoper POS</i>";
 
         self::sendMessage($msg, $to, $location_id);
@@ -5067,7 +5079,9 @@ class TelegramNotification
         $msg .= "🔖 <b>SKU:</b> {$subSku}\n\n";
         $msg .= "📉 <b>Old Price:</b> \${$oldPrice}\n";
         $msg .= "📈 <b>New Price:</b> \${$newPrice}\n";
-        $msg .= "\n⏰ <b>Updated At:</b> {$date}\n";
+        $updated_by = self::getUpdatedBy();
+        $msg .= "\n👤 <b>Updated By:</b> {$updated_by}\n";
+        $msg .= "⏰ <b>Updated At:</b> {$date}\n";
         $msg .= "🔁 <i>Price updated via Shoper POS</i>";
 
         self::sendMessage($msg, $to, $location_id);
@@ -5103,7 +5117,9 @@ class TelegramNotification
             }
         }
 
-        $msg .= "\n⏰ <b>Updated At:</b> {$date}\n";
+        $updated_by = self::getUpdatedBy();
+        $msg .= "\n👤 <b>Updated By:</b> {$updated_by}\n";
+        $msg .= "⏰ <b>Updated At:</b> {$date}\n";
         $msg .= "🔁 <i>SKU updated via Shoper POS</i>";
 
         self::sendMessage($msg, $to, $location_id);

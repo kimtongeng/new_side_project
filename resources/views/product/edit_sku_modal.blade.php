@@ -55,8 +55,8 @@
             @endif
         </div>
         <div class="modal-footer">
-            <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white"
-                id="update_sku_btn" disabled>@lang('messages.save')</button>
+            <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white" id="update_sku_btn"
+                disabled>@lang('messages.save')</button>
             <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white"
                 data-dismiss="modal">@lang('messages.close')</button>
         </div>
@@ -66,15 +66,28 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
+        var isSubmitting = false;
+
+        $.validator.addMethod("notEqualToOld", function (value, element) {
+            if (isSubmitting) {
+                return true;
+            }
+            var originalVal = $(element).data('original-val');
+            if ($(element).hasClass('touched') && value === originalVal) {
+                return false;
+            }
+            return true;
+        }, "New SKU must be different from the old SKU.");
+
         var $skuInputs = $('form#edit_sku_form').find('input[name="sku"], input[name^="variations"]');
-        $skuInputs.each(function() {
+        $skuInputs.each(function () {
             var $this = $(this);
             $this.data('original-val', $this.val());
         });
 
         function checkSkuChanges() {
             var changed = false;
-            $skuInputs.each(function() {
+            $skuInputs.each(function () {
                 var $this = $(this);
                 if ($this.val() !== $this.data('original-val')) {
                     changed = true;
@@ -83,8 +96,17 @@
             $('#update_sku_btn').prop('disabled', !changed);
         }
 
-        $skuInputs.on('input change keyup paste', function() {
+        $skuInputs.on('input change keyup paste', function () {
+            $(this).addClass('touched');
             checkSkuChanges();
+            $('form#edit_sku_form').validate().element($(this));
+        });
+
+        $('#update_sku_btn').on('click', function () {
+            isSubmitting = true;
+            setTimeout(function () {
+                isSubmitting = false;
+            }, 0);
         });
 
         checkSkuChanges();
@@ -92,6 +114,7 @@
         $('form#edit_sku_form').validate({
             rules: {
                 sku: {
+                    notEqualToOld: true,
                     remote: {
                         url: '/products/check_product_sku',
                         type: 'post',
@@ -115,6 +138,7 @@
             var element = $(this);
             var var_id = element.attr('id').replace('sku_', '');
             element.rules('add', {
+                notEqualToOld: true,
                 remote: {
                     url: '/products/check_product_sku',
                     type: 'post',

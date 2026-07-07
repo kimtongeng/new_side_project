@@ -25,6 +25,13 @@
 	</div>
 	<div class="col-md-8">
 		<div class="form-group">
+			<div id="barcode-reader-container"
+				style="display: none; margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+				<div id="barcode-reader" style="width: 100%;"></div>
+				<input type="file" id="barcode-image-input" accept="image/*" style="display: none;">
+				<button type="button" class="btn btn-warning btn-block" id="btn-stop-scan"
+					style="margin-top: 10px;">Cancel Scan</button>
+			</div>
 			<div class="input-group">
 				<div class="input-group-btn">
 					<button type="button" class="btn btn-default bg-white btn-flat" data-toggle="modal" data-target="#configure_search_modal" title="{{__('lang_v1.configure_product_search')}}"><i class="fas fa-search-plus"></i></button>
@@ -40,6 +47,8 @@
 						<button type="button" class="btn btn-default bg-white btn-flat" id="weighing_scale_btn" data-toggle="modal" data-target="#weighing_scale_modal" 
 						title="@lang('lang_v1.weighing_scale')"><i class="fa fa-digital-tachograph text-primary fa-lg"></i></button>
 					@endif
+
+					<button type="button" class="btn btn-default bg-white btn-flat btn-scan-barcode" data-target="#search_product" title="Scan Barcode"><i class="fa fa-camera text-primary fa-lg"></i></button>
 
 					<button type="button" class="btn btn-default bg-white btn-flat pos_add_quick_product" data-href="{{action([\App\Http\Controllers\ProductController::class, 'quickAdd'])}}" data-container=".quick_add_product_modal"><i class="fa fa-plus-circle text-primary fa-lg"></i></button>
 				</span>

@@ -106,6 +106,7 @@
 	    @endforeach
 	@endif
 	
+	@include('sale_pos.partials.scan_camera_js')
 @endsection
 
 @section('css')

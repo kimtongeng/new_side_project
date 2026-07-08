@@ -1,6 +1,110 @@
 @extends('layouts.app')
 @section('title', __('product.edit_product'))
 
+@section('css')
+<style>
+    .gallery-upload-zone {
+        border: 2px dashed #3c8dbc;
+        background-color: #fcfdfe;
+        border-radius: 8px;
+        padding: 24px 15px;
+        text-align: center;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .gallery-upload-zone:hover {
+        border-color: #357ca5;
+        background-color: #f2f7fa;
+    }
+    .gallery-upload-zone input[type="file"] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 10;
+    }
+    .upload-zone-content i {
+        color: #3c8dbc;
+        margin-bottom: 8px;
+        transition: transform 0.2s ease;
+    }
+    .gallery-upload-zone:hover .upload-zone-content i {
+        transform: translateY(-3px);
+    }
+    .upload-zone-content p {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #444;
+    }
+    .upload-zone-content span {
+        font-size: 11px;
+        color: #777;
+        display: block;
+        margin-top: 3px;
+    }
+    .gallery-preview-item {
+        position: relative;
+        display: inline-block;
+        width: 80px;
+        height: 80px;
+        border-radius: 6px;
+        border: 1px solid #d2d6de;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease;
+    }
+    .gallery-preview-item:hover {
+        transform: scale(1.05);
+    }
+    .gallery-preview-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .gallery-preview-item .remove-btn {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(217, 83, 79, 0.95);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+        z-index: 15;
+    }
+    .gallery-preview-item .remove-btn:hover {
+        background: rgba(201, 48, 44, 1);
+    }
+    .gallery-preview-item .img-name {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        font-size: 8px;
+        padding: 1px 4px;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+@endsection
+
 @section('content')
 
 @php
@@ -166,8 +270,24 @@
             <div class="col-sm-4">
               <div class="form-group">
                 {!! Form::label('product_images', __('lang_v1.product_gallery') . ':') !!}
-                {!! Form::file('product_images[]', ['id' => 'product_images', 'accept' => 'image/*', 'multiple']); !!}
-                <small><p class="help-block">@lang('purchase.max_file_size', ['size' => (config('constants.document_size_limit') / 1000000)])</p></small>
+                <div class="gallery-upload-container">
+                    <div class="gallery-upload-zone" id="gallery-dropzone">
+                        {!! Form::file('product_images[]', ['id' => 'product_images', 'accept' => 'image/*', 'multiple']) !!}
+                        <div class="upload-zone-content">
+                            <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                            <p>Drag & drop gallery images here</p>
+                            <span>or click to browse from device</span>
+                            <small class="tw-block tw-mt-2 tw-text-gray-400">
+                                @lang('purchase.max_file_size', ['size' => (config('constants.document_size_limit') / 1000000)]) MB
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div id="gallery-preview-container" class="tw-mt-4 tw-hidden">
+                        <h5 class="tw-text-xs tw-font-bold tw-text-gray-700 tw-mb-2">Selected images for upload:</h5>
+                        <div id="gallery-preview-grid" class="tw-flex tw-flex-wrap tw-gap-2"></div>
+                    </div>
+                </div>
                 @php
                     $gallery_images = $product->media->where('model_media_type', 'product_gallery');
                 @endphp
@@ -408,6 +528,61 @@
   <script type="text/javascript">
     $(document).ready( function(){
       __page_leave_confirmation('#product_add_form');
+
+      // Product Gallery Drag and Drop styling and preview logic
+      $(document).on('change', '#product_images', function(e) {
+          var galleryInput = this;
+          var previewGrid = $('#gallery-preview-grid');
+          var previewContainer = $('#gallery-preview-container');
+          
+          var dt = $(galleryInput).data('dataTransfer');
+          if (!dt) {
+              dt = new DataTransfer();
+          }
+          
+          for (var i = 0; i < this.files.length; i++) {
+              dt.items.add(this.files[i]);
+          }
+          
+          $(galleryInput).data('dataTransfer', dt);
+          this.files = dt.files;
+          
+          updateGalleryPreviews(galleryInput, previewGrid, previewContainer, dt);
+      });
+
+      function updateGalleryPreviews(input, grid, container, dt) {
+          grid.empty();
+          
+          if (dt.files.length === 0) {
+              container.addClass('tw-hidden');
+              return;
+          }
+
+          container.removeClass('tw-hidden');
+
+          Array.from(dt.files).forEach(function(file, index) {
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                  var previewItem = $('<div class="gallery-preview-item"></div>');
+                  var img = $('<img src="' + e.target.result + '" alt="preview">');
+                  var removeBtn = $('<button type="button" class="remove-btn"><i class="fa fa-times"></i></button>');
+                  var nameSpan = $('<span class="img-name">' + file.name + '</span>');
+                  
+                  removeBtn.on('click', function(evt) {
+                      evt.stopPropagation();
+                      evt.preventDefault();
+                      
+                      dt.items.remove(index);
+                      input.files = dt.files;
+                      updateGalleryPreviews(input, grid, container, dt);
+                  });
+                  
+                  previewItem.append(img).append(removeBtn).append(nameSpan);
+                  grid.append(previewItem);
+              };
+              reader.readAsDataURL(file);
+          });
+      }
     });
   </script>
 @endsection

@@ -2376,9 +2376,9 @@
                 $section.find('.product-card-wrapper').each(function () {
                     var $card = $(this);
                     var match = !term
-                        || ($card.data('name') || '').indexOf(term) !== -1
-                        || ($card.data('sku') || '').indexOf(term) !== -1
-                        || ($card.data('sub-sku') || '').indexOf(term) !== -1;
+                        || String($card.data('name') || '').toLowerCase().indexOf(term) !== -1
+                        || String($card.data('sku') || '').toLowerCase().indexOf(term) !== -1
+                        || String($card.data('sub-sku') || '').toLowerCase().indexOf(term) !== -1;
                     $card.toggle(match);
                     if (match) sectionVisible = true;
                 });

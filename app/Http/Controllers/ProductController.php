@@ -486,6 +486,35 @@ class ProductController extends Controller
         ];
     }
 
+    private function getTgLocationIds($product)
+    {
+        $tg_location_ids = [];
+        $is_admin = $this->productUtil->is_admin(auth()->user());
+        if ($is_admin) {
+            if ($product->product_locations->isNotEmpty()) {
+                $tg_location_ids = $product->product_locations->pluck('location_id')->filter()->unique()->toArray();
+            }
+        } else {
+            $permitted_locations = auth()->user() ? auth()->user()->permitted_locations() : 'all';
+            if ($permitted_locations === 'all') {
+                if ($product->product_locations->isNotEmpty()) {
+                    $tg_location_ids = $product->product_locations->pluck('location_id')->filter()->unique()->toArray();
+                }
+            } else {
+                $filtered_locations = $product->product_locations->filter(function ($location) use ($permitted_locations) {
+                    return in_array($location->id, $permitted_locations);
+                });
+                if ($filtered_locations->isNotEmpty()) {
+                    $tg_location_ids = $filtered_locations->pluck('location_id')->filter()->unique()->toArray();
+                }
+            }
+        }
+        if (empty($tg_location_ids)) {
+            $tg_location_ids = ['PT1001'];
+        }
+        return $tg_location_ids;
+    }
+
     /**
      * Store a newly created resource in storage.
      *
@@ -752,7 +781,9 @@ class ProductController extends Controller
 
             // ── Telegram Notification ──────────────────────────────
             $productUtil = $this->productUtil;
-            dispatch(function () use ($product, $business_id, $productUtil) {
+            $product->load('product_locations');
+            $tg_location_ids = $this->getTgLocationIds($product);
+            dispatch(function () use ($product, $business_id, $productUtil, $tg_location_ids) {
                 try {
                     $product->load([
                         'brand',
@@ -764,7 +795,6 @@ class ProductController extends Controller
                         'variations.product_variation',
                         'variations.group_prices',
                         'variations.media',
-                        'product_locations',
                         'warranty',
                     ]);
 
@@ -776,12 +806,7 @@ class ProductController extends Controller
                         );
                     }
 
-                    $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
-                    if ($location_ids->isEmpty()) {
-                        $location_ids = collect(['PT1001']);
-                    }
-
-                    foreach ($location_ids as $location_id) {
+                    foreach ($tg_location_ids as $location_id) {
                         TelegramNotification::addProductMessage($product, $combo_variations_for_tg, 'product', $location_id);
                     }
                 } catch (\Exception $e) {
@@ -1397,7 +1422,9 @@ class ProductController extends Controller
 
             // ── Telegram Notification ──────────────────────────────
             $productUtil = $this->productUtil;
-            dispatch(function () use ($product, $old_data, $business_id, $productUtil) {
+            $product->load('product_locations');
+            $tg_location_ids = $this->getTgLocationIds($product);
+            dispatch(function () use ($product, $old_data, $business_id, $productUtil, $tg_location_ids) {
                 try {
                     $product->load([
                         'brand',
@@ -1409,7 +1436,6 @@ class ProductController extends Controller
                         'variations.product_variation',
                         'variations.group_prices',
                         'variations.media',
-                        'product_locations',
                         'warranty',
                     ]);
 
@@ -1421,12 +1447,7 @@ class ProductController extends Controller
                         );
                     }
 
-                    $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
-                    if ($location_ids->isEmpty()) {
-                        $location_ids = collect(['PT1001']);
-                    }
-
-                    foreach ($location_ids as $location_id) {
+                    foreach ($tg_location_ids as $location_id) {
                         TelegramNotification::updateProductMessage($product, $old_data, $combo_variations_for_tg, 'product', $location_id);
                     }
                 } catch (\Exception $e) {
@@ -1712,7 +1733,7 @@ class ProductController extends Controller
 
                 // ── Snapshot ALL Telegram data BEFORE transaction ──────
                 $combo_for_tg   = [];
-                $tg_location_id = $product->product_locations->first()->location_id ?? 'PT1001';
+                $tg_location_ids = $this->getTgLocationIds($product);
                 $tg_unit        = optional($product->unit)->actual_name ?? 'N/A';
                 $tg_brand       = optional($product->brand)->name ?? 'N/A';
                 $tg_category    = optional($product->category)->name ?? 'N/A';
@@ -1775,18 +1796,20 @@ class ProductController extends Controller
 
                         // ── Telegram Notification ──────────────────────────
                         try {
-                            TelegramNotification::deleteProductMessage(
-                                $product,
-                                $combo_for_tg,
-                                $tg_unit,
-                                $tg_brand,
-                                $tg_category,
-                                $tg_sub_cat,
-                                $tg_tax,
-                                $tg_locations,
-                                'product',
-                                $tg_location_id
-                            );
+                            foreach ($tg_location_ids as $tg_location_id) {
+                                TelegramNotification::deleteProductMessage(
+                                    $product,
+                                    $combo_for_tg,
+                                    $tg_unit,
+                                    $tg_brand,
+                                    $tg_category,
+                                    $tg_sub_cat,
+                                    $tg_tax,
+                                    $tg_locations,
+                                    'product',
+                                    $tg_location_id
+                                );
+                            }
                         } catch (\Exception $e) {
                             \Log::error('Telegram product delete notification failed: File:' . $e->getFile() . ' Line:' . $e->getLine() . ' Message:' . $e->getMessage());
                         }
@@ -3158,7 +3181,15 @@ class ProductController extends Controller
                             );
                         }
 
-                        $locations_to_notify = BusinessLocation::whereIn('id', $locations_being_removed_db_ids)
+                        $locations_to_notify_db = $locations_being_removed_db_ids;
+                        $is_admin = $this->productUtil->is_admin(auth()->user());
+                        if (!$is_admin) {
+                            $permitted_locations = auth()->user() ? auth()->user()->permitted_locations() : 'all';
+                            if ($permitted_locations !== 'all') {
+                                $locations_to_notify_db = array_intersect($locations_to_notify_db, $permitted_locations);
+                            }
+                        }
+                        $locations_to_notify = BusinessLocation::whereIn('id', $locations_to_notify_db)
                             ->pluck('location_id')
                             ->filter()
                             ->unique()
@@ -3216,7 +3247,15 @@ class ProductController extends Controller
                                     );
                                 }
 
-                                $location_ids_to_notify = BusinessLocation::whereIn('id', $item['newly_added_location_db_ids'])
+                                $location_ids_to_notify_db = $item['newly_added_location_db_ids'];
+                                $is_admin = $productUtil->is_admin(auth()->user());
+                                if (!$is_admin) {
+                                    $permitted_locations = auth()->user() ? auth()->user()->permitted_locations() : 'all';
+                                    if ($permitted_locations !== 'all') {
+                                        $location_ids_to_notify_db = array_intersect($location_ids_to_notify_db, $permitted_locations);
+                                    }
+                                }
+                                $location_ids_to_notify = BusinessLocation::whereIn('id', $location_ids_to_notify_db)
                                     ->pluck('location_id')
                                     ->filter()
                                     ->unique();
@@ -3652,10 +3691,8 @@ class ProductController extends Controller
             }
 
             // Send Telegram Notification after response
-            $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
-            if ($location_ids->isEmpty()) {
-                $location_ids = collect(['PT1001']);
-            }
+            $product->load('product_locations');
+            $location_ids = $this->getTgLocationIds($product);
             app()->terminating(function () use ($product, $old_name, $old_sku, $variation_diffs, $location_ids) {
                 foreach ($location_ids as $location_id) {
                     try {
@@ -3826,10 +3863,8 @@ class ProductController extends Controller
             }
 
             // Send Telegram Notification after response
-            $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
-            if ($location_ids->isEmpty()) {
-                $location_ids = collect(['PT1001']);
-            }
+            $product->load('product_locations');
+            $location_ids = $this->getTgLocationIds($product);
             app()->terminating(function () use ($product, $old_sku, $variation_diffs, $location_ids) {
                 foreach ($location_ids as $location_id) {
                     try {
@@ -3976,10 +4011,8 @@ class ProductController extends Controller
             }
 
             // Send Telegram Notification after response
-            $location_ids = $product->product_locations->pluck('location_id')->filter()->unique();
-            if ($location_ids->isEmpty()) {
-                $location_ids = collect(['PT1001']);
-            }
+            $product->load('product_locations');
+            $location_ids = $this->getTgLocationIds($product);
             app()->terminating(function () use ($product, $old_name, $old_sku, $variation_diffs, $location_ids) {
                 foreach ($location_ids as $location_id) {
                     try {

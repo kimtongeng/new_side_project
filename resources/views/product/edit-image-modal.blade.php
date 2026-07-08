@@ -201,61 +201,96 @@
                                         <button type="button" id="image_remove_btn_1"
                                             class="image-remove-btn">&times;</button>
                                     </div>
+                        <!-- Product Gallery Section -->
+                        <div class="row" style="margin-top: 20px;">
+                            <div class="col-sm-12">
+                                <div class="form-group">
+                                    {!! Form::label('upload_image_gallery', 'Product Gallery (Multiple Images)') !!}
+                                    <div class="file-upload-wrapper mt-1">
+                                        <div class="file-upload-fake-input" role="button" aria-label="Upload gallery images">
+                                            <input type="text" id="filename_display_gallery" placeholder="No file selected" readonly>
+                                            <div class="file-upload-btn" data-input-id="gallery">
+                                                <i class="fas fa-folder-open mr-1"></i> Browse...
+                                            </div>
+                                            <input type="file" name="product_images[]" id="upload_image_gallery" accept="image/*" multiple class="real-file-input" />
+                                        </div>
+                                        <button type="button" id="clear_image_gallery" class="btn btn-outline-danger btn-remove" style="display:none;">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                    <small>
+                                        <p class="help-block mt-2">
+                                            @lang('purchase.max_file_size', ['size' => config('constants.document_size_limit') / 1000000])<br>
+                                            @lang('lang_v1.aspect_ratio_should_be_1_1')<br>
+                                            These images will be displayed in the product gallery.
+                                        </p>
+                                    </small>
+                                    <div class="variation-image-wrapper mt-2" id="gallery_image_wrapper">
+                                        @if (!empty($gallery_images) && count($gallery_images) > 0)
+                                            @foreach ($gallery_images as $media)
+                                                <div class="variation-thumb" data-media-id="{{ $media->id }}">
+                                                    <img src="{{ asset('uploads/media/' . $media->file_name) }}" alt="gallery">
+                                                    <button type="button" class="remove-btn" data-media-id="{{ $media->id }}">&times;</button>
+                                                </div>
+                                            @endforeach
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                     </div>
                     <div class="col-sm-12 col-lg-6">
-                        <!-- Each Variation: Full width, one under the other -->
                         @foreach ($variations as $variation)
-                            <div class="row variation-form-group" data-variation-id="{{ $variation->id }}">
-                                <div class="col-sm-12">
-                                    <div class="form-group">
-                                        <label for="upload_image_variation_{{ $variation->id }}">
-                                            Variation: {{ $variation->name ?? 'Unnamed Variation' }} (Multiple Images)
-                                        </label>
-                                        <div class="file-upload-wrapper mt-1">
-                                            <div class="file-upload-fake-input" role="button" aria-label="Upload variation images">
-                                                <input type="text"
-                                                    id="filename_display_variation_{{ $variation->id }}"
-                                                    placeholder="No file selected" readonly>
-                                                <div class="file-upload-btn" data-input-id="{{ $variation->id }}">
-                                                    <i class="fas fa-folder-open mr-1"></i> Browse...
-                                                </div>
-                                                <input type="file" name="variation_images[{{ $variation->id }}][]"
-                                                    id="upload_image_variation_{{ $variation->id }}" accept="image/*"
-                                                    multiple class="real-file-input" />
-                                            </div>
-
-                                            <!-- NEW: per-variation clear button -->
-                                            <button type="button" id="clear_image_variation_{{ $variation->id }}"
-                                                class="btn btn-outline-danger btn-remove" style="display:none;">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </div>
-                                        <small>
-                                            <p class="help-block mt-2">
-                                                @lang('purchase.max_file_size', ['size' => config('constants.document_size_limit') / 1000000])<br>
-                                                @lang('lang_v1.aspect_ratio_should_be_1_1')<br>
-                                                Previously uploaded image will be replaced
-                                            </p>
-                                        </small>
-                                        <div class="variation-image-wrapper mt-2" id="variation_image_wrapper_{{ $variation->id }}">
-                                            @if (!empty($variation->media) && count($variation->media) > 0)
-                                                @foreach ($variation->media as $media)
-                                                    <div class="variation-thumb" data-media-id="{{ $media->id }}">
-                                                        <img src="{{ asset('uploads/media/' . $media->file_name) }}"
-                                                            alt="variation">
-                                                        <button type="button" class="remove-btn"
-                                                            data-media-id="{{ $media->id }}">&times;</button>
+                            @if($variation->name != 'DUMMY')
+                                <div class="row variation-form-group" data-variation-id="{{ $variation->id }}">
+                                    <div class="col-sm-12">
+                                        <div class="form-group">
+                                            <label for="upload_image_variation_{{ $variation->id }}">
+                                                Variation: {{ $variation->name ?? 'Unnamed Variation' }} (Multiple Images)
+                                            </label>
+                                            <div class="file-upload-wrapper mt-1">
+                                                <div class="file-upload-fake-input" role="button" aria-label="Upload variation images">
+                                                    <input type="text"
+                                                        id="filename_display_variation_{{ $variation->id }}"
+                                                        placeholder="No file selected" readonly>
+                                                    <div class="file-upload-btn" data-input-id="{{ $variation->id }}">
+                                                        <i class="fas fa-folder-open mr-1"></i> Browse...
                                                     </div>
-                                                @endforeach
-                                            @endif
+                                                    <input type="file" name="variation_images[{{ $variation->id }}][]"
+                                                        id="upload_image_variation_{{ $variation->id }}" accept="image/*"
+                                                        multiple class="real-file-input" />
+                                                </div>
+
+                                                <!-- NEW: per-variation clear button -->
+                                                <button type="button" id="clear_image_variation_{{ $variation->id }}"
+                                                    class="btn btn-outline-danger btn-remove" style="display:none;">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                            <small>
+                                                <p class="help-block mt-2">
+                                                    @lang('purchase.max_file_size', ['size' => config('constants.document_size_limit') / 1000000])<br>
+                                                    @lang('lang_v1.aspect_ratio_should_be_1_1')<br>
+                                                    Previously uploaded image will be replaced
+                                                </p>
+                                            </small>
+                                            <div class="variation-image-wrapper mt-2" id="variation_image_wrapper_{{ $variation->id }}">
+                                                @if (!empty($variation->media) && count($variation->media) > 0)
+                                                    @foreach ($variation->media as $media)
+                                                        <div class="variation-thumb" data-media-id="{{ $media->id }}">
+                                                            <img src="{{ asset('uploads/media/' . $media->file_name) }}"
+                                                                alt="variation">
+                                                            <button type="button" class="remove-btn"
+                                                                data-media-id="{{ $media->id }}">&times;</button>
+                                                        </div>
+                                                    @endforeach
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endif
                         @endforeach
                         <input type="hidden" name="deleted_media_ids" id="deleted_media_ids" value="">
                     </div>
@@ -336,33 +371,37 @@ function createVariationThumb(fileOrUrl, opts = {}) {
         }
 
         if (isTemp) {
-            // Remove matching File from the corresponding variation input
-            // We need to find the parent variation id from wrapper's nearest variation-image-wrapper id
             let parent = wrapper.closest('.variation-image-wrapper');
-            if (!parent) {
-                // fallback: find by scanning all variation wrappers and matching name/size/lastmod
-                // but usually parent exists
-                parent = document.querySelector('.variation-image-wrapper');
-            }
-
-            // Find variationId from parent id pattern "variation_image_wrapper_{id}"
-            let variationId = null;
-            if (parent && parent.id) {
-                const m = parent.id.match(/variation_image_wrapper_(\d+)/);
-                if (m) variationId = m[1];
-            } else {
-                // try to find nearest .variation-form-group
-                const formGroup = wrapper.closest('.variation-form-group');
-                if (formGroup) variationId = formGroup.getAttribute('data-variation-id');
-            }
-
-            if (variationId) {
-                // Read metadata of this thumb
+            if (parent && parent.id === 'gallery_image_wrapper') {
                 const name = wrapper.getAttribute('data-name');
                 const size = Number(wrapper.getAttribute('data-size') || 0);
                 const lastmod = Number(wrapper.getAttribute('data-lastmod') || 0);
+                removeFileFromGalleryInput({ name, size, lastmod });
+            } else {
+                if (!parent) {
+                    // fallback
+                    parent = document.querySelector('.variation-image-wrapper');
+                }
 
-                removeFileFromVariationInput(variationId, { name, size, lastmod });
+                // Find variationId from parent id pattern "variation_image_wrapper_{id}"
+                let variationId = null;
+                if (parent && parent.id) {
+                    const m = parent.id.match(/variation_image_wrapper_(\d+)/);
+                    if (m) variationId = m[1];
+                } else {
+                    // try to find nearest .variation-form-group
+                    const formGroup = wrapper.closest('.variation-form-group');
+                    if (formGroup) variationId = formGroup.getAttribute('data-variation-id');
+                }
+
+                if (variationId) {
+                    // Read metadata of this thumb
+                    const name = wrapper.getAttribute('data-name');
+                    const size = Number(wrapper.getAttribute('data-size') || 0);
+                    const lastmod = Number(wrapper.getAttribute('data-lastmod') || 0);
+
+                    removeFileFromVariationInput(variationId, { name, size, lastmod });
+                }
             }
         }
 
@@ -644,4 +683,74 @@ document.querySelectorAll('.file-upload-fake-input').forEach(fake => {
         }
     });
 });
+
+/***** Product Gallery inputs wiring *****/
+const galleryInput = document.getElementById('upload_image_gallery');
+const galleryDisplay = document.getElementById('filename_display_gallery');
+const clearGalleryBtn = document.getElementById('clear_image_gallery');
+const galleryBrowseBtn = document.querySelector('.file-upload-btn[data-input-id="gallery"]');
+
+if (galleryInput && galleryDisplay) {
+    galleryBrowseBtn?.addEventListener('click', function(e) {
+        e.preventDefault();
+        galleryInput.click();
+    });
+
+    galleryInput.addEventListener('change', function() {
+        const files = Array.from(this.files || []);
+        galleryDisplay.value = files.length ? files.map(f => f.name).join(', ') : 'No file selected';
+        if (clearGalleryBtn) clearGalleryBtn.style.display = files.length ? 'inline-block' : 'none';
+        
+        // render gallery thumbs
+        renderGalleryPreviewsFromFiles(files);
+    });
+
+    clearGalleryBtn?.addEventListener('click', function(e) {
+        e.preventDefault();
+        clearGallerySelection();
+    });
+}
+
+function clearGallerySelection() {
+    if (galleryInput) galleryInput.value = '';
+    if (galleryDisplay) galleryDisplay.value = 'No file selected';
+    if (clearGalleryBtn) clearGalleryBtn.style.display = 'none';
+    const wrapper = document.getElementById('gallery_image_wrapper');
+    if (wrapper) wrapper.querySelectorAll('.variation-thumb[data-temp="1"]').forEach(t => t.remove());
+}
+
+function renderGalleryPreviewsFromFiles(files) {
+    const wrapper = document.getElementById('gallery_image_wrapper');
+    if (!wrapper) return;
+
+    // remove only temp thumbs to avoid duplications
+    wrapper.querySelectorAll('.variation-thumb[data-temp="1"]').forEach(t => t.remove());
+
+    files.forEach(file => {
+        if (!(file && file.type && file.type.startsWith('image/'))) return;
+        const thumb = createVariationThumb(file);
+        wrapper.appendChild(thumb);
+    });
+}
+
+function removeFileFromGalleryInput(fileMeta) {
+    if (!galleryInput) return;
+
+    const existingFiles = Array.from(galleryInput.files || []);
+    const remaining = existingFiles.filter(f => {
+        const sameName = f.name === fileMeta.name;
+        const sameSize = f.size === fileMeta.size;
+        const sameLast = (typeof f.lastModified !== 'undefined') ? (f.lastModified === fileMeta.lastmod) : true;
+        return !(sameName && sameSize && sameLast);
+    });
+
+    const dt = fileListToDataTransfer(remaining);
+    galleryInput.files = dt.files;
+
+    if (galleryDisplay) galleryDisplay.value = remaining.length ? remaining.map(f => f.name).join(', ') : 'No file selected';
+    if (clearGalleryBtn) clearGalleryBtn.style.display = remaining.length ? 'inline-block' : 'none';
+
+    const changeEvent = new Event('change', { bubbles: true });
+    galleryInput.dispatchEvent(changeEvent);
+}
 </script>

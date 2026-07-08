@@ -296,7 +296,7 @@ class ProductController extends Controller
                     return $product;
                 })
                 ->editColumn('image', function ($row) {
-                    return '<div style="display: flex;"><img src="' . $row->image_url . '" alt="Product image" class="product-thumbnail-small"></div>';
+                    return '<div style="display: flex;"><img src="' . $row->image_url . '" alt="Product image" class="product-thumbnail-small view-product-gallery" style="cursor: pointer;" data-href="' . action([\App\Http\Controllers\ProductController::class, 'showGallery'], [$row->id]) . '"></div>';
                 })
                 ->editColumn('type', '@lang("lang_v1." . $type)')
                 ->editColumn('sku', function ($row) {
@@ -747,6 +747,7 @@ class ProductController extends Controller
             }
 
             Media::uploadMedia($product->business_id, $product, $request, 'product_brochure', true);
+            Media::uploadMedia($product->business_id, $product, $request, 'product_images', false, 'product_gallery');
 
             DB::commit();
 
@@ -866,7 +867,7 @@ class ProductController extends Controller
         $barcode_types = $this->barcode_types;
 
         $product = Product::where('business_id', $business_id)
-            ->with(['product_locations'])
+            ->with(['product_locations', 'media'])
             ->where('id', $id)
             ->firstOrFail();
 
@@ -1392,6 +1393,7 @@ class ProductController extends Controller
             }
 
             Media::uploadMedia($product->business_id, $product, $request, 'product_brochure', true);
+            Media::uploadMedia($product->business_id, $product, $request, 'product_images', false, 'product_gallery');
 
             DB::commit();
 
@@ -2439,6 +2441,51 @@ class ProductController extends Controller
         }
     }
 
+    /**
+     * Display product gallery images.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function showGallery($id)
+    {
+        if (! auth()->user()->can('product.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = request()->session()->get('user.business_id');
+
+            $product = Product::where('business_id', $business_id)
+                ->with(['media', 'variations', 'variations.media'])
+                ->findOrFail($id);
+
+            // Get product gallery images
+            $gallery_images = $product->media->where('model_media_type', 'product_gallery')->values();
+
+            // Get variation images and merge them
+            $variation_images = collect();
+            foreach ($product->variations as $variation) {
+                foreach ($variation->media as $media) {
+                    $variation_images->push($media);
+                }
+            }
+            
+            // Merge all secondary images
+            $all_secondary_images = $gallery_images->merge($variation_images)->unique('id');
+
+            $active_url = request()->get('active_url', null);
+
+            return view('product.gallery_modal')->with([
+                'product' => $product,
+                'gallery_images' => $all_secondary_images,
+                'active_url' => $active_url
+            ]);
+        } catch (\Exception $e) {
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+        }
+    }
+
 
     /**
      * Mass deletes products.
@@ -3117,7 +3164,7 @@ class ProductController extends Controller
 
                 if ($update_type == 'add') {
                     $newly_added_location_db_ids = array_diff($location_ids, $existing_location_ids);
-                    
+
                     $product_locations = array_unique(array_merge($location_ids, $existing_location_ids));
                     $product->product_locations()->sync($product_locations);
 
@@ -3130,7 +3177,7 @@ class ProductController extends Controller
                 } elseif ($update_type == 'remove') {
                     // Identify which locations are being removed
                     $locations_being_removed_db_ids = array_intersect($location_ids, $existing_location_ids);
-                    
+
                     if (!empty($locations_being_removed_db_ids)) {
                         $product->load([
                             'brand',
@@ -3142,7 +3189,7 @@ class ProductController extends Controller
                             'variations.product_variation',
                             'product_locations'
                         ]);
-                        
+
                         $tg_unit = $product->unit->actual_name ?? 'N/A';
                         $tg_brand = $product->brand->name ?? 'N/A';
                         $tg_category = $product->category->name ?? 'N/A';
@@ -3442,6 +3489,9 @@ class ProductController extends Controller
 
 
 
+            // Handle new uploads for product gallery
+            Media::uploadMedia($product->business_id, $product, $request, 'product_images', false, 'product_gallery');
+
             return redirect()->to("products");
         } catch (\Exception $e) {
             // $this->error_notification("Product ID: {$id}\nError: " . $e->getMessage());
@@ -3460,7 +3510,10 @@ class ProductController extends Controller
         // Main product image (for the left-hand side uploader)
         $product_image = $product->image;
 
-        return view('product.edit-image-modal')->with(compact('product', 'variations', 'product_image'));
+        // Get product gallery images
+        $gallery_images = $product->media()->where('model_media_type', 'product_gallery')->get();
+
+        return view('product.edit-image-modal')->with(compact('product', 'variations', 'product_image', 'gallery_images'));
     }
 
     public function editRename($id)

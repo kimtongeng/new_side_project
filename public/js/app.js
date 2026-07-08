@@ -2380,7 +2380,9 @@ $(document).on('click', 'table.ajax_view tbody tr', function (e) {
         !$(e.target).hasClass('label') &&
         !$(e.target).is('li') &&
         $(this).data('href') &&
-        !$(e.target).is('i')
+        !$(e.target).is('i') &&
+        !$(e.target).hasClass('view-product-gallery') &&
+        !$(e.target).closest('.view-product-gallery').length
     ) {
         $.ajax({
             url: $(this).data('href'),

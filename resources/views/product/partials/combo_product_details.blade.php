@@ -64,7 +64,9 @@
 					</td>
 					<td>
 			        	@foreach($variation['variation']->media as $media)
-			        		{!! $media->thumbnail([60, 60], 'img-thumbnail') !!}
+			        		<span class="view-product-gallery" style="cursor: pointer;" data-href="{{ action([\App\Http\Controllers\ProductController::class, 'showGallery'], [$product->id]) }}?active_url={{ urlencode($media->display_url) }}">
+			        			{!! $media->thumbnail([60, 60], 'img-thumbnail') !!}
+			        		</span>
 			        	@endforeach
 			        </td>
 				</tr>

@@ -503,6 +503,25 @@ $(document).ready(function () {
         });
     });
 
+    $(document).on('click', '.view-product-gallery', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var container = $('#view_product_modal').is(':visible') ? '.view_modal' : '#view_product_modal';
+        $.ajax({
+            url: $(this).attr('data-href'),
+            dataType: 'html',
+            success: function (result) {
+                $(container).html(result).modal('show');
+            },
+        });
+    });
+
+    $(document).on('hidden.bs.modal', '.view_modal', function () {
+        if ($('#view_product_modal').is(':visible')) {
+            $('body').addClass('modal-open');
+        }
+    });
+
     $(document).on('click', 'a.edit_image', function (e) {
         e.preventDefault();
 

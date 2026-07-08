@@ -109,10 +109,28 @@
       				</div>
 	      		</div>
       			<div class="col-sm-3 col-md-3 invoice-col">
-      				<div class="thumbnail">
-      					<img src="{{$product->image_url}}" alt="Product image">
-      				</div>
-      			</div>
+       				<div class="thumbnail">
+       					<img src="{{$product->image_url}}" alt="Product image" class="view-product-gallery" style="cursor: pointer;" data-href="{{ action([\App\Http\Controllers\ProductController::class, 'showGallery'], [$product->id]) }}?active_url={{ urlencode($product->image_url) }}">
+       				</div>
+       			</div>
+			@php
+				$gallery_images = $product->media->where('model_media_type', 'product_gallery');
+			@endphp
+			@if($gallery_images->count() > 0)
+				<div class="col-sm-12">
+					<hr>
+					<strong>@lang('lang_v1.product_gallery'):</strong>
+					<div class="row" style="margin-top: 10px;">
+						@foreach($gallery_images as $media)
+							<div class="col-xs-4 col-sm-2 text-center" style="margin-bottom: 10px;">
+								<a href="#" class="view-product-gallery" data-href="{{ action([\App\Http\Controllers\ProductController::class, 'showGallery'], [$product->id]) }}?active_url={{ urlencode($media->display_url) }}">
+									<img src="{{$media->display_url}}" class="img-responsive img-thumbnail" style="max-height: 100px; display: inline-block; cursor: pointer;">
+								</a>
+							</div>
+						@endforeach
+					</div>
+				</div>
+			@endif
       		</div>
       		@if($rack_details->count())
       		@if(session('business.enable_racks') || session('business.enable_row') || session('business.enable_position'))

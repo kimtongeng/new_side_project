@@ -163,6 +163,29 @@
                 <small><p class="help-block">@lang('purchase.max_file_size', ['size' => (config('constants.document_size_limit') / 1000000)]). @lang('lang_v1.aspect_ratio_should_be_1_1') @if(!empty($product->image)) <br> @lang('lang_v1.previous_image_will_be_replaced') @endif</p></small>
               </div>
             </div>
+            <div class="col-sm-4">
+              <div class="form-group">
+                {!! Form::label('product_images', __('lang_v1.product_gallery') . ':') !!}
+                {!! Form::file('product_images[]', ['id' => 'product_images', 'accept' => 'image/*', 'multiple']); !!}
+                <small><p class="help-block">@lang('purchase.max_file_size', ['size' => (config('constants.document_size_limit') / 1000000)])</p></small>
+                @php
+                    $gallery_images = $product->media->where('model_media_type', 'product_gallery');
+                @endphp
+                @if($gallery_images->count() > 0)
+                    <div class="row" style="margin-top: 10px;">
+                        @foreach($gallery_images as $media)
+                            <div class="col-xs-4 col-sm-3 img-thumbnail text-center" style="margin: 5px; position: relative;">
+                                <img src="{{$media->display_url}}" class="img-responsive" style="max-height: 80px; display: inline-block;">
+                                <br>
+                                <span class="badge bg-red delete-media" data-href="{{ action([\App\Http\Controllers\ProductController::class, 'deleteMedia'], ['media_id' => $media->id])}}" style="cursor: pointer; position: absolute; top: -5px; right: -5px; z-index: 10;">
+                                    <i class="fas fa-times"></i>
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+              </div>
+            </div>
             </div>
             <div class="col-sm-4">
               <div class="form-group">

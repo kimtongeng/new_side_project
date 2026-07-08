@@ -162,6 +162,15 @@
                 </small>
             </div>
         </div>
+        <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('product_images', __('lang_v1.product_gallery') . ':') !!}
+                {!! Form::file('product_images[]', ['id' => 'product_images', 'accept' => 'image/*', 'multiple']) !!}
+                <small>
+                    <p class="help-block">@lang('purchase.max_file_size', ['size' => (config('constants.document_size_limit') / 1000000)])</p>
+                </small>
+            </div>
+        </div>
     </div>
     <div class="col-sm-4">
         <div class="form-group">

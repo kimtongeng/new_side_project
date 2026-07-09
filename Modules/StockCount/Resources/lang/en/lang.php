@@ -40,6 +40,12 @@ return [
     'variance_report' => 'Variance Report',
     "worksheet" => "Worksheet",
     "stock_count_session" => "Stock Count Session",
-
-
+    'variance_type' => 'Variance Type',
+    'only_variance' => 'Only Variance (Discrepancy)',
+    'shortage' => 'Shortage',
+    'surplus' => 'Surplus',
+    'no_variance' => 'No Variance (Matched)',
+    'reference_no' => 'Reference No',
+    'all' => 'All',
+    'filter' => 'Filter',
 ];

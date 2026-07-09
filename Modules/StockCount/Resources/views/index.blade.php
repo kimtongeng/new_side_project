@@ -55,6 +55,7 @@
             <table class="table table-bordered table-striped" id="stock_count_table" style="width: 100%;">
                 <thead>
                     <tr>
+                        <th>@lang('stockcount::lang.reference_no')</th>
                         <th>@lang('stockcount::lang.session_name')</th>
                         <th>@lang('stockcount::lang.location')</th>
                         <th>@lang('stockcount::lang.status')</th>
@@ -86,6 +87,7 @@
                     }
                 },
                 columns: [
+                    { data: 'reference_no', name: 'reference_no' },
                     { data: 'name', name: 'name' },
                     { data: 'location.name', name: 'location.name', defaultContent: '' },
                     { data: 'status', name: 'status', searchable: false },

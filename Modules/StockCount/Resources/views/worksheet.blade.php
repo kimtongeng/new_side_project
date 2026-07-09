@@ -6,16 +6,20 @@
 <style>
     .save-status-container {
         position: fixed;
-        bottom: 20px;
-        right: 20px;
+        bottom: 25px;
+        right: 25px;
         z-index: 1050;
-        background: rgba(0, 0, 0, 0.8);
+        background: #2c3e50;
         color: #fff;
-        padding: 10px 20px;
-        border-radius: 5px;
+        padding: 12px 24px;
+        border-radius: 30px;
         font-weight: bold;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         display: none;
+        border: 1px solid rgba(255,255,255,0.1);
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
     }
     .save-status-container i {
         margin-right: 8px;
@@ -72,48 +76,146 @@
         font-size: 14px;
         min-height: 22px;
     }
+
+    /* Slate/Professional Styling for screen view */
+    .box-primary {
+        border-top: 3px solid #34495e !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+    }
+
+    .box-solid {
+        border-top: 3px solid #34495e !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+    }
+
+    #worksheet_table thead th {
+        background: #2c3e50 !important;
+        color: #fff !important;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        border: none;
+        padding: 12px 10px;
+    }
+
+    .action-btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    .action-btn-group .btn {
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 6px 16px;
+        letter-spacing: 0.3px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+    }
+
+    .action-btn-group .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+    }
+
+    .action-btn-group .btn i {
+        margin-right: 5px;
+    }
+
+    .btn-back-custom {
+        background: #f0f0f0;
+        color: #555;
+        border: 1px solid #ddd;
+    }
+
+    .btn-back-custom:hover {
+        background: #e2e2e2;
+        color: #333;
+    }
+
+    .btn-worksheet-custom {
+        background: linear-gradient(135deg, #3a7bd5, #2563b0);
+        color: #fff;
+        border: none;
+    }
+
+    .btn-worksheet-custom:hover {
+        color: #fff;
+    }
+
+    .btn-export-custom {
+        background: linear-gradient(135deg, #1d9e6f, #158a5e);
+        color: #fff;
+        border: none;
+    }
+
+    .btn-export-custom:hover {
+        color: #fff;
+    }
+
+    .btn-warning-custom {
+        background: linear-gradient(135deg, #f39c12, #d35400);
+        color: #fff;
+        border: none;
+    }
+
+    .btn-warning-custom:hover {
+        color: #fff;
+    }
 </style>
 @endsection
 
 @section('content')
-<section class="content-header">
+<section class="content-header no-print">
     <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
         @lang('stockcount::lang.worksheet'): {{ $session->name }}
-        <small>@lang('stockcount::lang.location'): {{ $session->location->name ?? '' }}</small>
+        <small class="text-muted" style="font-size: 16px; margin-left: 10px;">Ref No: {{ $session->reference_no }}</small>
+        <span
+            class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active') bg-blue @else bg-gray @endif font-size-17">
+            {{ __('stockcount::lang.' . $session->status) }}
+        </span>
     </h1>
 </section>
 
 <section class="content">
     <!-- Barcode Scan Card -->
-    <div class="worksheet-header row">
-        <div class="col-md-6 col-xs-12">
-            <div class="form-group">
+    @component('components.widget', ['class' => 'box-solid'])
+    <div class="row" style="display: flex; align-items: center; flex-wrap: wrap;">
+        <div class="col-md-5 col-xs-12">
+            <div class="form-group" style="margin-bottom: 0;">
                 <label for="barcode_scanner"><strong><i class="fa fa-barcode"></i> @lang('stockcount::lang.scan_barcode') / SKU:</strong></label>
                 <div class="input-group">
-                    <input type="text" id="barcode_scanner" class="form-control input-lg" placeholder="Scan barcode or type SKU and press Enter" autofocus>
+                    <input type="text" id="barcode_scanner" class="form-control input-lg" style="border-radius: 20px 0 0 20px; border-right: none;" placeholder="Scan barcode or type SKU and press Enter" autofocus>
                     <span class="input-group-btn">
-                        <button class="btn btn-primary btn-lg btn-flat" type="button" id="btn_search_barcode">
+                        <button class="btn btn-primary btn-lg" type="button" id="btn_search_barcode" style="border-radius: 0 20px 20px 0; padding: 7px 20px; height: 46px;">
                             <i class="fa fa-search"></i>
                         </button>
                     </span>
                 </div>
             </div>
         </div>
-        <div class="col-md-6 col-xs-12 text-right" style="margin-top: 25px;">
-            <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}" class="btn btn-default btn-lg">
-                <i class="fa fa-arrow-left"></i> Back to List
-            </a>
-            <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}" class="btn btn-primary btn-lg">
-                <i class="fa fa-eye"></i> Back to Session
-            </a>
-            <button type="button" class="btn btn-warning btn-lg" id="btn_camera_scan">
-                <i class="fa fa-camera"></i> Scan Camera
-            </button>
-            <button type="button" class="btn btn-success btn-lg" data-toggle="modal" data-target="#importExcelModal">
-                <i class="fa fa-file-excel-o"></i> Import Excel
-            </button>
+        <div class="col-md-7 col-xs-12 text-right">
+            <div class="action-btn-group">
+                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}" class="btn btn-back-custom">
+                    <i class="fa fa-arrow-left"></i> Back to List
+                </a>
+                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}" class="btn btn-worksheet-custom">
+                    <i class="fa fa-eye"></i> Back to Session
+                </a>
+                <button type="button" class="btn btn-warning-custom btn-warning" id="btn_camera_scan">
+                    <i class="fa fa-camera"></i> Scan Camera
+                </button>
+                <button type="button" class="btn btn-export-custom" data-toggle="modal" data-target="#importExcelModal">
+                    <i class="fa fa-file-excel-o"></i> Import Excel
+                </button>
+            </div>
         </div>
     </div>
+    @endcomponent
     <!-- Worksheet Table -->
     @component('components.widget', ['class' => 'box-primary'])
         <div class="table-responsive">

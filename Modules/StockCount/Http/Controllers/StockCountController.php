@@ -149,11 +149,16 @@ class StockCountController extends Controller
         }
 
         try {
-            $input = $request->only(['name', 'location_id', 'blind_count']);
+            $input = $request->only(['name', 'location_id', 'blind_count', 'reference_no']);
             $input['blind_count'] = !empty($input['blind_count']) ? true : false;
             $input['business_id'] = $business_id;
             $input['created_by'] = auth()->user()->id;
             $input['status'] = 'active';
+
+            if (empty($input['reference_no'])) {
+                $count = StockCountSession::where('business_id', $business_id)->count() + 1;
+                $input['reference_no'] = 'SC' . date('Y') . sprintf('%04d', $count);
+            }
 
             $filters = $request->only(['categories', 'brands', 'racks', 'products']);
             $input['filters'] = $filters;
@@ -246,9 +251,36 @@ class StockCountController extends Controller
             ->where('business_id', $business_id)
             ->findOrFail($id);
 
-        $lines = StockCountLine::with(['product', 'variation', 'counter'])
-            ->where('stock_count_session_id', $id)
-            ->get();
+        $query = StockCountLine::with(['product', 'variation', 'counter'])
+            ->where('stock_count_session_id', $id);
+
+        // Apply filters
+        if (!empty(request()->get('category_id'))) {
+            $query->whereHas('product', function($q) {
+                $q->where('category_id', request()->get('category_id'));
+            });
+        }
+
+        if (!empty(request()->get('brand_id'))) {
+            $query->whereHas('product', function($q) {
+                $q->where('brand_id', request()->get('brand_id'));
+            });
+        }
+
+        $variance_type = request()->get('variance_type');
+        if (!empty($variance_type) && $variance_type != 'all') {
+            if ($variance_type == 'shortage') {
+                $query->whereColumn('counted_quantity', '<', 'book_quantity');
+            } elseif ($variance_type == 'surplus') {
+                $query->whereColumn('counted_quantity', '>', 'book_quantity');
+            } elseif ($variance_type == 'no_variance') {
+                $query->whereColumn('counted_quantity', '=', 'book_quantity');
+            } elseif ($variance_type == 'variance') {
+                $query->whereColumn('counted_quantity', '!=', 'book_quantity');
+            }
+        }
+
+        $lines = $query->get();
 
         $summary = [
             'total_items' => count($lines),
@@ -272,7 +304,10 @@ class StockCountController extends Controller
             }
         }
 
-        return view('stockcount::show', compact('session', 'lines', 'summary'));
+        $categories = Category::forDropdown($business_id, 'product');
+        $brands = Brands::forDropdown($business_id);
+
+        return view('stockcount::show', compact('session', 'lines', 'summary', 'categories', 'brands'));
     }
 
     public function worksheet($id)

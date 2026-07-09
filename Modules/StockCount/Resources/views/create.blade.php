@@ -14,13 +14,19 @@
 
         @component('components.widget', ['class' => 'box-primary'])
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="form-group">
                     {!! Form::label('name', __('stockcount::lang.session_name') . ':*') !!}
                     {!! Form::text('name', null, ['class' => 'form-control', 'required', 'placeholder' => __('stockcount::lang.session_name')]) !!}
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('reference_no', __('stockcount::lang.reference_no') . ':') !!}
+                    {!! Form::text('reference_no', null, ['class' => 'form-control', 'placeholder' => __('stockcount::lang.reference_no')]) !!}
+                </div>
+            </div>
+            <div class="col-md-4">
                 <div class="form-group">
                     {!! Form::label('location_id', __('purchase.business_location') . ':*') !!}
                     {!! Form::select('location_id', $business_locations, null, ['class' => 'form-control select2', 'required', 'style' => 'width:100%', 'placeholder' => __('messages.please_select')]) !!}

@@ -72,9 +72,14 @@ function __currency_trans_from_en(
     input,
     show_symbol = true,
     use_page_currency = false,
-    precision = __currency_precision,
+    precision = undefined,
     is_quantity = false
 ) {
+    // Resolve precision at call-time (not definition-time) to avoid
+    // ReferenceError when __currency_precision is not yet set by DOM-ready.
+    if (precision === undefined) {
+        precision = (typeof __currency_precision !== 'undefined') ? __currency_precision : 2;
+    }
     if (use_page_currency && __p_currency_symbol) {
         var s = __p_currency_symbol;
         var thousand = __p_currency_thousand_separator;

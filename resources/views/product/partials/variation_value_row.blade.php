@@ -27,6 +27,9 @@
         data-variation_value_id="{{$variation_value_id}}" 
         class="variation_value_row hide" 
     @endif>
+    <td class="text-center" style="vertical-align: middle;">
+        <i class="fa fa-arrows-alt cursor-pointer variation_value_handle" style="cursor: move;" title="Drag to reorder variation value"></i>
+    </td>
     <td>
         {!! Form::text($name . '[' . $variation_index . '][variations][' . $value_index . '][sub_sku]', null, ['class' => 'form-control input-sm input_sub_sku']); !!}
         {!! Form::hidden($name . '[' . $variation_index . '][variations][' . $value_index . '][is_hidden]', 

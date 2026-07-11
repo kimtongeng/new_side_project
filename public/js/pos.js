@@ -2056,7 +2056,7 @@ function reset_pos_form() {
     if (pos_form_obj[0]) {
         pos_form_obj[0].reset();
     }
-    if (sell_form[0]) {
+    if (typeof sell_form !== 'undefined' && sell_form && sell_form[0]) {
         sell_form[0].reset();
     }
     set_default_customer();

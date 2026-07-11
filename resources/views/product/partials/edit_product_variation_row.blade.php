@@ -23,6 +23,7 @@
 
 <tr class="variation_row">
     <td>
+        <i class="fa fa-arrows-alt cursor-pointer variation_row_handle" style="cursor: move; margin-right: 5px;" title="Drag to reorder variation group"></i>
         <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-error delete_complete_row"><i class="fa fa-trash"></i></button>
     </td>
     <td>
@@ -38,6 +39,7 @@
         <table class="table table-condensed table-bordered blue-header variation_value_table">
             <thead>
             <tr>
+                <th style="width: 30px;"></th>
                 <th>@lang('product.sku') @show_tooltip(__('tooltip.sub_sku'))</th>
                 <th>@lang('product.value')</th>
                 <th class="{{$class}}">@lang('product.default_purchase_price') 
@@ -68,6 +70,9 @@
                     }
                 @endphp
                 <tr>
+                    <td class="text-center" style="vertical-align: middle;">
+                        <i class="fa fa-arrows-alt cursor-pointer variation_value_handle" style="cursor: move;" title="Drag to reorder variation value"></i>
+                    </td>
                     <td>
                         @if($action != 'duplicate')
                             <input type="hidden" class="row_variation_id" value="{{$variation->id}}">

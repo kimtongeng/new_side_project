@@ -85,6 +85,7 @@ class ProductUtil extends Util
 
 
         //create product variations
+        $variation_group_index = 0;
         foreach ($input_variations as $key => $value) {
             $images = [];
             $variation_template_name = ! empty($value['name']) ? $value['name'] : null;
@@ -115,6 +116,7 @@ class ProductUtil extends Util
                 'product_id' => $product->id,
                 'is_dummy' => 0,
                 'variation_template_id' => $variation_template_id,
+                'sort_order' => $variation_group_index++,
             ];
             $product_variation = ProductVariation::create($product_variation_data);
 
@@ -126,6 +128,7 @@ class ProductUtil extends Util
                         ->where('product_id', $product->id)
                         ->count() + 1;
 
+                $variation_val_index = 0;
                 foreach ($value['variations'] as $k => $v) {
                     //skip hidden variations
                     if (isset($v['is_hidden']) && $v['is_hidden'] == 1) {
@@ -170,6 +173,7 @@ class ProductUtil extends Util
                         'profit_percent' => $this->num_uf($v['profit_percent']),
                         'default_sell_price' => $this->num_uf($v['default_sell_price']),
                         'sell_price_inc_tax' => $this->num_uf($v['sell_price_inc_tax']),
+                        'sort_order' => $variation_val_index++,
                     ];
                     $c++;
                     $images[] = 'variation_images_'.$key.'_'.$k;
@@ -199,15 +203,18 @@ class ProductUtil extends Util
         //Update product variations
         $product_variation_ids = [];
         $variations_ids = [];
+        $variation_group_index = 0;
 
         foreach ($input_variations_edit as $key => $value) {
             $product_variation_ids[] = $key;
 
             $product_variation = ProductVariation::find($key);
             $product_variation->name = $value['name'];
+            $product_variation->sort_order = $variation_group_index++;
             $product_variation->save();
 
             //Update existing variations
+            $variation_val_index = 0;
             if (! empty($value['variations_edit'])) {
                 foreach ($value['variations_edit'] as $k => $v) {
                     $data = [
@@ -217,6 +224,7 @@ class ProductUtil extends Util
                         'profit_percent' => $this->num_uf($v['profit_percent']),
                         'default_sell_price' => $this->num_uf($v['default_sell_price']),
                         'sell_price_inc_tax' => $this->num_uf($v['sell_price_inc_tax']),
+                        'sort_order' => $variation_val_index++,
                     ];
                     if (! empty($v['sub_sku']) && auth()->user()->can('product.rename_sku')) {
                         $data['sub_sku'] = $v['sub_sku'];
@@ -270,6 +278,7 @@ class ProductUtil extends Util
                         'profit_percent' => $this->num_uf($v['profit_percent']),
                         'default_sell_price' => $this->num_uf($v['default_sell_price']),
                         'sell_price_inc_tax' => $this->num_uf($v['sell_price_inc_tax']),
+                        'sort_order' => $variation_val_index++,
                     ];
                     $c++;
                     $media[] = 'variation_images_'.$key.'_'.$k;

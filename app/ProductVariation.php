@@ -15,7 +15,7 @@ class ProductVariation extends Model
 
     public function variations()
     {
-        return $this->hasMany(\App\Variation::class);
+        return $this->hasMany(\App\Variation::class)->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
     }
 
     public function variation_template()

@@ -14,6 +14,9 @@
 @endforeach
 
 <tr class="product_row" data-row_index="{{$row_count}}" @if(!empty($so_line)) data-so_id="{{$so_line->transaction_id}}" @endif>
+	<td class="text-center" style="vertical-align: middle;">
+		<i class="fa fa-arrows-alt cursor-pointer pos_row_handle" style="cursor: move;" title="Drag to reorder item"></i>
+	</td>
 	@if(!empty($is_serial_no))
 		<td class="serial_no" ></td>
 	@endif

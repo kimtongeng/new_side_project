@@ -107,6 +107,43 @@
 	@endif
 	
 	@include('sale_pos.partials.scan_camera_js')
+    <script type="text/javascript">
+        $(document).ready(function() {
+            function initialize_pos_sortable() {
+                var tbody = $('table#pos_table tbody');
+                if (tbody.data('ui-sortable')) {
+                    tbody.sortable('destroy');
+                }
+                tbody.sortable({
+                    handle: '.pos_row_handle',
+                    items: '> tr.product_row',
+                    placeholder: 'ui-state-highlight',
+                    update: function(event, ui) {
+                        if (typeof pos_total_row === 'function') {
+                            pos_total_row();
+                        }
+                    }
+                });
+            }
+
+            initialize_pos_sortable();
+
+            $(document).ajaxComplete(function(event, xhr, settings) {
+                if (settings.url.indexOf('/sells/pos/get_product_row') !== -1 || 
+                    settings.url.indexOf('/pos/get_product_row') !== -1) {
+                    initialize_pos_sortable();
+                }
+            });
+
+            var observer = new MutationObserver(function(mutations) {
+                initialize_pos_sortable();
+            });
+            var target = document.querySelector('table#pos_table tbody');
+            if (target) {
+                observer.observe(target, { childList: true });
+            }
+        });
+    </script>
 @endsection
 
 @section('css')
@@ -130,6 +167,19 @@
 			background: rgba(255,255,255,0) !important;
 			cursor: not-allowed;
 		}
+        .pos_row_handle {
+            cursor: move;
+            color: #ccc;
+            transition: color 0.2s;
+        }
+        .pos_row_handle:hover {
+            color: #666;
+        }
+        .ui-state-highlight {
+            background-color: #fcf8e3;
+            border: 1px dashed #fbeed5;
+            height: 45px;
+        }
 	</style>
 	<!-- include module css -->
     @if(!empty($pos_module_data))

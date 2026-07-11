@@ -102,6 +102,19 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    .variation_row_handle, .variation_value_handle {
+        cursor: move;
+        color: #ccc;
+        transition: color 0.2s;
+    }
+    .variation_row_handle:hover, .variation_value_handle:hover {
+        color: #666;
+    }
+    .ui-state-highlight {
+        background-color: #fcf8e3;
+        border: 1px dashed #fbeed5;
+        height: 45px;
+    }
 </style>
 @endsection
 
@@ -583,6 +596,115 @@
               reader.readAsDataURL(file);
           });
       }
+
+      // Initialize sortable and index-handling for variations
+      function initialize_variation_sortable() {
+          if ($('#product_variation_form_part > tbody').data('ui-sortable')) {
+              $('#product_variation_form_part > tbody').sortable('destroy');
+          }
+          
+          $('#product_variation_form_part > tbody').sortable({
+              handle: '.variation_row_handle',
+              items: '> tr.variation_row',
+              placeholder: 'ui-state-highlight',
+              update: function(event, ui) {
+                  reindex_variations();
+              }
+          });
+
+          $('table.variation_value_table > tbody').each(function() {
+              var tbody = $(this);
+              if (tbody.data('ui-sortable')) {
+                  tbody.sortable('destroy');
+              }
+              tbody.sortable({
+                  handle: '.variation_value_handle',
+                  items: '> tr',
+                  placeholder: 'ui-state-highlight',
+                  update: function(event, ui) {
+                      reindex_variations();
+                  }
+              });
+          });
+      }
+
+      function reindex_variations() {
+          $('#product_variation_form_part > tbody > tr.variation_row').each(function(i) {
+              var tr = $(this);
+              var is_edit_group = tr.find('.row_edit').val() === 'edit';
+              var old_group_idx = tr.find('.row_index').val();
+              var new_group_idx = is_edit_group ? old_group_idx : i;
+
+              if (!is_edit_group && old_group_idx !== String(new_group_idx)) {
+                  tr.find('.row_index').val(new_group_idx);
+
+                  tr.find('input, select, textarea').each(function() {
+                      var name = $(this).attr('name');
+                      if (name) {
+                          var new_name = name.replace('product_variation[' + old_group_idx + ']', 'product_variation[' + new_group_idx + ']');
+                          $(this).attr('name', new_name);
+                      }
+                  });
+
+                  tr.find('input[type="file"].variation_images').each(function() {
+                      var name = $(this).attr('name');
+                      if (name) {
+                          var new_name = name.replace('variation_images_' + old_group_idx + '_', 'variation_images_' + new_group_idx + '_');
+                          new_name = new_name.replace('edit_variation_images_' + old_group_idx + '_', 'edit_variation_images_' + new_group_idx + '_');
+                          $(this).attr('name', new_name);
+                      }
+                  });
+              }
+
+              var val_table = tr.find('table.variation_value_table');
+              val_table.find('tbody > tr').each(function(j) {
+                  var val_tr = $(this);
+                  var is_edit_val = val_tr.find('.row_variation_id').length > 0 || val_tr.attr('data-variation_value_id') !== undefined;
+                  var has_edit_name = val_tr.find('input[name*="[variations_edit]"]').length > 0;
+                  
+                  if (!is_edit_val && !has_edit_name) {
+                      var old_val_idx = val_tr.find('.variation_row_index').val();
+                      
+                      if (old_val_idx !== String(j)) {
+                          val_tr.find('.variation_row_index').val(j);
+                          
+                          val_tr.find('input, select, textarea').each(function() {
+                              var name = $(this).attr('name');
+                              if (name) {
+                                  var new_name = name.replace(/\[variations\]\[\d+\]/, '[variations][' + j + ']');
+                                  $(this).attr('name', new_name);
+                              }
+                          });
+
+                          val_tr.find('input[type="file"].variation_images').each(function() {
+                              var name = $(this).attr('name');
+                              if (name) {
+                                  var regex = new RegExp('(variation_images_' + new_group_idx + '_)\\d+(\\[\\])?');
+                                  var new_name = name.replace(regex, '$1' + j + '$2');
+                                  
+                                  var regex_edit = new RegExp('(edit_variation_images_' + new_group_idx + '_)\\d+(\\[\\])?');
+                                  new_name = new_name.replace(regex_edit, '$1' + j + '$2');
+                                  
+                                  $(this).attr('name', new_name);
+                              }
+                          });
+                      }
+                  }
+              });
+          });
+      }
+
+      // Initialize sortables
+      initialize_variation_sortable();
+
+      // Re-initialize sortables after Ajax calls load variations or variation value rows
+      $(document).ajaxComplete(function(event, xhr, settings) {
+          if (settings.url.indexOf('/products/product_form_part') !== -1 || 
+              settings.url.indexOf('/products/get_variation_value_row') !== -1 ||
+              settings.url.indexOf('/products/get_variation_template') !== -1) {
+              initialize_variation_sortable();
+          }
+      });
     });
   </script>
 @endsection

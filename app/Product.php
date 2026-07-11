@@ -58,7 +58,7 @@ class Product extends Model
 
     public function product_variations()
     {
-        return $this->hasMany(\App\ProductVariation::class);
+        return $this->hasMany(\App\ProductVariation::class)->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
     }
 
     /**
@@ -114,7 +114,7 @@ class Product extends Model
      */
     public function variations()
     {
-        return $this->hasMany(\App\Variation::class);
+        return $this->hasMany(\App\Variation::class)->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
     }
 
     /**

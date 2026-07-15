@@ -103,12 +103,26 @@
         text-overflow: ellipsis;
     }
     .variation_row_handle, .variation_value_handle {
-        cursor: move;
-        color: #ccc;
+        cursor: grab;
+        color: #aaa;
         transition: color 0.2s;
     }
     .variation_row_handle:hover, .variation_value_handle:hover {
-        color: #666;
+        color: #333;
+    }
+    .variation_row_handle:active, .variation_value_handle:active {
+        cursor: grabbing;
+    }
+    /* Style for the element being dragged when forceFallback is true */
+    .sortable-drag {
+        background: #e8f4fd !important;
+        opacity: 0.8;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+    /* Row being dragged placeholder */
+    tr.pos-dragging {
+        opacity: 0.4;
+        background: #e8f4fd !important;
     }
     .ui-state-highlight {
         background-color: #fcf8e3;
@@ -510,7 +524,14 @@
 @endsection
 
 @section('javascript')
-
+<!-- SortableJS for drag-and-drop (local copy, conflict-free) -->
+<script src="{{ asset('js/sortable.min.js?v=' . $asset_v) }}"></script>
+<!-- CDN fallback in case local file is missing -->
+<script>
+    if (typeof Sortable === 'undefined') {
+        document.write('<scr' + 'ipt src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"><\/scr' + 'ipt>');
+    }
+</script>
 <script src="{{ asset('js/product.js?v=' . $asset_v) }}"></script>
 
 <script type="text/javascript">
@@ -589,29 +610,38 @@
 
         // Initialize sortable and index-handling for variations
         function initialize_variation_sortable() {
-            if ($('#product_variation_form_part > tbody').data('ui-sortable')) {
-                $('#product_variation_form_part > tbody').sortable('destroy');
+            // Main product variations
+            var mainTbody = document.querySelector('#product_variation_form_part > tbody');
+            if (mainTbody) {
+                if (mainTbody.__sortable) {
+                    mainTbody.__sortable.destroy();
+                }
+                mainTbody.__sortable = Sortable.create(mainTbody, {
+                    handle: '.variation_row_handle',
+                    draggable: '.variation_row',
+                    animation: 150,
+                    forceFallback: true,
+                    ghostClass: 'pos-dragging',
+                    dragClass: 'sortable-drag',
+                    onEnd: function (evt) {
+                        reindex_variations();
+                    }
+                });
             }
-            
-            $('#product_variation_form_part > tbody').sortable({
-                handle: '.variation_row_handle',
-                items: '> tr.variation_row',
-                placeholder: 'ui-state-highlight',
-                update: function(event, ui) {
-                    reindex_variations();
-                }
-            });
 
-            $('table.variation_value_table > tbody').each(function() {
-                var tbody = $(this);
-                if (tbody.data('ui-sortable')) {
-                    tbody.sortable('destroy');
+            // Value tables for each variation
+            document.querySelectorAll('table.variation_value_table > tbody').forEach(function(valTbody) {
+                if (valTbody.__sortable) {
+                    valTbody.__sortable.destroy();
                 }
-                tbody.sortable({
+                valTbody.__sortable = Sortable.create(valTbody, {
                     handle: '.variation_value_handle',
-                    items: '> tr',
-                    placeholder: 'ui-state-highlight',
-                    update: function(event, ui) {
+                    draggable: 'tr',
+                    animation: 150,
+                    forceFallback: true,
+                    ghostClass: 'pos-dragging',
+                    dragClass: 'sortable-drag',
+                    onEnd: function (evt) {
                         reindex_variations();
                     }
                 });

@@ -86,6 +86,14 @@
 @stop
 
 @section('javascript')
+	<!-- SortableJS for drag-and-drop (local copy, conflict-free) -->
+	<script src="{{ asset('js/sortable.min.js?v=' . $asset_v) }}"></script>
+	<!-- CDN fallback in case local file is missing -->
+	<script>
+		if (typeof Sortable === 'undefined') {
+			document.write('<scr' + 'ipt src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"><\/scr' + 'ipt>');
+		}
+	</script>
 	<script src="{{ asset('js/pos.js?v=' . $asset_v) }}"></script>
 	<script src="{{ asset('js/printer.js?v=' . $asset_v) }}"></script>
 	<script src="{{ asset('js/product.js?v=' . $asset_v) }}"></script>
@@ -110,38 +118,28 @@
     <script type="text/javascript">
         $(document).ready(function() {
             function initialize_pos_sortable() {
-                var tbody = $('table#pos_table tbody');
-                if (tbody.data('ui-sortable')) {
-                    tbody.sortable('destroy');
-                }
-                tbody.sortable({
-                    handle: '.pos_row_handle',
-                    items: '> tr.product_row',
-                    placeholder: 'ui-state-highlight',
-                    update: function(event, ui) {
-                        if (typeof pos_total_row === 'function') {
-                            pos_total_row();
-                        }
+                var tbody = document.querySelector('table#pos_table tbody');
+                if (tbody) {
+                    if (tbody.__sortable) {
+                        tbody.__sortable.destroy();
                     }
-                });
+                    tbody.__sortable = Sortable.create(tbody, {
+                        handle: '.pos_row_handle',
+                        draggable: '.product_row',
+                        animation: 150,
+                        forceFallback: true,
+                        ghostClass: 'pos-dragging',
+                        dragClass: 'sortable-drag',
+                        onEnd: function (evt) {
+                            if (typeof pos_total_row === 'function') {
+                                pos_total_row();
+                            }
+                        }
+                    });
+                }
             }
 
             initialize_pos_sortable();
-
-            $(document).ajaxComplete(function(event, xhr, settings) {
-                if (settings.url.indexOf('/sells/pos/get_product_row') !== -1 || 
-                    settings.url.indexOf('/pos/get_product_row') !== -1) {
-                    initialize_pos_sortable();
-                }
-            });
-
-            var observer = new MutationObserver(function(mutations) {
-                initialize_pos_sortable();
-            });
-            var target = document.querySelector('table#pos_table tbody');
-            if (target) {
-                observer.observe(target, { childList: true });
-            }
         });
     </script>
 @endsection
@@ -168,12 +166,26 @@
 			cursor: not-allowed;
 		}
         .pos_row_handle {
-            cursor: move;
-            color: #ccc;
+            cursor: grab;
+            color: #aaa;
             transition: color 0.2s;
         }
         .pos_row_handle:hover {
-            color: #666;
+            color: #333;
+        }
+        .pos_row_handle:active {
+            cursor: grabbing;
+        }
+        /* Style for the element being dragged when forceFallback is true */
+        .sortable-drag {
+            background: #e8f4fd !important;
+            opacity: 0.8;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        /* Row being dragged placeholder */
+        tr.pos-dragging {
+            opacity: 0.4;
+            background: #e8f4fd !important;
         }
         .ui-state-highlight {
             background-color: #fcf8e3;

@@ -29,18 +29,16 @@
         .pos_row_handle:active {
             cursor: grabbing;
         }
-        /* Row being dragged */
+        /* Style for the element being dragged when forceFallback is true */
+        .sortable-drag {
+            background: #e8f4fd !important;
+            opacity: 0.8;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        /* Row being dragged placeholder */
         tr.pos-dragging {
             opacity: 0.4;
             background: #e8f4fd !important;
-        }
-        /* Drop target row */
-        tr.pos-drag-over > td {
-            border-top: 3px solid #007bff !important;
-        }
-        /* Allow drag ghost to escape the table-responsive overflow clip */
-        .table-responsive {
-            overflow: visible !important;
         }
         .ui-state-highlight {
             background-color: #fcf8e3;
@@ -948,6 +946,14 @@
 @stop
 
 @section('javascript')
+	<!-- SortableJS for drag-and-drop (local copy, conflict-free) -->
+	<script src="{{ asset('js/sortable.min.js?v=' . $asset_v) }}"></script>
+	<!-- CDN fallback in case local file is missing -->
+	<script>
+		if (typeof Sortable === 'undefined') {
+			document.write('<scr' + 'ipt src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"><\/scr' + 'ipt>');
+		}
+	</script>
 	<script src="{{ asset('js/pos.js?v=' . $asset_v) }}"></script>
 	<script src="{{ asset('js/product.js?v=' . $asset_v) }}"></script>
 	<script src="{{ asset('js/opening_stock.js?v=' . $asset_v) }}"></script>
@@ -1028,108 +1034,22 @@
 				$('.payment_types_dropdown').change();
 			}
 
-            // ── Native HTML5 drag-and-drop for POS/Sell table rows ──────────────────
-            var dragSrcRow = null;
-
-            function addDragHandlers(row) {
-                if ($(row).data('drag-init')) return; // already wired
-                $(row).data('drag-init', true);
-
-                // Make the row draggable only while holding the handle
-                var handle = row.querySelector('.pos_row_handle');
-                if (!handle) return;
-
-                handle.addEventListener('mousedown', function () {
-                    row.setAttribute('draggable', 'true');
-                });
-                handle.addEventListener('mouseup', function () {
-                    row.setAttribute('draggable', 'false');
-                });
-                document.addEventListener('mouseup', function () {
-                    row.setAttribute('draggable', 'false');
-                });
-
-                row.addEventListener('dragstart', function (e) {
-                    dragSrcRow = row;
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', ''); // required for Firefox
-                    $(row).addClass('pos-dragging');
-                });
-
-                row.addEventListener('dragend', function () {
-                    $(row).removeClass('pos-dragging');
-                    $('tr.product_row').removeClass('pos-drag-over');
-                    dragSrcRow = null;
-                });
-
-                row.addEventListener('dragover', function (e) {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    if (dragSrcRow && row !== dragSrcRow) {
-                        $('tr.product_row').removeClass('pos-drag-over');
-                        $(row).addClass('pos-drag-over');
-                    }
-                });
-
-                row.addEventListener('dragleave', function () {
-                    $(row).removeClass('pos-drag-over');
-                });
-
-                row.addEventListener('drop', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (dragSrcRow && row !== dragSrcRow) {
-                        var tbody = row.closest('tbody');
-                        var rows = Array.from(tbody.querySelectorAll('tr.product_row'));
-                        var srcIdx = rows.indexOf(dragSrcRow);
-                        var tgtIdx = rows.indexOf(row);
-
-                        if (srcIdx < tgtIdx) {
-                            tbody.insertBefore(dragSrcRow, row.nextSibling);
-                        } else {
-                            tbody.insertBefore(dragSrcRow, row);
-                        }
-
-                        $(row).removeClass('pos-drag-over');
-
+            // Initialize SortableJS for drag-and-drop on POS/Sell table rows (works on mobile too)
+            var tbody = document.querySelector('table#pos_table tbody');
+            if (tbody) {
+                Sortable.create(tbody, {
+                    handle: '.pos_row_handle',
+                    draggable: '.product_row',
+                    animation: 150,
+                    forceFallback: true,
+                    ghostClass: 'pos-dragging',
+                    dragClass: 'sortable-drag',
+                    onEnd: function (evt) {
                         if (typeof pos_total_row === 'function') {
                             pos_total_row();
                         }
                     }
                 });
-            }
-
-            function initAllRows() {
-                document.querySelectorAll('table#pos_table tbody tr.product_row').forEach(function (row) {
-                    addDragHandlers(row);
-                });
-            }
-
-            // Wire up existing rows
-            initAllRows();
-
-            // Wire up new rows added via AJAX
-            $(document).ajaxComplete(function (event, xhr, settings) {
-                if (settings.url && (
-                    settings.url.indexOf('/sells/pos/get_product_row') !== -1 ||
-                    settings.url.indexOf('/pos/get_product_row') !== -1
-                )) {
-                    setTimeout(initAllRows, 50);
-                }
-            });
-
-            // Observe direct DOM changes
-            var tbody = document.querySelector('table#pos_table tbody');
-            if (tbody) {
-                new MutationObserver(function (mutations) {
-                    mutations.forEach(function (m) {
-                        m.addedNodes.forEach(function (node) {
-                            if (node.nodeType === 1 && $(node).hasClass('product_row')) {
-                                addDragHandlers(node);
-                            }
-                        });
-                    });
-                }).observe(tbody, { childList: true });
             }
 
     	});

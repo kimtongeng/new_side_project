@@ -43,7 +43,7 @@ class Transaction extends Model
 
     public function sell_lines()
     {
-        return $this->hasMany(\App\TransactionSellLine::class);
+        return $this->hasMany(\App\TransactionSellLine::class)->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
     }
 
     public function contact()

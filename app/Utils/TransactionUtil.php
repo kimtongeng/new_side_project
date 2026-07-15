@@ -292,6 +292,7 @@ class TransactionUtil extends Util
         $modifiers_formatted = [];
         $combo_lines = [];
         $products_modified_combo = [];
+        $sort_order = 0;
         foreach ($products as $product) {
             $multiplier = 1;
             if (isset($product['sub_unit_id']) && $product['sub_unit_id'] == $product['product_unit_id']) {
@@ -306,6 +307,9 @@ class TransactionUtil extends Util
             if (! empty($product['transaction_sell_lines_id'])) {
                 $edit_id_temp = $this->editSellLine($product, $location_id, $status_before, $multiplier, $uf_data);
                 $edit_ids = array_merge($edit_ids, $edit_id_temp);
+
+                //Update sort_order for existing sell line
+                TransactionSellLine::where('id', $product['transaction_sell_lines_id'])->update(['sort_order' => $sort_order]);
 
                 //update or create modifiers for existing sell lines
                 if ($this->isModuleEnabled('modifiers')) {
@@ -384,6 +388,7 @@ class TransactionUtil extends Util
                     'res_line_order_status' => ! empty($product['res_service_staff_id']) ? 'received' : null,
                     'so_line_id' => ! empty($product['so_line_id']) ? $product['so_line_id'] : null,
                     'secondary_unit_quantity' => ! empty($product['secondary_unit_quantity']) ? $this->num_uf($product['secondary_unit_quantity']) : 0,
+                    'sort_order' => $sort_order,
                 ];
 
                 foreach ($extra_line_parameters as $key => $value) {
@@ -425,6 +430,7 @@ class TransactionUtil extends Util
                 //Update purchase order line quantity received
                 $this->updateSalesOrderLine($line['so_line_id'], $line['quantity'], 0);
             }
+            $sort_order++;
         }
 
         if (! is_object($transaction)) {

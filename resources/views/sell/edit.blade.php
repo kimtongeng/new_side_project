@@ -5,6 +5,40 @@
 @endphp
 @section('title', $title)
 
+@section('css')
+<style>
+        .pos_row_handle {
+            cursor: grab;
+            color: #aaa;
+            transition: color 0.2s;
+        }
+        .pos_row_handle:hover {
+            color: #333;
+        }
+        .pos_row_handle:active {
+            cursor: grabbing;
+        }
+        /* Row being dragged */
+        tr.pos-dragging {
+            opacity: 0.4;
+            background: #e8f4fd !important;
+        }
+        /* Drop target row */
+        tr.pos-drag-over > td {
+            border-top: 3px solid #007bff !important;
+        }
+        /* Allow drag ghost to escape the table-responsive overflow clip */
+        .table-responsive {
+            overflow: visible !important;
+        }
+        .ui-state-highlight {
+            background-color: #fcf8e3;
+            border: 1px dashed #fbeed5;
+            height: 45px;
+        }
+</style>
+@endsection
+
 @section('content')
 <!-- Content Header (Page header) -->
 <section class="content-header">
@@ -896,6 +930,111 @@
                 format: moment_date_format + ' ' + moment_time_format,
                 ignoreReadonly: true,
             });
+
+            // ── Native HTML5 drag-and-drop for POS/Sell table rows ──────────────────
+            var dragSrcRow = null;
+
+            function addDragHandlers(row) {
+                if ($(row).data('drag-init')) return; // already wired
+                $(row).data('drag-init', true);
+
+                // Make the row draggable only while holding the handle
+                var handle = row.querySelector('.pos_row_handle');
+                if (!handle) return;
+
+                handle.addEventListener('mousedown', function () {
+                    row.setAttribute('draggable', 'true');
+                });
+                handle.addEventListener('mouseup', function () {
+                    row.setAttribute('draggable', 'false');
+                });
+                document.addEventListener('mouseup', function () {
+                    row.setAttribute('draggable', 'false');
+                });
+
+                row.addEventListener('dragstart', function (e) {
+                    dragSrcRow = row;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', ''); // required for Firefox
+                    $(row).addClass('pos-dragging');
+                });
+
+                row.addEventListener('dragend', function () {
+                    $(row).removeClass('pos-dragging');
+                    $('tr.product_row').removeClass('pos-drag-over');
+                    dragSrcRow = null;
+                });
+
+                row.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragSrcRow && row !== dragSrcRow) {
+                        $('tr.product_row').removeClass('pos-drag-over');
+                        $(row).addClass('pos-drag-over');
+                    }
+                });
+
+                row.addEventListener('dragleave', function () {
+                    $(row).removeClass('pos-drag-over');
+                });
+
+                row.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (dragSrcRow && row !== dragSrcRow) {
+                        var tbody = row.closest('tbody');
+                        var rows = Array.from(tbody.querySelectorAll('tr.product_row'));
+                        var srcIdx = rows.indexOf(dragSrcRow);
+                        var tgtIdx = rows.indexOf(row);
+
+                        if (srcIdx < tgtIdx) {
+                            tbody.insertBefore(dragSrcRow, row.nextSibling);
+                        } else {
+                            tbody.insertBefore(dragSrcRow, row);
+                        }
+
+                        $(row).removeClass('pos-drag-over');
+
+                        if (typeof pos_total_row === 'function') {
+                            pos_total_row();
+                        }
+                    }
+                });
+            }
+
+            function initAllRows() {
+                document.querySelectorAll('table#pos_table tbody tr.product_row').forEach(function (row) {
+                    addDragHandlers(row);
+                });
+            }
+
+            // Wire up existing rows
+            initAllRows();
+
+            // Wire up new rows added via AJAX
+            $(document).ajaxComplete(function (event, xhr, settings) {
+                if (settings.url && (
+                    settings.url.indexOf('/sells/pos/get_product_row') !== -1 ||
+                    settings.url.indexOf('/pos/get_product_row') !== -1
+                )) {
+                    setTimeout(initAllRows, 50);
+                }
+            });
+
+            // Observe direct DOM changes
+            var tbody = document.querySelector('table#pos_table tbody');
+            if (tbody) {
+                new MutationObserver(function (mutations) {
+                    mutations.forEach(function (m) {
+                        m.addedNodes.forEach(function (node) {
+                            if (node.nodeType === 1 && $(node).hasClass('product_row')) {
+                                addDragHandlers(node);
+                            }
+                        });
+                    });
+                }).observe(tbody, { childList: true });
+            }
+
     	});
     </script>
 @endsection

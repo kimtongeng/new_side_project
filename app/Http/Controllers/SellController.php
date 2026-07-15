@@ -1072,6 +1072,8 @@ class SellController extends Controller
                 'transaction_sell_lines.so_line_id',
                 DB::raw('vld.qty_available + transaction_sell_lines.quantity AS qty_available')
             )
+            ->orderBy('transaction_sell_lines.sort_order', 'asc')
+            ->orderBy('transaction_sell_lines.id', 'asc')
             ->get();
 
         if (! empty($sell_details)) {

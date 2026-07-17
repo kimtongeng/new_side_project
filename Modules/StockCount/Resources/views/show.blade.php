@@ -73,7 +73,40 @@
         }
 
         .dt-buttons {
-            display: none !important;
+            margin-bottom: 15px;
+            float: none !important;
+            display: inline-block;
+        }
+
+        /* Equal-height summary boxes and flex layout to fix clipped icons */
+        .info-box {
+            display: flex !important;
+            align-items: stretch !important;
+            min-height: 90px;
+        }
+        .info-box-icon {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 90px;
+            flex-shrink: 0;
+            float: none !important;
+            height: auto !important;
+            line-height: normal !important;
+        }
+        .info-box-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex-grow: 1;
+        }
+
+        /* Compact product name column with word wrapping */
+        #variance_table th:nth-child(2), 
+        #variance_table td:nth-child(2) {
+            max-width: 280px !important;
+            word-wrap: break-word !important;
+            white-space: normal !important;
         }
 
         /* Hide print template in screen view */
@@ -225,6 +258,57 @@
                 border-top: 1.5px solid #000;
                 margin-top: 50px;
             }
+        }
+
+        /* ── Premium Modern Info Boxes styling ────────────────────── */
+        .info-box {
+            border-radius: 8px !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+            overflow: hidden;
+            border: none !important;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .info-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+        }
+        .info-box.bg-aqua {
+            background: linear-gradient(135deg, #00c6ff, #0072ff) !important;
+        }
+        .info-box.bg-red {
+            background: linear-gradient(135deg, #ff512f, #dd2476) !important;
+        }
+        .info-box.bg-green {
+            background: linear-gradient(135deg, #11998e, #38ef7d) !important;
+        }
+        .info-box.bg-yellow {
+            background: linear-gradient(135deg, #f12711, #f5af19) !important;
+        }
+        .info-box-icon {
+            background: rgba(0, 0, 0, 0.1) !important;
+            color: #fff !important;
+        }
+        .info-box-text {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            font-size: 11px !important;
+            letter-spacing: 0.8px !important;
+            margin-bottom: 4px;
+        }
+        .info-box-number {
+            color: #ffffff !important;
+            font-size: 22px !important;
+            font-weight: 700 !important;
+        }
+        .progress-description {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 13px !important;
+            margin-top: 5px;
+        }
+        .progress-description span {
+            color: #ffffff !important;
+            font-weight: bold;
         }
     </style>
 @endsection
@@ -429,7 +513,7 @@
                                 <th>@lang('stockcount::lang.variance')</th>
                                 <th>Cost Price</th>
                                 <th>Financial Impact</th>
-                                <th>Counted By</th>
+                                <th>Adjusted By</th>
                                 <th>Notes</th>
                             </tr>
                         </thead>
@@ -555,11 +639,48 @@
         $(document).ready(function () {
             var table = $('#variance_table').DataTable({
                 pageLength: 25,
-                dom: 'Bfrtip',
+                aLengthMenu: [
+                    [25, 50, 100, 200, 500, 1000, -1],
+                    [25, 50, 100, 200, 500, 1000, LANG.all]
+                ],
+                dom: '<"row margin-bottom-20 text-center"<"col-sm-2"l><"col-sm-7"B><"col-sm-3"f> r>tip',
+                language: {
+                    searchPlaceholder: LANG.search + ' ...',
+                    search: '',
+                    lengthMenu: LANG.show + ' _MENU_ ' + LANG.entries,
+                    emptyTable: LANG.table_emptyTable,
+                    info: LANG.table_info,
+                    infoEmpty: LANG.table_infoEmpty,
+                    loadingRecords: LANG.table_loadingRecords,
+                    processing: LANG.table_processing,
+                    zeroRecords: LANG.table_zeroRecords,
+                    paginate: {
+                        first: LANG.first,
+                        last: LANG.last,
+                        next: LANG.next,
+                        previous: LANG.previous,
+                    },
+                },
                 buttons: [
                     {
+                        extend: 'csv',
+                        text: '<i class="fa fa-file-csv" aria-hidden="true"></i> ' + LANG.export_to_csv,
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    },
+                    {
+                        extend: 'excel',
+                        text: '<i class="fa fa-file-excel" aria-hidden="true"></i> ' + LANG.export_to_excel,
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    },
+                    {
+                        extend: 'colvis',
+                        text: '<i class="fa fa-columns" aria-hidden="true"></i> ' + LANG.col_vis,
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    },
+                    {
                         extend: 'pdf',
-                        className: 'buttons-pdf hidden',
+                        text: '<i class="fa fa-file-pdf" aria-hidden="true"></i> ' + LANG.export_to_pdf,
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1',
                         orientation: 'landscape',
                         pageSize: 'A4',
                         exportOptions: {
@@ -671,7 +792,8 @@
                     },
                     {
                         extend: 'print',
-                        className: 'buttons-print hidden',
+                        text: '<i class="fa fa-print" aria-hidden="true"></i> ' + LANG.print,
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1',
                         exportOptions: {
                             columns: ':visible'
                         },

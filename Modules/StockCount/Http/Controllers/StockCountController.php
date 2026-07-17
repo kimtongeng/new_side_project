@@ -60,8 +60,15 @@ class StockCountController extends Controller
             if (!empty(request()->get('status'))) {
                 $sessions->where('status', request()->get('status'));
             }
+            if (!empty(request()->get('created_by'))) {
+                $sessions->where('created_by', request()->get('created_by'));
+            }
+            if (!empty(request()->get('start_date')) && !empty(request()->get('end_date'))) {
+                $sessions->whereDate('created_at', '>=', request()->get('start_date'))
+                         ->whereDate('created_at', '<=', request()->get('end_date'));
+            }
 
-            return DataTables::of($sessions)
+            $dt = DataTables::of($sessions)
                 ->addColumn('action', function ($row) {
                     $html = '<div class="btn-group">
                                 <button class="btn btn-info btn-xs dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
@@ -75,7 +82,13 @@ class StockCountController extends Controller
                     }
 
                     if ($row->status === 'active' && auth()->user()->can('stock_count.count')) {
-                        $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'worksheet'], [$row->id]) . '"><i class="fa fa-edit"></i> ' . __('stockcount::lang.worksheet') . '</a></li>';
+                        $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'worksheet'], [$row->id]) . '"><i class="fa fa-edit"></i> Edit (worksheet)</a></li>';
+                    }
+
+                    $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$row->id]) . '" target="_blank"><i class="fa fa-print"></i> Print worksheet</a></li>';
+
+                    if (auth()->user()->can('stock_count.create')) {
+                        $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'duplicate'], [$row->id]) . '"><i class="fa fa-copy"></i> Duplicate</a></li>';
                     }
 
                     if ($row->status !== 'completed' && auth()->user()->can('stock_count.delete')) {
@@ -100,8 +113,11 @@ class StockCountController extends Controller
                     }
                     return '<span class="label ' . $color . '">' . __('stockcount::lang.' . $row->status) . '</span>';
                 })
-                ->addColumn('items_count', function ($row) {
+                ->addColumn('total_items', function ($row) {
                     return $row->lines()->count();
+                })
+                ->addColumn('items_counted', function ($row) {
+                    return $row->lines()->whereNotNull('counted_by')->count();
                 })
                 ->editColumn('created_at', '{{@format_datetime($created_at)}}')
                 ->editColumn('blind_count', function ($row) {
@@ -109,10 +125,44 @@ class StockCountController extends Controller
                 })
                 ->rawColumns(['action', 'status', 'created_at'])
                 ->make(true);
+
+            $data = $dt->getData(true);
+            
+            // Calculate stats based on the filtered query
+            $filtered_sessions_query = clone $sessions;
+            $session_ids = $filtered_sessions_query->pluck('id')->toArray();
+            
+            $active_sessions = $filtered_sessions_query->clone()->where('status', 'active')->count();
+            $completed_sessions = $filtered_sessions_query->clone()->where('status', 'completed')->count();
+            
+            $total_items = 0;
+            $total_counted = 0;
+            if (!empty($session_ids)) {
+                $total_items = DB::table('stock_count_lines')
+                    ->whereIn('stock_count_session_id', $session_ids)
+                    ->count();
+                $total_counted = DB::table('stock_count_lines')
+                    ->whereIn('stock_count_session_id', $session_ids)
+                    ->whereNotNull('counted_by')
+                    ->count();
+            }
+            
+            $progress_percent = $total_items > 0 ? round(($total_counted / $total_items) * 100, 1) : 0;
+            
+            $data['stats'] = [
+                'active_sessions' => $active_sessions,
+                'completed_sessions' => $completed_sessions,
+                'total_counted' => $total_counted,
+                'total_items' => $total_items,
+                'progress_percent' => $progress_percent
+            ];
+            
+            return response()->json($data);
         }
 
         $business_locations = BusinessLocation::forDropdown($business_id);
-        return view('stockcount::index', compact('business_locations'));
+        $users = \App\User::forDropdown($business_id, false);
+        return view('stockcount::index', compact('business_locations', 'users'));
     }
 
     public function create()
@@ -252,7 +302,8 @@ class StockCountController extends Controller
             ->findOrFail($id);
 
         $query = StockCountLine::with(['product', 'variation', 'counter'])
-            ->where('stock_count_session_id', $id);
+            ->where('stock_count_session_id', $id)
+            ->whereNotNull('counted_by');
 
         // Apply filters
         if (!empty(request()->get('category_id'))) {
@@ -341,22 +392,43 @@ class StockCountController extends Controller
         }
 
         try {
-            $line_id = $request->input('line_id');
-            $quantity = $request->input('quantity', 0);
-            $note = $request->input('note', '');
+            DB::beginTransaction();
 
-            $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
-                $query->where('id', $id)->where('business_id', $business_id)->where('status', 'active');
-            })->findOrFail($line_id);
+            $lines = $request->input('lines');
+            if (!empty($lines) && is_array($lines)) {
+                foreach ($lines as $line_data) {
+                    $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
+                        $query->where('id', $id)->where('business_id', $business_id)->where('status', 'active');
+                    })->find($line_data['line_id']);
 
-            $line->counted_quantity = $quantity;
-            $line->note = $note;
-            $line->counted_by = auth()->user()->id;
-            $line->counted_at = Carbon::now();
-            $line->save();
+                    if (!empty($line)) {
+                        $line->counted_quantity = $line_data['quantity'] ?? 0;
+                        $line->note = $line_data['note'] ?? '';
+                        $line->counted_by = auth()->user()->id;
+                        $line->counted_at = Carbon::now();
+                        $line->save();
+                    }
+                }
+            } else {
+                $line_id = $request->input('line_id');
+                $quantity = $request->input('quantity', 0);
+                $note = $request->input('note', '');
 
+                $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
+                    $query->where('id', $id)->where('business_id', $business_id)->where('status', 'active');
+                })->findOrFail($line_id);
+
+                $line->counted_quantity = $quantity;
+                $line->note = $note;
+                $line->counted_by = auth()->user()->id;
+                $line->counted_at = Carbon::now();
+                $line->save();
+            }
+
+            DB::commit();
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -777,6 +849,99 @@ class StockCountController extends Controller
                 'msg' => 'Error: ' . $e->getMessage()
             ];
             return redirect()->back()->with('status', $output);
+        }
+    }
+
+    public function printWorksheet($id)
+    {
+        $business_id = request()->session()->get('user.business_id');
+
+        if (!auth()->user()->can('stock_count.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $session = StockCountSession::with(['location', 'creator'])
+            ->where('business_id', $business_id)
+            ->findOrFail($id);
+
+        $lines = StockCountLine::with(['product', 'variation'])
+            ->where('stock_count_session_id', $id)
+            ->get();
+
+        return view('stockcount::print_worksheet', compact('session', 'lines'));
+    }
+
+    public function duplicate($id)
+    {
+        $business_id = request()->session()->get('user.business_id');
+
+        if (!auth()->user()->can('stock_count.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $session = StockCountSession::where('business_id', $business_id)
+                ->findOrFail($id);
+
+            DB::beginTransaction();
+
+            // Create duplicated session
+            $count = StockCountSession::where('business_id', $business_id)->count() + 1;
+            $new_session = $session->replicate();
+            $new_session->name = $session->name . ' - Copy';
+            $new_session->reference_no = 'SC' . date('Y') . sprintf('%04d', $count);
+            $new_session->status = 'active';
+            $new_session->created_by = auth()->user()->id;
+            $new_session->completed_by = null;
+            $new_session->completed_at = null;
+            $new_session->save();
+
+            // Duplicate lines
+            $lines = StockCountLine::where('stock_count_session_id', $id)->get();
+            $new_lines = [];
+            foreach ($lines as $line) {
+                // Fetch current QOH for the location to start fresh
+                $qty = DB::table('variation_location_details')
+                    ->where('variation_id', $line->variation_id)
+                    ->where('location_id', $new_session->location_id)
+                    ->value('qty_available') ?? 0.0000;
+
+                $new_lines[] = [
+                    'stock_count_session_id' => $new_session->id,
+                    'product_id' => $line->product_id,
+                    'variation_id' => $line->variation_id,
+                    'book_quantity' => $qty,
+                    'counted_quantity' => 0.0000,
+                    'unit_price' => $line->unit_price,
+                    'counted_by' => null,
+                    'counted_at' => null,
+                    'note' => null,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
+                ];
+            }
+
+            if (!empty($new_lines)) {
+                StockCountLine::insert($new_lines);
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index'])
+                ->with('status', [
+                    'success' => true,
+                    'msg' => 'Count session duplicated successfully.'
+                ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+            return redirect()->back()
+                ->with('status', [
+                    'success' => false,
+                    'msg' => __('messages.something_went_wrong')
+                ]);
         }
     }
 }

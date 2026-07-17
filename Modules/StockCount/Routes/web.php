@@ -9,6 +9,8 @@ Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezon
     Route::get('/{id}', [Modules\StockCount\Http\Controllers\StockCountController::class, 'show'])->name('stock-counts.show');
     Route::delete('/{id}', [Modules\StockCount\Http\Controllers\StockCountController::class, 'destroy'])->name('stock-counts.destroy');
     Route::get('/{id}/worksheet', [Modules\StockCount\Http\Controllers\StockCountController::class, 'worksheet'])->name('stock-counts.worksheet');
+    Route::get('/{id}/print-worksheet', [Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'])->name('stock-counts.print-worksheet');
+    Route::get('/{id}/duplicate', [Modules\StockCount\Http\Controllers\StockCountController::class, 'duplicate'])->name('stock-counts.duplicate');
     Route::post('/{id}/save-progress', [Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'])->name('stock-counts.save-progress');
     Route::post('/{id}/scan-barcode', [Modules\StockCount\Http\Controllers\StockCountController::class, 'scanBarcode'])->name('stock-counts.scan-barcode');
     Route::post('/{id}/reconcile', [Modules\StockCount\Http\Controllers\StockCountController::class, 'reconcile'])->name('stock-counts.reconcile');

@@ -3,233 +3,292 @@
 @section('title', __('stockcount::lang.worksheet') . ' - ' . $session->name)
 
 @section('css')
-<style>
-    .save-status-container {
-        position: fixed;
-        bottom: 25px;
-        right: 25px;
-        z-index: 1050;
-        background: #2c3e50;
-        color: #fff;
-        padding: 12px 24px;
-        border-radius: 30px;
-        font-weight: bold;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        display: none;
-        border: 1px solid rgba(255,255,255,0.1);
-        font-size: 13px;
-        letter-spacing: 0.5px;
-        transition: all 0.3s ease;
-    }
-    .save-status-container i {
-        margin-right: 8px;
-    }
-    .scan-highlight {
-        background-color: #dff0d8 !important;
-        transition: background-color 1s ease;
-    }
-    .worksheet-header {
-        background: #f7f7f7;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    /* Camera Scanner Modal */
-    #camera_preview_container {
-        width: 100%;
-        min-height: 280px;
-        background: #000;
-        border-radius: 6px;
-        overflow: hidden;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    #camera_preview_container #reader {
-        width: 100% !important;
-        border: none !important;
-    }
-    #camera_preview_container #reader video {
-        width: 100% !important;
-        border-radius: 6px;
-    }
-    .camera-scan-line {
-        position: absolute;
-        left: 10%;
-        right: 10%;
-        height: 2px;
-        background: rgba(255, 80, 80, 0.85);
-        box-shadow: 0 0 8px 2px rgba(255, 80, 80, 0.6);
-        animation: scanline 2s linear infinite;
-        pointer-events: none;
-        z-index: 10;
-    }
-    @keyframes scanline {
-        0%   { top: 15%; }
-        50%  { top: 80%; }
-        100% { top: 15%; }
-    }
-    #camera_result_feedback {
-        margin-top: 10px;
-        font-size: 14px;
-        min-height: 22px;
-    }
+    <style>
+        .save-status-container {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1050;
+            background: #2c3e50;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
 
-    /* Slate/Professional Styling for screen view */
-    .box-primary {
-        border-top: 3px solid #34495e !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
-    }
+        .save-status-container i {
+            margin-right: 8px;
+        }
 
-    .box-solid {
-        border-top: 3px solid #34495e !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
-    }
+        .scan-highlight {
+            background-color: #dff0d8 !important;
+            transition: background-color 1s ease;
+        }
 
-    #worksheet_table thead th {
-        background: #2c3e50 !important;
-        color: #fff !important;
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 0.5px;
-        border: none;
-        padding: 12px 10px;
-    }
+        .worksheet-header {
+            background: #f7f7f7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
 
-    .action-btn-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: flex-end;
-        align-items: center;
-    }
+        /* ── Barcode scanner input-group fix ─────────────────────────────
+               Forces the text input + buttons to render as one seamless
+               control regardless of which Bootstrap version is loaded
+               (fixes the "floating pill buttons with a gap" look). */
+        #barcode_scanner_group {
+            display: flex;
+            align-items: stretch;
+            width: 100%;
+        }
 
-    .action-btn-group .btn {
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 13px;
-        padding: 6px 16px;
-        letter-spacing: 0.3px;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
-    }
+        #barcode_scanner_group .form-control {
+            flex: 1 1 auto;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: none;
+            box-shadow: none;
+            height: 40px;
+        }
 
-    .action-btn-group .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
-    }
+        #barcode_scanner_group .input-group-btn-fixed {
+            display: flex;
+        }
 
-    .action-btn-group .btn i {
-        margin-right: 5px;
-    }
+        #barcode_scanner_group .btn {
+            border-radius: 0;
+            border-left: none;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
 
-    .btn-back-custom {
-        background: #f0f0f0;
-        color: #555;
-        border: 1px solid #ddd;
-    }
+        #barcode_scanner_group .btn:last-child {
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+            border-left: 1px solid rgba(0, 0, 0, 0.15);
+        }
 
-    .btn-back-custom:hover {
-        background: #e2e2e2;
-        color: #333;
-    }
+        #barcode_scanner_group .btn:focus,
+        #barcode_scanner_group .form-control:focus {
+            z-index: 2;
+        }
 
-    .btn-worksheet-custom {
-        background: linear-gradient(135deg, #3a7bd5, #2563b0);
-        color: #fff;
-        border: none;
-    }
+        /* Camera Scanner Modal */
+        #camera_preview_container {
+            width: 100%;
+            min-height: 280px;
+            background: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    .btn-worksheet-custom:hover {
-        color: #fff;
-    }
+        #camera_preview_container #reader {
+            width: 100% !important;
+            border: none !important;
+        }
 
-    .btn-export-custom {
-        background: linear-gradient(135deg, #1d9e6f, #158a5e);
-        color: #fff;
-        border: none;
-    }
+        #camera_preview_container #reader video {
+            width: 100% !important;
+            border-radius: 6px;
+        }
 
-    .btn-export-custom:hover {
-        color: #fff;
-    }
+        .camera-scan-line {
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: rgba(255, 80, 80, 0.85);
+            box-shadow: 0 0 8px 2px rgba(255, 80, 80, 0.6);
+            animation: scanline 2s linear infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
 
-    .btn-warning-custom {
-        background: linear-gradient(135deg, #f39c12, #d35400);
-        color: #fff;
-        border: none;
-    }
+        @keyframes scanline {
+            0% {
+                top: 15%;
+            }
 
-    .btn-warning-custom:hover {
-        color: #fff;
-    }
-</style>
+            50% {
+                top: 80%;
+            }
+
+            100% {
+                top: 15%;
+            }
+        }
+
+        #camera_result_feedback {
+            margin-top: 10px;
+            font-size: 14px;
+            min-height: 22px;
+        }
+
+        /* Mobile usability enhancements */
+        @media (max-width: 768px) {
+            .box-tools {
+                margin-top: 15px;
+                justify-content: flex-start !important;
+            }
+
+            .box-tools .btn {
+                flex: 1 1 auto;
+            }
+
+            #barcode_scanner_group .form-control,
+            #barcode_scanner_group .btn {
+                height: 46px;
+            }
+
+            #barcode_scanner {
+                font-size: 16px;
+                /* Prevents auto-zoom on iOS */
+            }
+
+            .select-type,
+            .input-adjust-qty,
+            .input-new-qoh,
+            .input-note {
+                height: 40px !important;
+                font-size: 15px !important;
+            }
+
+            .btn-qty {
+                height: 40px !important;
+                width: 40px !important;
+                padding: 0 !important;
+            }
+        }
+
+        /* Hide HTML5 Up/Down Spinners */
+        .input-adjust-qty::-webkit-outer-spin-button,
+        .input-adjust-qty::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .input-adjust-qty {
+            -moz-appearance: textfield;
+            /* Firefox */
+        }
+
+        /* jQuery UI Autocomplete z-index fix */
+        .ui-autocomplete {
+            z-index: 2000 !important;
+            max-height: 250px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+    </style>
 @endsection
 
 @section('content')
-<section class="content-header no-print">
-    <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
-        @lang('stockcount::lang.worksheet'): {{ $session->name }}
-        <small class="text-muted" style="font-size: 16px; margin-left: 10px;">Ref No: {{ $session->reference_no }}</small>
-        <span
-            class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active') bg-blue @else bg-gray @endif font-size-17">
-            {{ __('stockcount::lang.' . $session->status) }}
-        </span>
-    </h1>
-</section>
+    <section class="content-header no-print">
+        <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
+            @lang('stockcount::lang.worksheet'): {{ $session->name }}
+            <small class="text-muted" style="font-size: 16px; margin-left: 10px;">Ref No:
+                {{ $session->reference_no }}</small>
+            <span
+                class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active') bg-blue @else bg-gray @endif font-size-17">
+                {{ __('stockcount::lang.' . $session->status) }}
+            </span>
+        </h1>
+    </section>
 
-<section class="content">
-    <!-- Barcode Scan Card -->
-    @component('components.widget', ['class' => 'box-solid'])
-    <div class="row" style="display: flex; align-items: center; flex-wrap: wrap;">
-        <div class="col-md-5 col-xs-12">
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="barcode_scanner"><strong><i class="fa fa-barcode"></i> @lang('stockcount::lang.scan_barcode') / SKU:</strong></label>
-                <div class="input-group">
-                    <input type="text" id="barcode_scanner" class="form-control input-lg" style="border-radius: 20px 0 0 20px; border-right: none;" placeholder="Scan barcode or type SKU and press Enter" autofocus>
-                    <span class="input-group-btn">
-                        <button class="btn btn-primary btn-lg" type="button" id="btn_search_barcode" style="border-radius: 0 20px 20px 0; padding: 7px 20px; height: 46px;">
-                            <i class="fa fa-search"></i>
-                        </button>
-                    </span>
+    <section class="content">
+        <!-- Barcode Scan Card -->
+        @component('components.widget', ['class' => 'box-solid'])
+        <div class="row" style="display: flex; align-items: center; flex-wrap: wrap;">
+            <div class="col-md-5 col-xs-12">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="barcode_scanner"><strong><i class="fa fa-barcode"></i>
+                            @lang('stockcount::lang.scan_barcode') / SKU:</strong></label>
+                    <div id="barcode_scanner_group">
+                        <input type="text" id="barcode_scanner" class="form-control"
+                            placeholder="Scan barcode or type SKU and press Enter" autofocus>
+                        <div class="input-group-btn-fixed">
+                            <button class="btn btn-primary" type="button" id="btn_search_barcode">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            <button class="btn btn-default" type="button" id="btn_clear_search"
+                                title="Clear search & show all">
+                                <i class="fa fa-times text-danger"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-7 col-xs-12 text-right">
+                <div class="box-tools"
+                    style="display: flex; gap: 5px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                    <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}"
+                        class="btn btn-default btn-flat">
+                        <i class="fa fa-arrow-left"></i> Back to List
+                    </a>
+                    <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}"
+                        class="btn btn-info btn-flat">
+                        <i class="fa fa-eye"></i> Back to Session
+                    </a>
+                    <button type="button" class="btn btn-warning btn-flat" id="btn_camera_scan">
+                        <i class="fa fa-camera"></i> Scan Camera
+                    </button>
+                    <button type="button" class="btn btn-success btn-flat" data-toggle="modal"
+                        data-target="#importExcelModal">
+                        <i class="fa fa-file-excel-o"></i> Import Excel
+                    </button>
                 </div>
             </div>
         </div>
-        <div class="col-md-7 col-xs-12 text-right">
-            <div class="action-btn-group">
-                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}" class="btn btn-back-custom">
-                    <i class="fa fa-arrow-left"></i> Back to List
-                </a>
-                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}" class="btn btn-worksheet-custom">
-                    <i class="fa fa-eye"></i> Back to Session
-                </a>
-                <button type="button" class="btn btn-warning-custom btn-warning" id="btn_camera_scan">
-                    <i class="fa fa-camera"></i> Scan Camera
-                </button>
-                <button type="button" class="btn btn-export-custom" data-toggle="modal" data-target="#importExcelModal">
-                    <i class="fa fa-file-excel-o"></i> Import Excel
-                </button>
+        @endcomponent
+        <!-- Worksheet Table -->
+        @component('components.widget', ['class' => 'box-primary'])
+        <div class="row" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <div class="col-xs-6">
+                <label style="font-weight: normal; margin-bottom: 0;">Show
+                    <select id="worksheet_page_length" class="form-control input-sm"
+                        style="display: inline-block; width: auto; height: 30px; padding: 5px 10px; margin: 0 5px;">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="-1">All</option>
+                    </select> entries
+                </label>
+            </div>
+            <div class="col-xs-6 text-right">
+                <span id="worksheet_table_info" class="text-muted" style="font-size: 13px;"></span>
             </div>
         </div>
-    </div>
-    @endcomponent
-    <!-- Worksheet Table -->
-    @component('components.widget', ['class' => 'box-primary'])
         <div class="table-responsive">
             <table class="table table-bordered table-striped" id="worksheet_table">
                 <thead>
                     <tr>
                         <th>Product Name (Product Code)</th>
-                        <th>QOH</th>
-                        <th>Type</th>
-                        <th style="width: 140px;">Quantity</th>
+                        @if(!$session->blind_count)
+                            <th>QOH</th>
+                            <th style="min-width: 80px;">Type</th>
+                            <th style="min-width: 150px;">Quantity</th>
+                            <th>Unit</th>
+                        @endif
+                        <th style="min-width: 100px;">{{ $session->blind_count ? 'Counted Qty' : 'New QOH' }}</th>
                         <th>Unit</th>
-                        <th>New QOH</th>
-                        <th>Unit</th>
-                        <th>Note</th>
+                        <th style="min-width: 180px;">Note</th>
                     </tr>
                 </thead>
                 <tbody id="worksheet_body">
@@ -239,313 +298,767 @@
                 </tbody>
             </table>
         </div>
-    @endcomponent
-</section>
-
-<!-- Floating Auto Save Status Indicator -->
-<div class="save-status-container" id="save_status">
-    <span id="save_status_text"><i class="fa fa-spinner fa-spin"></i> Saving...</span>
-</div>
-
-<!-- Camera Scanner Modal -->
-<div class="modal fade" id="cameraScanModal" tabindex="-1" role="dialog" aria-labelledby="cameraScanModalLabel">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header" style="background:#2c3e50; color:#fff; border-radius:4px 4px 0 0;">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff; opacity:1;"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="cameraScanModalLabel"><i class="fa fa-camera"></i> Scan Barcode with Camera</h4>
+        <div class="row" style="margin-top: 15px;">
+            <div class="col-xs-12 text-center">
+                <ul class="pagination pagination-sm" id="worksheet_pagination" style="margin: 0;"></ul>
             </div>
-            <div class="modal-body">
-                <p class="text-muted" style="font-size:13px;">Point your camera at a barcode. It will be detected and added automatically.</p>
-                <div id="camera_preview_container">
-                    <div id="reader"></div>
-                    <div class="camera-scan-line"></div>
+        </div>
+        <hr>
+        <div class="row" style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 15px;">
+            <button type="button" class="btn btn-primary btn-lg btn-flat" id="btn_save_submit" style="min-width: 150px; font-weight: bold;">
+                <i class="fa fa-save"></i> Save & Submit
+            </button>
+            <button type="button" class="btn btn-danger btn-lg btn-flat" id="btn_reset_worksheet" style="min-width: 150px; font-weight: bold;">
+                <i class="fa fa-refresh"></i> Reset All Counts
+            </button>
+        </div>
+        @endcomponent
+    </section>
+
+    <!-- Floating Auto Save Status Indicator -->
+    <div class="save-status-container" id="save_status">
+        <span id="save_status_text"><i class="fa fa-spinner fa-spin"></i> Saving...</span>
+    </div>
+
+    <!-- Camera Scanner Modal -->
+    <div class="modal fade" id="cameraScanModal" tabindex="-1" role="dialog" aria-labelledby="cameraScanModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background:#2c3e50; color:#fff; border-radius:4px 4px 0 0;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"
+                        style="color:#fff; opacity:1;"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="cameraScanModalLabel"><i class="fa fa-camera"></i> Scan Barcode with Camera
+                    </h4>
                 </div>
-                <div id="camera_result_feedback" class="text-center"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" id="btn_stop_camera"><i class="fa fa-stop"></i> Stop Camera</button>
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size:13px;">Point your camera at a barcode. It will be detected and
+                        added automatically.</p>
+                    <div id="camera_preview_container">
+                        <div id="reader"></div>
+                        <div class="camera-scan-line"></div>
+                    </div>
+                    <div id="camera_result_feedback" class="text-center"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" id="btn_stop_camera"><i class="fa fa-stop"></i> Stop
+                        Camera</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Import Excel Modal -->
-<div class="modal fade" id="importExcelModal" tabindex="-1" role="dialog" aria-labelledby="importExcelModalLabel">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'importExcel'], [$session->id]), 'method' => 'post', 'files' => true]) !!}
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="importExcelModalLabel">Import Count Worksheet from Excel</h4>
-            </div>
-            <div class="modal-body">
-                <p>You can upload an Excel sheet to bulk import counted quantities for this session.</p>
-                <div class="form-group">
-                    <label for="excel_file">Select Excel/CSV File:</label>
-                    <input type="file" name="file" id="excel_file" required accept=".xlsx, .xls, .csv">
-                    <p class="help-block">Supported formats: .xlsx, .xls, .csv</p>
+    <!-- Import Excel Modal -->
+    <div class="modal fade" id="importExcelModal" tabindex="-1" role="dialog" aria-labelledby="importExcelModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'importExcel'], [$session->id]), 'method' => 'post', 'files' => true]) !!}
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="importExcelModalLabel">Import Count Worksheet from Excel</h4>
                 </div>
-                <div class="well well-sm">
-                    <strong>Instructions:</strong>
-                    <ul>
-                        <li>Make sure the sheet has columns for <strong>SKU</strong> and <strong>Counted Qty</strong> (notes column is optional).</li>
-                        <li>You can download a template pre-filled with all active session items to fill in:</li>
-                    </ul>
-                    <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'downloadTemplate'], [$session->id]) }}" class="btn btn-info btn-xs">
-                        <i class="fa fa-download"></i> Download Pre-filled Template
-                    </a>
+                <div class="modal-body">
+                    <p>You can upload an Excel sheet to bulk import counted quantities for this session.</p>
+                    <div class="form-group">
+                        <label for="excel_file">Select Excel/CSV File:</label>
+                        <input type="file" name="file" id="excel_file" required accept=".xlsx, .xls, .csv">
+                        <p class="help-block">Supported formats: .xlsx, .xls, .csv</p>
+                    </div>
+                    <div class="well well-sm">
+                        <strong>Instructions:</strong>
+                        <ul>
+                            <li>Make sure the sheet has columns for <strong>SKU</strong> and <strong>Counted Qty</strong>
+                                (notes column is optional).</li>
+                            <li>You can download a template pre-filled with all active session items to fill in:</li>
+                        </ul>
+                        <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'downloadTemplate'], [$session->id]) }}"
+                            class="btn btn-info btn-xs">
+                            <i class="fa fa-download"></i> Download Pre-filled Template
+                        </a>
+                    </div>
                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Upload & Import</button>
+                </div>
+                {!! Form::close() !!}
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                <button type="submit" class="btn btn-success">Upload & Import</button>
-            </div>
-            {!! Form::close() !!}
         </div>
     </div>
-</div>
+
+    <!-- Mobile Count Modal -->
+    <div class="modal fade" id="mobileCountModal" tabindex="-1" role="dialog" aria-labelledby="mobileCountModalLabel">
+        <div class="modal-dialog modal-sm" role="document" style="margin: 10px auto; max-width: 95%;">
+            <div class="modal-content"
+                style="border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                <div class="modal-header" style="background-color: #3c8dbc; color: #fff; padding: 12px 15px;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"
+                        style="color: #fff; opacity: 1;"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="mobileCountModalLabel"
+                        style="font-weight: bold; font-size: 16px; margin: 0;"><i class="fa fa-pencil-square-o"></i> Enter
+                        Count</h4>
+                </div>
+                <div class="modal-body" style="padding: 15px 20px;">
+                    <!-- Product Information -->
+                    <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <h5 id="modal_product_name"
+                            style="font-weight: bold; margin: 0 0 5px 0; font-size: 15px; color: #333;">Product Name</h5>
+                        <span id="modal_product_sku" class="text-muted" style="font-size: 13px;">SKU: 12345</span>
+                    </div>
+
+                    <!-- Count Input Block -->
+                    <div class="form-group text-center" style="margin-bottom: 20px;">
+                        <label id="modal_qty_label"
+                            style="font-size: 14px; font-weight: bold; display: block; margin-bottom: 10px;">Counted
+                            Quantity</label>
+                        <div class="input-group input-group-lg" style="max-width: 220px; margin: 0 auto;">
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-default btn-flat" id="modal_btn_minus"
+                                    style="height: 46px; width: 46px; font-size: 18px; padding: 0;"><i
+                                        class="fa fa-minus"></i></button>
+                            </span>
+                            <input type="number" id="modal_qty_input" class="form-control text-center"
+                                style="height: 46px; font-size: 20px; font-weight: bold;" step="any" min="0">
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-default btn-flat" id="modal_btn_plus"
+                                    style="height: 46px; width: 46px; font-size: 18px; padding: 0;"><i
+                                        class="fa fa-plus"></i></button>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Note Input Block -->
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="modal_note_input" style="font-size: 13px; font-weight: bold;">Note</label>
+                        <input type="text" id="modal_note_input" class="form-control" placeholder="Add note here...">
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 10px 15px; background-color: #f9f9f9; display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-default btn-flat" data-dismiss="modal"
+                        style="flex: 1; height: 40px; font-weight: bold; margin: 0;">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-flat" id="modal_btn_save"
+                        style="flex: 2; height: 40px; font-weight: bold; margin: 0;">Save & Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('javascript')
-<!-- html5-qrcode library for camera barcode scanning -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // ── Barcode text input scanning ────────────────────────────────
-        $('#barcode_scanner').on('keypress', function(e) {
-            if (e.which === 13) {
-                e.preventDefault();
+    <!-- html5-qrcode library for camera barcode scanning -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // ── Barcode text input scanning & filtering ────────────────────
+            $('#barcode_scanner').on('keypress', function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    scanBarcode($('#barcode_scanner').val().trim());
+                }
+            });
+
+            $('#barcode_scanner').on('input', function () {
+                var query = $(this).val().toLowerCase().trim();
+                filterTableRows(query);
+            });
+
+            $('#btn_search_barcode').on('click', function () {
                 scanBarcode($('#barcode_scanner').val().trim());
-            }
-        });
+            });
 
-        $('#btn_search_barcode').on('click', function() {
-            scanBarcode($('#barcode_scanner').val().trim());
-        });
+            $('#btn_clear_search').on('click', function () {
+                $('#barcode_scanner').val('');
+                filterTableRows('');
+                $('#barcode_scanner').focus();
+            });
 
-        // ── Camera scanning ───────────────────────────────────────────
-        var html5QrCode = null;
-        var cameraActive = false;
-        var lastScanned = '';
-        var scanCooldown = false;
+            var currentPage = 1;
+            var pageSize = 25;
 
-        $('#btn_camera_scan').on('click', function() {
-            $('#cameraScanModal').modal('show');
-        });
+            function updatePagination() {
+                var visibleRows = $('#worksheet_body tr').filter(function () {
+                    return $(this).data('filtered-out') !== true;
+                });
 
-        $('#cameraScanModal').on('shown.bs.modal', function() {
-            startCamera();
-        });
+                var totalEntries = visibleRows.length;
 
-        $('#cameraScanModal').on('hidden.bs.modal', function() {
-            stopCamera();
-        });
-
-        $('#btn_stop_camera').on('click', function() {
-            stopCamera();
-            $('#cameraScanModal').modal('hide');
-        });
-
-        function startCamera() {
-            if (cameraActive) return;
-            $('#camera_result_feedback').html('<span class="text-muted"><i class="fa fa-spinner fa-spin"></i> Starting camera...</span>');
-
-            html5QrCode = new Html5Qrcode('reader');
-
-            Html5Qrcode.getCameras().then(function(devices) {
-                if (!devices || devices.length === 0) {
-                    $('#camera_result_feedback').html('<span class="text-danger"><i class="fa fa-times"></i> No camera found on this device.</span>');
+                if (pageSize === -1) {
+                    visibleRows.show();
+                    $('#worksheet_pagination').empty();
+                    $('#worksheet_table_info').text('Showing 1 to ' + totalEntries + ' of ' + totalEntries + ' entries');
                     return;
                 }
 
-                // Prefer back camera on mobile
-                var cameraId = devices[devices.length - 1].id;
+                var totalPages = Math.ceil(totalEntries / pageSize) || 1;
+                if (currentPage > totalPages) {
+                    currentPage = totalPages;
+                }
+                if (currentPage < 1) {
+                    currentPage = 1;
+                }
 
-                html5QrCode.start(
-                    cameraId,
-                    { fps: 10, qrbox: { width: 250, height: 150 } },
-                    function(decodedText) {
-                        // Prevent duplicate scans within 2 seconds
-                        if (scanCooldown || decodedText === lastScanned) return;
-                        lastScanned = decodedText;
-                        scanCooldown = true;
+                var start = (currentPage - 1) * pageSize;
+                var end = start + pageSize;
+                if (end > totalEntries) {
+                    end = totalEntries;
+                }
 
-                        $('#camera_result_feedback').html(
-                            '<span class="text-success"><i class="fa fa-check-circle"></i> Scanned: <strong>' +
-                            $('<span>').text(decodedText).html() +
-                            '</strong> — processing...</span>'
-                        );
+                $('#worksheet_body tr').hide();
+                visibleRows.slice(start, end).show();
 
-                        // Feed into main scan function
-                        scanBarcode(decodedText, function() {
-                            // Reset cooldown after 2s so same barcode can be scanned again
-                            setTimeout(function() {
-                                scanCooldown = false;
-                                lastScanned = '';
-                                $('#camera_result_feedback').html('<span class="text-muted">Ready to scan next item...</span>');
-                            }, 2000);
-                        });
-                    },
-                    function() { /* scan frame errors — ignore */ }
-                ).then(function() {
-                    cameraActive = true;
-                    $('#camera_result_feedback').html('<span class="text-muted">Camera active — point at a barcode.</span>');
-                }).catch(function(err) {
-                    $('#camera_result_feedback').html('<span class="text-danger"><i class="fa fa-times"></i> Cannot access camera: ' + err + '</span>');
-                });
-            }).catch(function(err) {
-                $('#camera_result_feedback').html('<span class="text-danger"><i class="fa fa-times"></i> Camera permission denied or unavailable.</span>');
+                if (totalEntries === 0) {
+                    $('#worksheet_table_info').text('Showing 0 to 0 of 0 entries');
+                } else {
+                    $('#worksheet_table_info').text('Showing ' + (start + 1) + ' to ' + end + ' of ' + totalEntries + ' entries');
+                }
+
+                var paginationUl = $('#worksheet_pagination');
+                paginationUl.empty();
+
+                if (totalPages <= 1) {
+                    return;
+                }
+
+                var prevClass = (currentPage === 1) ? 'disabled' : '';
+                paginationUl.append('<li class="' + prevClass + '"><a href="#" class="page-link" data-page="' + (currentPage - 1) + '">&laquo;</a></li>');
+
+                for (var i = 1; i <= totalPages; i++) {
+                    var activeClass = (currentPage === i) ? 'active' : '';
+                    paginationUl.append('<li class="' + activeClass + '"><a href="#" class="page-link" data-page="' + i + '">' + i + '</a></li>');
+                }
+
+                var nextClass = (currentPage === totalPages) ? 'disabled' : '';
+                paginationUl.append('<li class="' + nextClass + '"><a href="#" class="page-link" data-page="' + (currentPage + 1) + '">&raquo;</a></li>');
+            }
+
+            $(document).on('click', '#worksheet_pagination .page-link', function (e) {
+                e.preventDefault();
+                var parentLi = $(this).parent();
+                if (parentLi.hasClass('disabled') || parentLi.hasClass('active')) {
+                    return;
+                }
+                currentPage = parseInt($(this).data('page'));
+                updatePagination();
             });
-        }
 
-        function stopCamera() {
-            if (html5QrCode && cameraActive) {
-                html5QrCode.stop().then(function() {
-                    html5QrCode.clear();
-                    cameraActive = false;
-                    lastScanned = '';
-                    scanCooldown = false;
-                }).catch(function() {
-                    cameraActive = false;
+            $(document).on('change', '#worksheet_page_length', function () {
+                pageSize = parseInt($(this).val());
+                currentPage = 1;
+                updatePagination();
+            });
+
+            function filterTableRows(query) {
+                var rows = $('#worksheet_body tr');
+                if (query === '') {
+                    rows.data('filtered-out', false);
+                } else {
+                    rows.each(function () {
+                        var row = $(this);
+                        var text = row.find('td:first').text().toLowerCase();
+                        if (text.indexOf(query) !== -1) {
+                            row.data('filtered-out', false);
+                        } else {
+                            row.data('filtered-out', true);
+                        }
+                    });
+                }
+                currentPage = 1;
+                updatePagination();
+            }
+
+            function filterTableRowsForScannedId(line_id) {
+                var rows = $('#worksheet_body tr');
+                rows.each(function () {
+                    var row = $(this);
+                    if (row.attr('id') === 'line_' + line_id) {
+                        row.data('filtered-out', false);
+                    } else {
+                        row.data('filtered-out', true);
+                    }
+                });
+                currentPage = 1;
+                updatePagination();
+            }
+
+            // ── Camera scanning ───────────────────────────────────────────
+            var html5QrCode = null;
+            var cameraActive = false;
+            var lastScanned = '';
+            var scanCooldown = false;
+
+            $('#btn_camera_scan').on('click', function () {
+                $('#cameraScanModal').modal('show');
+            });
+
+            $('#cameraScanModal').on('shown.bs.modal', function () {
+                startCamera();
+            });
+
+            $('#cameraScanModal').on('hidden.bs.modal', function () {
+                stopCamera();
+            });
+
+            $('#btn_stop_camera').on('click', function () {
+                stopCamera();
+                $('#cameraScanModal').modal('hide');
+            });
+
+            function startCamera() {
+                if (cameraActive) return;
+                $('#camera_result_feedback').html('<span class="text-muted"><i class="fa fa-spinner fa-spin"></i> Starting camera...</span>');
+
+                html5QrCode = new Html5Qrcode('reader');
+
+                Html5Qrcode.getCameras().then(function (devices) {
+                    if (!devices || devices.length === 0) {
+                        $('#camera_result_feedback').html('<span class="text-danger"><i class="fa fa-times"></i> No camera found on this device.</span>');
+                        return;
+                    }
+
+                    // Prefer back camera on mobile
+                    var cameraId = devices[devices.length - 1].id;
+
+                    html5QrCode.start(
+                        cameraId,
+                        { fps: 10, qrbox: { width: 250, height: 150 } },
+                        function (decodedText) {
+                            // Prevent duplicate scans within 2 seconds
+                            if (scanCooldown || decodedText === lastScanned) return;
+                            lastScanned = decodedText;
+                            scanCooldown = true;
+
+                            $('#camera_result_feedback').html(
+                                '<span class="text-success"><i class="fa fa-check-circle"></i> Scanned: <strong>' +
+                                $('<span>').text(decodedText).html() +
+                                '</strong> — processing...</span>'
+                            );
+
+                            // Feed into main scan function
+                            scanBarcode(decodedText, function () {
+                                // Reset cooldown after 2s so same barcode can be scanned again
+                                setTimeout(function () {
+                                    scanCooldown = false;
+                                    lastScanned = '';
+                                    $('#camera_result_feedback').html('<span class="text-muted">Ready to scan next item...</span>');
+                                }, 2000);
+                            });
+                        },
+                        function () { /* scan frame errors — ignore */ }
+                    ).then(function () {
+                        cameraActive = true;
+                        $('#camera_result_feedback').html('<span class="text-muted">Camera active — point at a barcode.</span>');
+                    }).catch(function (err) {
+                        $('#camera_result_feedback').html('<span class="text-danger"><i class="fa fa-times"></i> Cannot access camera: ' + err + '</span>');
+                    });
+                }).catch(function (err) {
+                    $('#camera_result_feedback').html('<span class="text-danger"><i class="fa fa-times"></i> Camera permission denied or unavailable.</span>');
                 });
             }
-        }
 
-        // ── Core scan function (shared by text input & camera) ────────
-        function scanBarcode(barcode, callback) {
-            if (!barcode || barcode === '') return;
+            function stopCamera() {
+                if (html5QrCode && cameraActive) {
+                    html5QrCode.stop().then(function () {
+                        html5QrCode.clear();
+                        cameraActive = false;
+                        lastScanned = '';
+                        scanCooldown = false;
+                    }).catch(function () {
+                        cameraActive = false;
+                    });
+                }
+            }
 
-            showSaveStatus('Searching...', 'spinner');
+            // ── Core scan function (shared by text input & camera) ────────
+            function scanBarcode(barcode, callback) {
+                if (!barcode || barcode === '') return;
 
-            $.ajax({
-                method: "POST",
-                url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'scanBarcode'], [$session->id]) }}",
-                dataType: "json",
-                data: {
-                    barcode: barcode,
-                    _token: "{{ csrf_token() }}"
-                },
-                success: function(result) {
-                    $('#barcode_scanner').val('').focus();
-                    if (result.success) {
-                        showSaveStatus('Saved ✔', 'check');
-                        if (result.appended) {
-                            $('#worksheet_body').prepend(result.row_html);
+                showSaveStatus('Searching...', 'spinner');
+
+                $.ajax({
+                    method: "POST",
+                    url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'scanBarcode'], [$session->id]) }}",
+                    dataType: "json",
+                    data: {
+                        barcode: barcode,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function (result) {
+                        if (result.success) {
+                            showSaveStatus('Saved ✔', 'check');
+                            if (result.appended) {
+                                $('#worksheet_body').prepend(result.row_html);
+                                updateWorksheetProductsList();
+                            }
+                            // Update qty in table either way
+                            var input = $('#new_qoh_' + result.line_id);
+                            if (input.length) {
+                                updateRowInputs(result.line_id, result.new_qty);
+                            }
+
+                            // Set value, select & focus so the user can easily scan the next barcode to overwrite it
+                            $('#barcode_scanner').val(barcode).select().focus();
+
+                            // Show only this scanned product row
+                            filterTableRowsForScannedId(result.line_id);
+
+                            highlightRow(result.line_id);
+
+                            // Open count modal for easy phone counting
+                            openCountModal(result.line_id);
+                        } else {
+                            $('#barcode_scanner').val('').focus();
+                            showSaveStatus('Not Found ✖', 'exclamation-circle');
+                            toastr.error(result.message || 'Barcode not found.');
                         }
-                        // Update qty in table either way
-                        var input = $('#new_qoh_' + result.line_id);
-                        if (input.length) {
-                            updateRowInputs(result.line_id, result.new_qty);
-                        }
-                        highlightRow(result.line_id);
-                    } else {
-                        showSaveStatus('Not Found ✖', 'exclamation-circle');
-                        toastr.error(result.message || 'Barcode not found.');
+                        if (typeof callback === 'function') callback(result);
+                    },
+                    error: function () {
+                        $('#barcode_scanner').val('').focus();
+                        showSaveStatus('Error ✖', 'times');
+                        toastr.error('Error matching barcode.');
+                        if (typeof callback === 'function') callback(null);
                     }
-                    if (typeof callback === 'function') callback(result);
-                },
-                error: function() {
-                    $('#barcode_scanner').val('').focus();
-                    showSaveStatus('Error ✖', 'times');
-                    toastr.error('Error matching barcode.');
-                    if (typeof callback === 'function') callback(null);
+                });
+            }
+
+            function updateRowInputs(line_id, new_qoh) {
+                var bookQty = parseFloat($('#new_qoh_' + line_id).data('book-qty')) || 0;
+                var diff = new_qoh - bookQty;
+                var type = diff >= 0 ? '+' : '-';
+                var adjustQty = Math.abs(diff);
+
+                $('#type_' + line_id).val(type);
+                $('#qty_' + line_id).val(adjustQty.toFixed(4));
+                $('#new_qoh_' + line_id).val(new_qoh.toFixed(4));
+            }
+
+            // ── Highlight scanned row ──────────────────────────────────────
+            function highlightRow(line_id) {
+                var row = $('#line_' + line_id);
+                if (!row.length) return;
+                row.addClass('scan-highlight');
+                $('html, body').animate({ scrollTop: row.offset().top - 150 }, 500);
+                setTimeout(function () { row.removeClass('scan-highlight'); }, 1500);
+            }
+
+            // ── Quantity +/- buttons ───────────────────────────────────────
+            $(document).on('click', '.btn-qty', function () {
+                var id = $(this).data('id');
+                var action = $(this).data('action');
+                var input = $('#qty_' + id);
+                var val = parseFloat(input.val()) || 0;
+                if (action === 'plus') {
+                    input.val(val + 1).trigger('change');
+                } else if (action === 'minus' && val > 0) {
+                    input.val(val - 1).trigger('change');
                 }
             });
-        }
 
-        function updateRowInputs(line_id, new_qoh) {
-            var bookQty = parseFloat($('#new_qoh_' + line_id).data('book-qty')) || 0;
-            var diff = new_qoh - bookQty;
-            var type = diff >= 0 ? '+' : '-';
-            var adjustQty = Math.abs(diff);
+            // ── Auto-save on qty / note change (DISABLED - Save & Submit used instead) ────────────────────────────
+            var saveTimeout = null;
+            $(document).on('change keyup', '.select-type, .input-adjust-qty', function () {
+                var id = $(this).data('id');
+                var type = $('#type_' + id).val();
+                var adjustQty = parseFloat($('#qty_' + id).val()) || 0;
+                var bookQty = parseFloat($('#new_qoh_' + id).data('book-qty')) || 0;
 
-            $('#type_' + line_id).val(type);
-            $('#qty_' + line_id).val(adjustQty.toFixed(4));
-            $('#new_qoh_' + line_id).val(new_qoh.toFixed(4));
-        }
+                var newQoh = bookQty;
+                if (type === '+') {
+                    newQoh = bookQty + adjustQty;
+                } else {
+                    newQoh = bookQty - adjustQty;
+                    if (newQoh < 0) newQoh = 0;
+                }
 
-        // ── Highlight scanned row ──────────────────────────────────────
-        function highlightRow(line_id) {
-            var row = $('#line_' + line_id);
-            if (!row.length) return;
-            row.addClass('scan-highlight');
-            $('html, body').animate({ scrollTop: row.offset().top - 150 }, 500);
-            setTimeout(function() { row.removeClass('scan-highlight'); }, 1500);
-        }
+                $('#new_qoh_' + id).val(newQoh.toFixed(4));
+            });
 
-        // ── Quantity +/- buttons ───────────────────────────────────────
-        $(document).on('click', '.btn-qty', function() {
-            var id     = $(this).data('id');
-            var action = $(this).data('action');
-            var input  = $('#qty_' + id);
-            var val    = parseFloat(input.val()) || 0;
-            if (action === 'plus') {
-                input.val(val + 1).trigger('change');
-            } else if (action === 'minus' && val > 0) {
-                input.val(val - 1).trigger('change');
+            $(document).on('change', '.input-note', function () {
+                // DOM updated automatically via default input behavior
+            });
+
+            $(document).on('change keyup', '.input-new-qoh', function () {
+                if ($(this).attr('readonly')) return;
+            });
+
+            function saveProgress(line_id) {
+                var qty = $('#new_qoh_' + line_id).val();
+                var note = $('#note_' + line_id).val();
+                showSaveStatus('Saving...', 'spinner');
+                if (saveTimeout) clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(function () {
+                    $.ajax({
+                        method: "POST",
+                        url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'], [$session->id]) }}",
+                        dataType: "json",
+                        data: { line_id: line_id, quantity: qty, note: note, _token: "{{ csrf_token() }}" },
+                        success: function (result) {
+                            showSaveStatus(result.success ? 'Saved ✔' : 'Error ✖', result.success ? 'check' : 'times');
+                            if (!result.success) toastr.error('Failed to save progress.');
+                        },
+                        error: function () {
+                            showSaveStatus('Error ✖', 'times');
+                            toastr.error('Network error during auto-save.');
+                        }
+                    });
+                }, 500);
             }
-        });
 
-        // ── Auto-save on qty / note change ────────────────────────────
-        var saveTimeout = null;
-        $(document).on('change keyup', '.select-type, .input-adjust-qty', function() {
-            var id = $(this).data('id');
-            var type = $('#type_' + id).val();
-            var adjustQty = parseFloat($('#qty_' + id).val()) || 0;
-            var bookQty = parseFloat($('#new_qoh_' + id).data('book-qty')) || 0;
-
-            var newQoh = bookQty;
-            if (type === '+') {
-                newQoh = bookQty + adjustQty;
-            } else {
-                newQoh = bookQty - adjustQty;
-                if (newQoh < 0) newQoh = 0;
+            // ── Save-status floating toast ────────────────────────────────
+            function showSaveStatus(text, icon) {
+                var statusDiv = $('#save_status');
+                var statusText = $('#save_status_text');
+                var spin = (icon === 'spinner') ? ' fa-spin' : '';
+                statusText.html('<i class="fa fa-' + icon + spin + '"></i> ' + text);
+                statusDiv.fadeIn(300);
+                if (icon !== 'spinner') {
+                    setTimeout(function () { statusDiv.fadeOut(300); }, 2000);
+                }
             }
 
-            $('#new_qoh_' + id).val(newQoh.toFixed(4));
-            saveProgress(id);
-        });
+            updatePagination();
 
-        $(document).on('change', '.input-note', function() {
-            saveProgress($(this).data('id'));
-        });
+            // ── Mobile / Smart Phone Popup Counting Logic ───────────────────
+            var worksheetProducts = [];
+            function updateWorksheetProductsList() {
+                worksheetProducts = [];
+                $('#worksheet_body tr').each(function () {
+                    var row = $(this);
+                    var id = row.attr('id').replace('line_', '');
+                    var firstTd = row.find('td:first');
+                    var nameText = firstTd.find('strong').text().trim();
+                    var fullText = firstTd.text();
+                    var skuMatch = fullText.match(/\(([^)]+)\)/);
+                    var skuText = skuMatch ? skuMatch[1] : '';
 
-        function saveProgress(line_id) {
-            var qty  = $('#new_qoh_' + line_id).val();
-            var note = $('#note_' + line_id).val();
-            showSaveStatus('Saving...', 'spinner');
-            if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(function() {
+                    worksheetProducts.push({
+                        label: nameText + ' (' + skuText + ')',
+                        value: nameText,
+                        sku: skuText,
+                        line_id: id,
+                        name: nameText
+                    });
+                });
+            }
+
+            updateWorksheetProductsList();
+
+            $('#barcode_scanner').autocomplete({
+                source: function (request, response) {
+                    var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+                    response($.grep(worksheetProducts, function (value) {
+                        return matcher.test(value.name) || matcher.test(value.sku);
+                    }));
+                },
+                minLength: 2,
+                select: function (event, ui) {
+                    event.preventDefault();
+                    $('#barcode_scanner').val('');
+                    openCountModal(ui.item.line_id);
+                }
+            });
+
+            // Tap row to open popup
+            $(document).on('click', '#worksheet_body tr', function (e) {
+                if ($(e.target).closest('input, select, button, a').length) {
+                    return;
+                }
+                var line_id = $(this).attr('id').replace('line_', '');
+                openCountModal(line_id);
+            });
+
+            var activeLineId = null;
+            function openCountModal(line_id) {
+                activeLineId = line_id;
+                var row = $('#line_' + line_id);
+                if (!row.length) return;
+
+                var productName = row.find('td:first strong').text().trim();
+                var fullText = row.find('td:first').text();
+                var skuMatch = fullText.match(/\(([^)]+)\)/);
+                var productSku = skuMatch ? skuMatch[1] : '';
+
+                var countedQty = parseFloat($('#new_qoh_' + line_id).val()) || 0;
+                var note = $('#note_' + line_id).val() || '';
+
+                $('#modal_product_name').text(productName);
+                $('#modal_product_sku').text('SKU: ' + productSku);
+                $('#modal_qty_input').val(countedQty);
+                $('#modal_note_input').val(note);
+
+                $('#mobileCountModal').modal('show');
+
+                setTimeout(function () {
+                    $('#modal_qty_input').focus().select();
+                }, 500);
+            }
+
+            $('#modal_btn_plus').on('click', function () {
+                var val = parseFloat($('#modal_qty_input').val()) || 0;
+                $('#modal_qty_input').val(val + 1);
+            });
+
+            $('#modal_btn_minus').on('click', function () {
+                var val = parseFloat($('#modal_qty_input').val()) || 0;
+                if (val > 0) {
+                    $('#modal_qty_input').val(val - 1);
+                }
+            });
+
+            $('#modal_btn_save').on('click', function () {
+                if (activeLineId === null) return;
+
+                var qty = parseFloat($('#modal_qty_input').val()) || 0;
+                var note = $('#modal_note_input').val() || '';
+
+                var isBlindCount = {{ $session->blind_count ? 'true' : 'false' }};
+
+                if (isBlindCount) {
+                    $('#new_qoh_' + activeLineId).val(qty.toFixed(4));
+                } else {
+                    var bookQty = parseFloat($('#new_qoh_' + activeLineId).data('book-qty')) || 0;
+                    var diff = qty - bookQty;
+                    var type = diff >= 0 ? '+' : '-';
+                    var adjustQty = Math.abs(diff);
+
+                    $('#type_' + activeLineId).val(type);
+                    $('#qty_' + activeLineId).val(adjustQty.toFixed(4));
+                    $('#new_qoh_' + activeLineId).val(qty.toFixed(4));
+                }
+
+                $('#note_' + activeLineId).val(note);
+
+                $('#mobileCountModal').modal('hide');
+
+                setTimeout(function () {
+                    $('#barcode_scanner').val('').focus();
+                }, 300);
+            });
+
+            // Handle Save & Submit bulk post
+            $('#btn_save_submit').on('click', function() {
+                var btn = $(this);
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+                showSaveStatus('Saving worksheet...', 'spinner');
+                
+                var lines = [];
+                $('#worksheet_body tr').each(function() {
+                    var row = $(this);
+                    var line_id = row.attr('id').replace('line_', '');
+                    var qty = $('#new_qoh_' + line_id).val();
+                    var note = $('#note_' + line_id).val();
+                    
+                    lines.push({
+                        line_id: line_id,
+                        quantity: qty,
+                        note: note
+                    });
+                });
+                
                 $.ajax({
                     method: "POST",
                     url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'], [$session->id]) }}",
                     dataType: "json",
-                    data: { line_id: line_id, quantity: qty, note: note, _token: "{{ csrf_token() }}" },
+                    data: {
+                        lines: lines,
+                        _token: "{{ csrf_token() }}"
+                    },
                     success: function(result) {
-                        showSaveStatus(result.success ? 'Saved ✔' : 'Error ✖', result.success ? 'check' : 'times');
-                        if (!result.success) toastr.error('Failed to save progress.');
+                        if (result.success) {
+                            showSaveStatus('Saved ✔', 'check');
+                            toastr.success('Worksheet saved successfully.');
+                            window.location.href = "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}";
+                        } else {
+                            btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save & Submit');
+                            showSaveStatus('Error ✖', 'times');
+                            toastr.error(result.message || 'Failed to save worksheet.');
+                        }
                     },
                     error: function() {
+                        btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save & Submit');
                         showSaveStatus('Error ✖', 'times');
-                        toastr.error('Network error during auto-save.');
+                        toastr.error('Network error while saving worksheet.');
                     }
                 });
-            }, 500);
-        }
+            });
 
-        // ── Save-status floating toast ────────────────────────────────
-        function showSaveStatus(text, icon) {
-            var statusDiv  = $('#save_status');
-            var statusText = $('#save_status_text');
-            var spin = (icon === 'spinner') ? ' fa-spin' : '';
-            statusText.html('<i class="fa fa-' + icon + spin + '"></i> ' + text);
-            statusDiv.fadeIn(300);
-            if (icon !== 'spinner') {
-                setTimeout(function() { statusDiv.fadeOut(300); }, 2000);
-            }
-        }
-    });
-</script>
+            $('#modal_qty_input, #modal_note_input').on('keypress', function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    $('#modal_btn_save').trigger('click');
+                }
+            });
+
+            // Handle Reset All Counts
+            $('#btn_reset_worksheet').on('click', function() {
+                swal({
+                    title: "Are you sure you want to reset all counted quantities?",
+                    text: "This will set all your counted quantities on this worksheet back to 0.",
+                    icon: "warning",
+                    buttons: true,
+                    dangerMode: true,
+                }).then((willReset) => {
+                    if (willReset) {
+                        showSaveStatus('Resetting...', 'spinner');
+                        
+                        var rows = $('#worksheet_body tr');
+                        var totalRows = rows.length;
+                        var processed = 0;
+                        
+                        if (totalRows === 0) {
+                            showSaveStatus('Reset ✔', 'check');
+                            return;
+                        }
+                        
+                        rows.each(function() {
+                            var row = $(this);
+                            var line_id = row.attr('id').replace('line_', '');
+                            
+                            // Reset inputs in DOM
+                            var isBlindCount = {{ $session->blind_count ? 'true' : 'false' }};
+                            if (isBlindCount) {
+                                $('#new_qoh_' + line_id).val('0.0000');
+                            } else {
+                                var bookQty = parseFloat($('#new_qoh_' + line_id).data('book-qty')) || 0;
+                                $('#type_' + line_id).val('-');
+                                $('#qty_' + line_id).val(bookQty.toFixed(4));
+                                $('#new_qoh_' + line_id).val('0.0000');
+                            }
+                            $('#note_' + line_id).val('');
+                            
+                            // Call AJAX to save progress
+                            $.ajax({
+                                method: "POST",
+                                url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'], [$session->id]) }}",
+                                dataType: "json",
+                                data: {
+                                    line_id: line_id,
+                                    quantity: 0,
+                                    note: '',
+                                    _token: "{{ csrf_token() }}"
+                                },
+                                success: function() {
+                                    processed++;
+                                    if (processed === totalRows) {
+                                        showSaveStatus('Reset Completed ✔', 'check');
+                                        toastr.success('All counted quantities reset to 0.');
+                                        updatePagination();
+                                    }
+                                },
+                                error: function() {
+                                    processed++;
+                                    if (processed === totalRows) {
+                                        showSaveStatus('Reset Error ✖', 'times');
+                                        toastr.error('Some lines failed to reset.');
+                                        updatePagination();
+                                    }
+                                }
+                            });
+                        });
+                    }
+                });
+            });
+        });
+    </script>
 @endsection

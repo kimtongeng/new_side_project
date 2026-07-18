@@ -1585,5 +1585,6 @@ return [
     "edit_rename" => "Edit Rename",
     "selling_price" => "Selling price",
     "edit_selling_price" => "Edit Selling Price",
-    "selling_price_less_than_cost_price" => "Selling price cannot be less than cost price"
+    "selling_price_less_than_cost_price" => "Selling price cannot be less than cost price",
+    "user_level" => "User Level"
 ];

@@ -10,6 +10,16 @@
 
     <div class="modal-body">
             <div class="form-group">
+                {!! Form::label('location_id', __( 'business.business_location' ) .":") !!}
+                {!! Form::select('location_id', $business_locations, $account->location_id, ['class' => 'form-control select2', 'placeholder' => __( 'messages.please_select' ), 'style' => 'width:100%' ]); !!}
+            </div>
+
+            <div class="form-group">
+                {!! Form::label('user_level', __( 'lang_v1.user_level' ) .":") !!}
+                {!! Form::select('user_level', $roles, $account->user_level, ['class' => 'form-control select2', 'placeholder' => __( 'messages.please_select' ), 'style' => 'width:100%' ]); !!}
+            </div>
+
+            <div class="form-group">
                 {!! Form::label('name', __( 'lang_v1.name' ) .":*") !!}
                 {!! Form::text('name', $account->name, ['class' => 'form-control', 'required','placeholder' => __( 'lang_v1.name' ) ]); !!}
             </div>

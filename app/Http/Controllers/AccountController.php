@@ -14,6 +14,7 @@ use App\Utils\Util;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Spatie\Permission\Models\Role;
 use Yajra\DataTables\Facades\DataTables;
 
 class AccountController extends Controller
@@ -64,6 +65,8 @@ class AccountController extends Controller
                     'pat.id'
                 )
                 ->leftJoin('users AS u', 'accounts.created_by', '=', 'u.id')
+                ->leftJoin('business_locations AS bl', 'accounts.location_id', '=', 'bl.id')
+                ->leftJoin('roles AS r', 'accounts.user_level', '=', 'r.id')
                 ->where('accounts.business_id', $business_id)
                 ->select([
                     'accounts.name',
@@ -75,6 +78,8 @@ class AccountController extends Controller
                     'pat.name as parent_account_type_name',
                     'accounts.account_details',
                     'is_closed',
+                    'bl.name as location_name',
+                    'r.name as role_name',
                     DB::raw("SUM( IF(AT.type='credit', amount, -1*amount) ) as balance"),
                     DB::raw("CONCAT(COALESCE(u.surname, ''),' ',COALESCE(u.first_name, ''),' ',COALESCE(u.last_name,'')) as added_by"),
                 ]);
@@ -101,8 +106,22 @@ class AccountController extends Controller
                 $account_ids = array_unique($account_ids);
             }
 
-            if (! $this->moduleUtil->is_admin(auth()->user(), $business_id) && $permitted_locations != 'all') {
-                $accounts->whereIn('accounts.id', $account_ids);
+            if (! $this->moduleUtil->is_admin(auth()->user(), $business_id)) {
+                if ($permitted_locations != 'all') {
+                    $accounts->where(function ($q) use ($permitted_locations, $account_ids) {
+                        $q->whereIn('accounts.location_id', $permitted_locations)
+                          ->orWhereNull('accounts.location_id');
+                        if (!empty($account_ids)) {
+                            $q->orWhereIn('accounts.id', $account_ids);
+                        }
+                    });
+                }
+
+                $user_role_ids = auth()->user()->roles()->pluck('id')->toArray();
+                $accounts->where(function ($q) use ($user_role_ids) {
+                    $q->whereIn('accounts.user_level', $user_role_ids)
+                      ->orWhereNull('accounts.user_level');
+                });
             }
 
             $is_closed = request()->input('account_status') == 'closed' ? 1 : 0;
@@ -131,6 +150,19 @@ class AccountController extends Controller
                     } else {
                         return $row->name;
                     }
+                })
+                ->editColumn('location_name', function ($row) {
+                    return $row->location_name ?: __('report.all_locations');
+                })
+                ->editColumn('role_name', function ($row) use ($business_id) {
+                    if (empty($row->role_name)) {
+                        return __('messages.all');
+                    }
+                    $role = str_replace('#'.$business_id, '', $row->role_name);
+                    if (in_array($role, ['Admin', 'Cashier'])) {
+                        $role = __('lang_v1.'.$role);
+                    }
+                    return $role;
                 })
                 ->editColumn('balance', function ($row) {
                     return '<span class="balance" data-orig-value="' . $row->balance . '">' . $this->commonUtil->num_f($row->balance, true) . '</span>';
@@ -217,8 +249,20 @@ class AccountController extends Controller
             ->with(['sub_types'])
             ->get();
 
+        $business_locations = BusinessLocation::forDropdown($business_id);
+        
+        $roles_array = Role::where('business_id', $business_id)->get()->pluck('name', 'id');
+        $roles = [];
+        $is_admin = $this->moduleUtil->is_admin(auth()->user(), $business_id);
+        foreach ($roles_array as $key => $value) {
+            if (! $is_admin && $value == 'Admin#'.$business_id) {
+                continue;
+            }
+            $roles[$key] = str_replace('#'.$business_id, '', $value);
+        }
+
         return view('account.create')
-            ->with(compact('account_types'));
+            ->with(compact('account_types', 'business_locations', 'roles'));
     }
 
     /**
@@ -235,11 +279,18 @@ class AccountController extends Controller
 
         if (request()->ajax()) {
             try {
-                $input = $request->only(['name', 'account_number', 'note', 'account_type_id', 'account_details']);
+                $input = $request->only(['name', 'account_number', 'note', 'account_type_id', 'account_details', 'location_id', 'user_level']);
                 $business_id = $request->session()->get('user.business_id');
                 $user_id = $request->session()->get('user.id');
                 $input['business_id'] = $business_id;
                 $input['created_by'] = $user_id;
+
+                if (empty($input['location_id'])) {
+                    $input['location_id'] = null;
+                }
+                if (empty($input['user_level'])) {
+                    $input['user_level'] = null;
+                }
 
                 $account = Account::create($input);
 
@@ -558,8 +609,20 @@ class AccountController extends Controller
                 ->with(['sub_types'])
                 ->get();
 
+            $business_locations = BusinessLocation::forDropdown($business_id);
+            
+            $roles_array = Role::where('business_id', $business_id)->get()->pluck('name', 'id');
+            $roles = [];
+            $is_admin = $this->moduleUtil->is_admin(auth()->user(), $business_id);
+            foreach ($roles_array as $key => $value) {
+                if (! $is_admin && $value == 'Admin#'.$business_id) {
+                    continue;
+                }
+                $roles[$key] = str_replace('#'.$business_id, '', $value);
+            }
+
             return view('account.edit')
-                ->with(compact('account', 'account_types'));
+                ->with(compact('account', 'account_types', 'business_locations', 'roles'));
         }
     }
 
@@ -577,7 +640,7 @@ class AccountController extends Controller
 
         if (request()->ajax()) {
             try {
-                $input = $request->only(['name', 'account_number', 'note', 'account_type_id', 'account_details']);
+                $input = $request->only(['name', 'account_number', 'note', 'account_type_id', 'account_details', 'location_id', 'user_level']);
 
                 $business_id = request()->session()->get('user.business_id');
 
@@ -588,11 +651,20 @@ class AccountController extends Controller
                 $old_account = $account->replicate();
                 $old_account->load(['account_type', 'account_type.parent_account']);
 
+                if (empty($input['location_id'])) {
+                    $input['location_id'] = null;
+                }
+                if (empty($input['user_level'])) {
+                    $input['user_level'] = null;
+                }
+
                 $account->name            = $input['name'];
                 $account->account_number  = $input['account_number'];
                 $account->note            = $input['note'];
                 $account->account_type_id = $input['account_type_id'];
                 $account->account_details = $input['account_details'];
+                $account->location_id     = $input['location_id'];
+                $account->user_level      = $input['user_level'];
                 $account->save();
 
                 // ── Telegram Notification ──────────────────────────

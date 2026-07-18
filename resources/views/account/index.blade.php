@@ -86,24 +86,26 @@
                                                 <table class="table table-bordered table-striped" id="other_account_table">
                                                     <thead>
                                                         <tr>
-                                                            <th>@lang('lang_v1.name')</th>
-                                                            <th>@lang('lang_v1.account_type')</th>
-                                                            <th>@lang('lang_v1.account_sub_type')</th>
-                                                            <th>@lang('account.account_number')</th>
-                                                            <th>@lang('brand.note')</th>
-                                                            <th>@lang('lang_v1.balance')</th>
-                                                            <th>@lang('lang_v1.account_details')</th>
-                                                            <th>@lang('lang_v1.added_by')</th>
-                                                            <th>@lang('messages.action')</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tfoot>
-                                                        <tr class="bg-gray font-17 footer-total text-center">
-                                                            <td colspan="5"><strong>@lang('sale.total'):</strong></td>
-                                                            <td class="footer_total_balance"></td>
-                                                            <td colspan="3"></td>
-                                                        </tr>
-                                                    </tfoot>
+                                                             <th>@lang('lang_v1.name')</th>
+                                                             <th>@lang('lang_v1.account_type')</th>
+                                                             <th>@lang('lang_v1.account_sub_type')</th>
+                                                             <th>@lang('business.business_location')</th>
+                                                             <th>@lang('lang_v1.user_level')</th>
+                                                             <th>@lang('account.account_number')</th>
+                                                             <th>@lang('brand.note')</th>
+                                                             <th>@lang('lang_v1.balance')</th>
+                                                             <th>@lang('lang_v1.account_details')</th>
+                                                             <th>@lang('lang_v1.added_by')</th>
+                                                             <th>@lang('messages.action')</th>
+                                                         </tr>
+                                                     </thead>
+                                                     <tfoot>
+                                                         <tr class="bg-gray font-17 footer-total text-center">
+                                                             <td colspan="7"><strong>@lang('sale.total'):</strong></td>
+                                                             <td class="footer_total_balance"></td>
+                                                             <td colspan="3"></td>
+                                                         </tr>
+                                                     </tfoot>
                                                 </table>
                                             </div>
                                         </div>
@@ -334,7 +336,7 @@
                     }
                 },
                 columnDefs: [{
-                    "targets": [6, 8],
+                    "targets": [8, 10],
                     "orderable": false,
                     "searchable": false
                 }],
@@ -349,6 +351,14 @@
                     {
                         data: 'account_type_name',
                         name: 'ats.name'
+                    },
+                    {
+                        data: 'location_name',
+                        name: 'bl.name'
+                    },
+                    {
+                        data: 'role_name',
+                        name: 'r.name'
                     },
                     {
                         data: 'account_number',

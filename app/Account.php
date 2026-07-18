@@ -26,9 +26,10 @@ class Account extends Model
     {
         $query = Account::where('business_id', $business_id);
 
-        $permitted_locations = auth()->user()->permitted_locations();
+        $user = auth()->user();
+        $permitted_locations = $user ? $user->permitted_locations() : 'all';
         $account_ids = [];
-        if ($permitted_locations != 'all') {
+        if ($user && $permitted_locations != 'all') {
             $locations = BusinessLocation::where('business_id', $business_id)
                             ->whereIn('id', $permitted_locations)
                             ->get();
@@ -47,8 +48,22 @@ class Account extends Model
             $account_ids = array_unique($account_ids);
         }
 
-        if ($permitted_locations != 'all') {
-            $query->whereIn('accounts.id', $account_ids);
+        if ($user && !$user->hasRole('Admin#' . $business_id)) {
+            if ($permitted_locations != 'all') {
+                $query->where(function ($q) use ($permitted_locations, $account_ids) {
+                    $q->whereIn('accounts.location_id', $permitted_locations)
+                      ->orWhereNull('accounts.location_id');
+                    if (!empty($account_ids)) {
+                        $q->orWhereIn('accounts.id', $account_ids);
+                    }
+                });
+            }
+
+            $user_role_ids = $user->roles()->pluck('id')->toArray();
+            $query->where(function ($q) use ($user_role_ids) {
+                $q->whereIn('accounts.user_level', $user_role_ids)
+                  ->orWhereNull('accounts.user_level');
+            });
         }
 
         $can_access_account = auth()->user()->can('account.access');

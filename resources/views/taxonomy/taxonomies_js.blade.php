@@ -25,11 +25,11 @@
                     fixedHeader:false,
                     ajax: '/taxonomies?type=' + category_type,
                     columns: [
-                        { data: 'name', name: 'name', orderable: false, searchable: false },
+                        { data: 'name', name: 'name', orderable: false, searchable: true },
                         @if($cat_code_enabled)
-                            { data: 'short_code', name: 'short_code', orderable: false, searchable: false },
+                            { data: 'short_code', name: 'short_code', orderable: false, searchable: true },
                         @endif
-                        { data: 'description', name: 'description', orderable: false, searchable: false },
+                        { data: 'description', name: 'description', orderable: false, searchable: true },
                         { data: 'action', name: 'action', orderable: false, searchable: false},
                     ],
                 });

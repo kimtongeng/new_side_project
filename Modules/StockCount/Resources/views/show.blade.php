@@ -83,7 +83,10 @@
             display: flex !important;
             align-items: stretch !important;
             min-height: 90px;
+            height: 100%;
+            margin-bottom: 0px !important;
         }
+
         .info-box-icon {
             display: flex !important;
             align-items: center;
@@ -94,15 +97,21 @@
             height: auto !important;
             line-height: normal !important;
         }
+
         .info-box-content {
             display: flex;
             flex-direction: column;
             justify-content: center;
             flex-grow: 1;
+            padding: 5px 15px !important;
+            text-align: left !important;
+            align-items: flex-start !important;
+
+            margin-left: 0px;
         }
 
         /* Compact product name column with word wrapping */
-        #variance_table th:nth-child(2), 
+        #variance_table th:nth-child(2),
         #variance_table td:nth-child(2) {
             max-width: 280px !important;
             word-wrap: break-word !important;
@@ -268,26 +277,33 @@
             border: none !important;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+
         .info-box:hover {
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
         }
+
         .info-box.bg-aqua {
             background: linear-gradient(135deg, #00c6ff, #0072ff) !important;
         }
+
         .info-box.bg-red {
             background: linear-gradient(135deg, #ff512f, #dd2476) !important;
         }
+
         .info-box.bg-green {
             background: linear-gradient(135deg, #11998e, #38ef7d) !important;
         }
+
         .info-box.bg-yellow {
             background: linear-gradient(135deg, #f12711, #f5af19) !important;
         }
+
         .info-box-icon {
             background: rgba(0, 0, 0, 0.1) !important;
             color: #fff !important;
         }
+
         .info-box-text {
             color: rgba(255, 255, 255, 0.85) !important;
             font-weight: 600 !important;
@@ -296,16 +312,19 @@
             letter-spacing: 0.8px !important;
             margin-bottom: 4px;
         }
+
         .info-box-number {
             color: #ffffff !important;
             font-size: 22px !important;
             font-weight: 700 !important;
         }
+
         .progress-description {
             color: rgba(255, 255, 255, 0.9) !important;
             font-size: 13px !important;
             margin-top: 5px;
         }
+
         .progress-description span {
             color: #ffffff !important;
             font-weight: bold;
@@ -315,15 +334,43 @@
 
 @section('content')
     <section class="content-header no-print">
-        <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
-            @lang('stockcount::lang.stock_count_session'): {{ $session->name }}
-            <small class="text-muted" style="font-size: 16px; margin-left: 10px;">Ref No:
-                {{ $session->reference_no }}</small>
-            <span
-                class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active') bg-blue @else bg-gray @endif font-size-17">
-                {{ __('stockcount::lang.' . $session->status) }}
-            </span>
-        </h1>
+        <div class="row">
+            <div class="col-md-6 col-xs-12">
+                <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black" style="margin: 0; line-height: 1.2;">
+                    @lang('stockcount::lang.stock_count_session'): {{ $session->name }}
+                    @if(!empty($session->reference_no))
+                        <br><small class="text-muted" style="font-size: 14px; display: inline-block; margin-top: 5px;">Ref No:
+                            {{ $session->reference_no }}</small>
+                    @endif
+                </h1>
+            </div>
+            <div class="col-md-6 col-xs-12 text-right">
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    <span
+                        class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active' || $session->status == 'in_progress') bg-blue @elseif($session->status == 'reviewed') bg-purple @elseif($session->status == 'approved') bg-navy @elseif($session->status == 'rejected' || $session->status == 'cancelled') bg-red @else bg-gray @endif"
+                        style="font-size: 14px; padding: 6px 12px; border-radius: 4px; display: inline-block; vertical-align: middle; line-height: 20px; height: 34px; padding-top: 7px; font-weight: bold;">
+                        Status: {{ __('stockcount::lang.' . $session->status) }}
+                    </span>
+
+                    @if(auth()->user()->can('stock_count.create'))
+                        <div style="display: inline-block; vertical-align: middle;">
+                            {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']), 'method' => 'post', 'id' => 'update_status_form', 'style' => 'display:inline;']) !!}
+                            <input type="hidden" name="session_id" value="{{ $session->id }}">
+                            <select name="status" class="form-control"
+                                style="width: 140px; display: inline-block; border-radius: 4px; height: 34px; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background-color: #fff; padding: 6px 12px; box-shadow: inset 0 1px 1px rgba(0,0,0,.075);"
+                                onchange="this.form.submit()">
+                                @foreach(['draft', 'in_progress', 'completed', 'reviewed', 'approved', 'rejected', 'cancelled'] as $st)
+                                    <option value="{{ $st }}" @if($session->status == $st) selected @endif>
+                                        {{ __('stockcount::lang.' . $st) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            {!! Form::close() !!}
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
     </section>
 
     <section class="content">
@@ -341,7 +388,7 @@
                         <strong>Created At: </strong> {{ @format_datetime($session->created_at) }}
                     </div>
                     <div class="col-sm-3">
-                        @if($session->status === 'completed')
+                        @if(!empty($session->completed_at))
                             <strong>Reconciled By: </strong> {{ $session->completer->user_full_name ?? '' }}<br>
                             <strong>Reconciled At: </strong> {{ @format_datetime($session->completed_at) }}
                         @endif
@@ -354,7 +401,7 @@
                                 <i class="fa fa-arrow-left"></i> Back
                             </a>
 
-                            @if($session->status === 'active' && auth()->user()->can('stock_count.count'))
+                            @if(in_array($session->status, ['active', 'in_progress']) && auth()->user()->can('stock_count.count'))
                                 <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'worksheet'], [$session->id]) }}"
                                     class="btn btn-worksheet-custom">
                                     <i class="fa fa-edit"></i> @lang('stockcount::lang.worksheet')
@@ -374,7 +421,7 @@
                                 </button>
                             @endif
 
-                            @if($session->status === 'active' && auth()->user()->can('stock_count.reconcile'))
+                            @if(in_array($session->status, ['active', 'in_progress']) && auth()->user()->can('stock_count.reconcile'))
                                 {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'reconcile'], [$session->id]), 'method' => 'post', 'class' => 'inline-form', 'id' => 'reconcile_form']) !!}
                                 <button type="submit" class="btn btn-reconcile-custom btn-reconcile">
                                     <i class="fa fa-check-circle"></i> @lang('stockcount::lang.reconcile')
@@ -394,19 +441,19 @@
         <div class="row no-print">
             <div class="col-md-12">
                 @component('components.filters', ['title' => __('report.filters')])
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         {!! Form::label('category_id', __('product.category') . ':') !!}
-                        {!! Form::select('category_id', $categories, request()->get('category_id'), ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all')]) !!}
+                        {!! Form::select('category_id', $categories, request()->get('category_id'), ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all'), 'id' => 'filter_category_id']) !!}
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         {!! Form::label('brand_id', __('product.brand') . ':') !!}
-                        {!! Form::select('brand_id', $brands, request()->get('brand_id'), ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all')]) !!}
+                        {!! Form::select('brand_id', $brands, request()->get('brand_id'), ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all'), 'id' => 'filter_brand_id']) !!}
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-group">
                         {!! Form::label('variance_type', __('stockcount::lang.variance_type') . ':') !!}
                         {!! Form::select('variance_type', [
@@ -415,22 +462,7 @@
         'shortage' => __('stockcount::lang.shortage'),
         'surplus' => __('stockcount::lang.surplus'),
         'no_variance' => __('stockcount::lang.no_variance')
-    ], request()->get('variance_type') ?? 'all', ['class' => 'form-control select2', 'style' => 'width:100%']) !!}
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label>&nbsp;</label>
-                        <div style="display: flex; gap: 8px;">
-                            <button type="submit" class="btn btn-primary form-control" style="border-radius: 20px;">
-                                <i class="fa fa-filter"></i> @lang('stockcount::lang.filter')
-                            </button>
-                            <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}"
-                                class="btn btn-default form-control"
-                                style="border-radius: 20px; line-height: 20px; text-align: center;">
-                                Reset
-                            </a>
-                        </div>
+    ], request()->get('variance_type') ?? 'all', ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'filter_variance_type']) !!}
                     </div>
                 </div>
                 @endcomponent
@@ -439,13 +471,13 @@
         {!! Form::close() !!}
 
         <!-- Summary cards for Variance & Financial Impact -->
-        <div class="row">
+        <div class="row" style="display: flex; flex-wrap: wrap; align-items: stretch; margin-bottom: 20px;">
             <div class="col-md-3 col-sm-6 col-xs-12">
                 <div class="info-box bg-aqua text-white">
                     <span class="info-box-icon"><i class="fa fa-list"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Total Items Counted</span>
-                        <span class="info-box-number">{{ $summary['total_items'] }}</span>
+                        <span class="info-box-number" id="summary_total_items">{{ $summary['total_items'] }}</span>
                     </div>
                 </div>
             </div>
@@ -455,10 +487,9 @@
                     <span class="info-box-icon"><i class="fa fa-minus-circle"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Shortage Quantity</span>
-                        <span class="info-box-number">{{ number_format($summary['shortage_qty'], 2) }}</span>
+                        <span class="info-box-number" id="summary_shortage_qty">{{ number_format($summary['shortage_qty'], 2) }}</span>
                         <span class="progress-description text-white">
-                            Loss: <span class="display_currency"
-                                data-currency_symbol="true">{{ $summary['shortage_value'] }}</span>
+                            Loss: <span id="summary_shortage_value" class="display_currency" data-currency_symbol="true">{{ $summary['shortage_value'] }}</span>
                         </span>
                     </div>
                 </div>
@@ -469,10 +500,9 @@
                     <span class="info-box-icon"><i class="fa fa-plus-circle"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Surplus Quantity</span>
-                        <span class="info-box-number">{{ number_format($summary['surplus_qty'], 2) }}</span>
+                        <span class="info-box-number" id="summary_surplus_qty">{{ number_format($summary['surplus_qty'], 2) }}</span>
                         <span class="progress-description text-white">
-                            Gain: <span class="display_currency"
-                                data-currency_symbol="true">{{ $summary['surplus_value'] }}</span>
+                            Gain: <span id="summary_surplus_value" class="display_currency" data-currency_symbol="true">{{ $summary['surplus_value'] }}</span>
                         </span>
                     </div>
                 </div>
@@ -487,9 +517,9 @@
                             $net_impact = $summary['surplus_value'] - $summary['shortage_value'];
                         @endphp
                         <span class="info-box-number">
-                            <span class="display_currency" data-currency_symbol="true">{{ $net_impact }}</span>
+                            <span id="summary_net_impact" class="display_currency" data-currency_symbol="true">{{ $net_impact }}</span>
                         </span>
-                        <span class="progress-description text-white">
+                        <span class="progress-description text-white" id="summary_net_label">
                             {{ $net_impact >= 0 ? 'Surplus/Gain' : 'Shortage/Loss' }}
                         </span>
                     </div>
@@ -815,17 +845,17 @@
 
                             // Session Info Header Block
                             var metadataHtml = `
-                                         <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #cbd5e0; padding-bottom: 12px; margin-bottom: 20px; font-size: 13px; font-family: sans-serif;">
-                                             <div>
-                                                 <strong>Location:</strong> {{ $session->location->name ?? '' }}<br>
-                                                 <strong>Blind Count Mode:</strong> {{ $session->blind_count ? 'Yes' : 'No' }}
-                                             </div>
-                                             <div>
-                                                 <strong>Added By:</strong> {{ $session->creator->user_full_name ?? '' }}<br>
-                                                 <strong>Created At:</strong> {{ @format_datetime($session->created_at) }}
-                                             </div>
-                                         </div>
-                                     `;
+                                                         <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #cbd5e0; padding-bottom: 12px; margin-bottom: 20px; font-size: 13px; font-family: sans-serif;">
+                                                             <div>
+                                                                 <strong>Location:</strong> {{ $session->location->name ?? '' }}<br>
+                                                                 <strong>Blind Count Mode:</strong> {{ $session->blind_count ? 'Yes' : 'No' }}
+                                                             </div>
+                                                             <div>
+                                                                 <strong>Added By:</strong> {{ $session->creator->user_full_name ?? '' }}<br>
+                                                                 <strong>Created At:</strong> {{ @format_datetime($session->created_at) }}
+                                                             </div>
+                                                         </div>
+                                                     `;
                             $(metadataHtml).insertBefore($(win.document.body).find('table'));
 
                             // Table Styling
@@ -957,6 +987,123 @@
                     }
                 });
             });
+
+            // ── AJAX filter (no page reload) ─────────────────────────────────
+            var filterUrl = '{{ route("stock-counts.filter-data", $session->id) }}';
+            var currencySymbol = typeof accounting !== 'undefined' ? accounting.settings.currency.symbol : '';
+
+            function formatCurrency(value) {
+                return parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function loadFilteredData() {
+                var params = {
+                    category_id:   $('#filter_category_id').val(),
+                    brand_id:      $('#filter_brand_id').val(),
+                    variance_type: $('#filter_variance_type').val()
+                };
+
+                // Show loading overlay on table
+                $('#variance_table tbody').html(
+                    '<tr><td colspan="10" class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin fa-2x"></i> Loading...</td></tr>'
+                );
+
+                $.ajax({
+                    url: filterUrl,
+                    type: 'GET',
+                    data: params,
+                    success: function (response) {
+                        // ── Update summary cards ──────────────────────────────
+                        var s = response.summary;
+                        $('#summary_total_items').text(s.total_items);
+                        $('#summary_shortage_qty').text(parseFloat(s.shortage_qty).toFixed(2));
+                        $('#summary_shortage_value').text(formatCurrency(s.shortage_value));
+                        $('#summary_surplus_qty').text(parseFloat(s.surplus_qty).toFixed(2));
+                        $('#summary_surplus_value').text(formatCurrency(s.surplus_value));
+                        var net = s.surplus_value - s.shortage_value;
+                        $('#summary_net_impact').text(formatCurrency(Math.abs(net)));
+                        $('#summary_net_label').text(net >= 0 ? 'Surplus/Gain' : 'Shortage/Loss');
+
+                        // ── Re-render table rows ──────────────────────────────
+                        var rows = response.rows;
+                        var tbody = '';
+                        if (rows.length === 0) {
+                            tbody = '<tr><td colspan="10" class="text-center text-muted" style="padding:30px;">No records found.</td></tr>';
+                        } else {
+                            $.each(rows, function (i, r) {
+                                var varianceClass = r.variance < 0 ? 'text-danger' : (r.variance > 0 ? 'text-success' : '');
+                                var varianceSign  = r.variance > 0 ? '+' : '';
+                                var finClass      = r.financial_diff < 0 ? 'text-danger' : (r.financial_diff > 0 ? 'text-success' : '');
+                                var variationHtml = r.variation_name ? ' <span class="text-muted">('+r.variation_name+')</span>' : '';
+
+                                tbody += '<tr>';
+                                tbody += '<td>'+r.index+'</td>';
+                                tbody += '<td>'+r.product_name+variationHtml+'</td>';
+                                tbody += '<td>'+r.sku+'</td>';
+                                tbody += '<td>'+parseFloat(r.book_quantity).toFixed(2)+'</td>';
+                                tbody += '<td>'+parseFloat(r.counted_quantity).toFixed(2)+'</td>';
+                                tbody += '<td class="'+varianceClass+' font-weight-bold">'+varianceSign+parseFloat(r.variance).toFixed(2)+'</td>';
+                                tbody += '<td>'+formatCurrency(r.unit_price)+'</td>';
+                                tbody += '<td class="'+finClass+' font-weight-bold">'+formatCurrency(r.financial_diff)+'</td>';
+                                tbody += '<td>'+r.counter_name+'<br><small class="text-muted">'+r.counted_at+'</small></td>';
+                                tbody += '<td>'+r.note+'</td>';
+                                tbody += '</tr>';
+                            });
+                        }
+
+                        // Destroy DataTable, replace tbody, reinitialize
+                        if ($.fn.DataTable.isDataTable('#variance_table')) {
+                            table.destroy();
+                        }
+                        $('#variance_table tbody').html(tbody);
+                        table = $('#variance_table').DataTable({
+                            pageLength: 25,
+                            aLengthMenu: [
+                                [25, 50, 100, 200, 500, 1000, -1],
+                                [25, 50, 100, 200, 500, 1000, LANG.all]
+                            ],
+                            dom: '<"row margin-bottom-20 text-center"<"col-sm-2"l><"col-sm-7"B><"col-sm-3"f> r>tip',
+                            language: {
+                                searchPlaceholder: LANG.search + ' ...',
+                                search: '',
+                                lengthMenu: LANG.show + ' _MENU_ ' + LANG.entries,
+                                emptyTable: LANG.table_emptyTable,
+                                info: LANG.table_info,
+                                infoEmpty: LANG.table_infoEmpty,
+                                loadingRecords: LANG.table_loadingRecords,
+                                processing: LANG.table_processing,
+                                zeroRecords: LANG.table_zeroRecords,
+                                paginate: {
+                                    first: LANG.first,
+                                    last: LANG.last,
+                                    next: LANG.next,
+                                    previous: LANG.previous,
+                                },
+                            },
+                            buttons: [],
+                            order: [],
+                        });
+                    },
+                    error: function () {
+                        $('#variance_table tbody').html(
+                            '<tr><td colspan="10" class="text-center text-danger" style="padding:30px;"><i class="fa fa-exclamation-triangle"></i> Failed to load data.</td></tr>'
+                        );
+                    }
+                });
+            }
+
+            $('#filter_category_id, #filter_brand_id, #filter_variance_type').on('select2:select select2:clear', function () {
+                loadFilteredData();
+            });
+            // ────────────────────────────────────────────────────────────────
+
+            // Auto print if requested via URL parameter
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('print') && urlParams.get('print') === 'true') {
+                setTimeout(function () {
+                    $('#print_variance_report').trigger('click');
+                }, 500);
+            }
         });
     </script>
 @endsection

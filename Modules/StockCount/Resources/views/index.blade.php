@@ -89,6 +89,21 @@
             flex-direction: column;
             justify-content: center;
         }
+
+        /* Prevent dropdowns from being clipped by responsive table container on desktop */
+        @media (min-width: 768px) {
+            .table-responsive {
+                overflow: visible !important;
+            }
+        }
+        
+        /* Ensure first action column is not squished */
+        #stock_count_table th:first-child,
+        #stock_count_table td:first-child {
+            width: 85px !important;
+            min-width: 85px !important;
+            text-align: center;
+        }
     </style>
 @endsection
 
@@ -116,8 +131,11 @@
                 {!! Form::label('filter_status', __('sale.status') . ':') !!}
                 {!! Form::select('filter_status', [
         'draft' => __('stockcount::lang.draft'),
-        'active' => __('stockcount::lang.active'),
+        'in_progress' => __('stockcount::lang.in_progress'),
         'completed' => __('stockcount::lang.completed'),
+        'reviewed' => __('stockcount::lang.reviewed'),
+        'approved' => __('stockcount::lang.approved'),
+        'rejected' => __('stockcount::lang.rejected'),
         'cancelled' => __('stockcount::lang.cancelled')
     ], null, [
         'class' => 'form-control select2',
@@ -188,6 +206,10 @@
         <div class="box-tools" style="display: flex; gap: 5px; align-items: center;">
 
             @can('stock_count.create')
+                <a class="btn btn-default"
+                    href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'getSettings']) }}">
+                    <i class="fa fa-cog"></i> Settings
+                </a>
                 <a class="btn btn-primary"
                     href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'create']) }}">
                     <i class="fa fa-plus"></i> @lang('messages.add')
@@ -200,21 +222,85 @@
             <table class="table table-bordered table-striped" id="stock_count_table" style="width: 100%;">
                 <thead>
                     <tr>
+                        <th>@lang('messages.action')</th>
                         <th>@lang('stockcount::lang.reference_no')</th>
                         <th>@lang('stockcount::lang.session_name')</th>
                         <th>@lang('stockcount::lang.location')</th>
                         <th>@lang('stockcount::lang.status')</th>
+                        <th>Completion</th>
                         <th>Total Items</th>
                         <th>Items Counted</th>
                         <th>@lang('stockcount::lang.blind_count')</th>
                         <th>Added By</th>
                         <th>Created At</th>
-                        <th>@lang('messages.action')</th>
                     </tr>
                 </thead>
             </table>
         </div>
         @endcomponent
+
+        <!-- Update Status Modal -->
+        <div class="modal fade" id="update_status_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    {!! Form::open(['url' => '', 'method' => 'post', 'id' => 'update_status_modal_form']) !!}
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Update Status</h4>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="session_id" id="modal_session_id">
+                        <div class="form-group">
+                            {!! Form::label('modal_status', 'Status:') !!}
+                            <select name="status" id="modal_status" class="form-control" style="width: 100%;">
+                                <option value="draft">Draft</option>
+                                <option value="in_progress">In progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="reviewed">Reviewed</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Update</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                    {!! Form::close() !!}
+                </div>
+            </div>
+        </div>
+        <!-- Compare Sessions Modal -->
+        <div class="modal fade" id="compare_sessions_modal" role="dialog" aria-labelledby="gridSystemModalLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'compare']), 'method' => 'get', 'id' => 'compare_sessions_form']) !!}
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Compare Worksheet Sessions</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Session A (Current):</label>
+                            <input type="text" id="compare_session_a_name" class="form-control" readonly style="background-color: #eee;">
+                            <input type="hidden" name="session_1" id="compare_session_a_id">
+                        </div>
+                        <div class="form-group">
+                            <label for="compare_session_b_id">Select Session B to Compare with:*</label>
+                            <select name="session_2" id="compare_session_b_id" class="form-control select2" style="width: 100%;">
+                                <option value="">Please Select</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Compare</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                    {!! Form::close() !!}
+                </div>
+            </div>
+        </div>
     </section>
 
 @endsection
@@ -240,16 +326,17 @@
                     }
                 },
                 columns: [
+                    { data: 'action', name: 'action', orderable: false, searchable: false },
                     { data: 'reference_no', name: 'reference_no' },
                     { data: 'name', name: 'name' },
                     { data: 'location.name', name: 'location.name', defaultContent: '' },
                     { data: 'status', name: 'status', searchable: false },
+                    { data: 'completion', name: 'completion', orderable: false, searchable: false },
                     { data: 'total_items', name: 'total_items', orderable: false, searchable: false },
                     { data: 'items_counted', name: 'items_counted', orderable: false, searchable: false },
                     { data: 'blind_count', name: 'blind_count', orderable: false, searchable: false },
                     { data: 'creator.first_name', name: 'creator.first_name', defaultContent: '' },
-                    { data: 'created_at', name: 'created_at' },
-                    { data: 'action', name: 'action', orderable: false, searchable: false }
+                    { data: 'created_at', name: 'created_at' }
                 ],
                 rawColumns: ['action', 'status', 'created_at']
             });
@@ -309,6 +396,81 @@
                         });
                     }
                 });
+            });
+
+            $(document).on('click', '.btn_update_status', function (e) {
+                e.preventDefault();
+                var session_id = $(this).data('session_id');
+                var status = $(this).data('status');
+                var action = $(this).data('href');
+                
+                $('#modal_session_id').val(session_id);
+                $('#modal_status').val(status);
+                $('#update_status_modal_form').attr('action', action);
+                
+                $('#update_status_modal').modal('show');
+            });
+            
+            $(document).on('submit', '#update_status_modal_form', function(e) {
+                e.preventDefault();
+                var data = $(this).serialize();
+                var url = $(this).attr('action');
+                
+                $.ajax({
+                    method: 'POST',
+                    url: url,
+                    dataType: 'json',
+                    data: data,
+                    success: function(result) {
+                        if (result.success) {
+                            toastr.success(result.msg);
+                            $('#update_status_modal').modal('hide');
+                            stock_count_table.ajax.reload();
+                        } else {
+                            toastr.error(result.msg);
+                        }
+                    }
+                });
+            });
+
+            $(document).on('click', '.btn_compare_worksheet', function (e) {
+                e.preventDefault();
+                var session_id = $(this).data('session_id');
+                var session_name = $(this).data('session_name');
+
+                $('#compare_session_a_id').val(session_id);
+                $('#compare_session_a_name').val(session_name);
+
+                // Fetch other sessions to compare
+                $.ajax({
+                    url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'getAllSessionsJson']) }}",
+                    data: { exclude_id: session_id },
+                    dataType: 'json',
+                    success: function (data) {
+                        var select = $('#compare_session_b_id');
+                        select.empty();
+                        select.append('<option value="">Please Select</option>');
+                        $.each(data, function (index, item) {
+                            var text = item.name + (item.reference_no ? ' (' + item.reference_no + ')' : '');
+                            select.append('<option value="' + item.id + '">' + text + '</option>');
+                        });
+                        if (select.hasClass('select2-hidden-accessible')) {
+                            select.select2('destroy');
+                        }
+                        select.select2();
+                        select.trigger('change');
+                        $('#compare_sessions_modal').modal('show');
+                    }
+                });
+            });
+
+            $(document).on('submit', '#compare_sessions_form', function (e) {
+                var session_2 = $('#compare_session_b_id').val();
+                if (!session_2) {
+                    e.preventDefault();
+                    toastr.error('Please select Session B to compare.');
+                    return false;
+                }
             });
         });
     </script>

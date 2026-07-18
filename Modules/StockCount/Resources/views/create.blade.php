@@ -40,7 +40,10 @@
             <div class="col-md-12">
                 <div class="checkbox">
                     <label>
-                        {!! Form::checkbox('blind_count', 1, false, ['class' => 'input-icheck']) !!}
+                        @php
+                            $default_blind_count = isset($settings['stock_count_show_expected_qty']) ? !$settings['stock_count_show_expected_qty'] : false;
+                        @endphp
+                        {!! Form::checkbox('blind_count', 1, $default_blind_count, ['class' => 'input-icheck']) !!}
                         <strong>@lang('stockcount::lang.blind_count')</strong>
                     </label>
                     <p class="help-block">@lang('stockcount::lang.blind_count_help')</p>

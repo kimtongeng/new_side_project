@@ -65,7 +65,7 @@ class StockCountController extends Controller
             }
             if (!empty(request()->get('start_date')) && !empty(request()->get('end_date'))) {
                 $sessions->whereDate('created_at', '>=', request()->get('start_date'))
-                         ->whereDate('created_at', '<=', request()->get('end_date'));
+                    ->whereDate('created_at', '<=', request()->get('end_date'));
             }
 
             $dt = DataTables::of($sessions)
@@ -75,13 +75,13 @@ class StockCountController extends Controller
                                     ' . __('messages.action') . '
                                     <span class="caret"></span>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-right" role="menu">';
+                                <ul class="dropdown-menu dropdown-menu-left" role="menu">';
 
                     if (auth()->user()->can('stock_count.view')) {
                         $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$row->id]) . '"><i class="fa fa-eye"></i> ' . __('messages.view') . '</a></li>';
                     }
 
-                    if ($row->status === 'active' && auth()->user()->can('stock_count.count')) {
+                    if (in_array($row->status, ['active', 'in_progress']) && auth()->user()->can('stock_count.count')) {
                         $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'worksheet'], [$row->id]) . '"><i class="fa fa-edit"></i> Edit (worksheet)</a></li>';
                     }
 
@@ -89,6 +89,22 @@ class StockCountController extends Controller
 
                     if (auth()->user()->can('stock_count.create')) {
                         $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'duplicate'], [$row->id]) . '"><i class="fa fa-copy"></i> Duplicate</a></li>';
+                    }
+
+                    if (auth()->user()->can('stock_count.create')) {
+                        $html .= '<li>
+                                    <a data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '" class="btn_update_status cursor-pointer">
+                                        <i class="fa fa-sync"></i> Update Status
+                                    </a>
+                                 </li>';
+                    }
+
+                    if (auth()->user()->can('stock_count.view')) {
+                        $html .= '<li>
+                                    <a data-session_id="' . $row->id . '" data-session_name="' . $row->name . '" class="btn_compare_worksheet cursor-pointer">
+                                        <i class="fa fa-balance-scale"></i> Compare worksheet
+                                    </a>
+                                 </li>';
                     }
 
                     if ($row->status !== 'completed' && auth()->user()->can('stock_count.delete')) {
@@ -104,14 +120,18 @@ class StockCountController extends Controller
                 })
                 ->editColumn('status', function ($row) {
                     $color = 'bg-gray';
-                    if ($row->status === 'active') {
+                    if ($row->status === 'active' || $row->status === 'in_progress') {
                         $color = 'bg-blue';
                     } elseif ($row->status === 'completed') {
                         $color = 'bg-green';
-                    } elseif ($row->status === 'cancelled') {
+                    } elseif ($row->status === 'reviewed') {
+                        $color = 'bg-purple';
+                    } elseif ($row->status === 'approved') {
+                        $color = 'bg-navy';
+                    } elseif ($row->status === 'rejected' || $row->status === 'cancelled') {
                         $color = 'bg-red';
                     }
-                    return '<span class="label ' . $color . '">' . __('stockcount::lang.' . $row->status) . '</span>';
+                    return '<span class="label ' . $color . ' btn_update_status" style="cursor: pointer;" data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '">' . __('stockcount::lang.' . $row->status) . '</span>';
                 })
                 ->addColumn('total_items', function ($row) {
                     return $row->lines()->count();
@@ -119,22 +139,40 @@ class StockCountController extends Controller
                 ->addColumn('items_counted', function ($row) {
                     return $row->lines()->whereNotNull('counted_by')->count();
                 })
+                ->addColumn('completion', function ($row) {
+                    $total = $row->lines()->count();
+                    $counted = $row->lines()->whereNotNull('counted_by')->count();
+                    $percent = $total > 0 ? round(($counted / $total) * 100) : 0;
+
+                    $bar_color = 'progress-bar-primary';
+                    if ($percent == 100) {
+                        $bar_color = 'progress-bar-success';
+                    } elseif ($percent > 0) {
+                        $bar_color = 'progress-bar-info';
+                    }
+
+                    $html = '<div class="progress progress-xs" style="margin-bottom: 3px; background-color: #d2d6de; height: 6px; border-radius: 3px; overflow: hidden;">
+                                <div class="progress-bar ' . $bar_color . '" role="progressbar" style="width: ' . $percent . '%; height: 6px;"></div>
+                             </div>
+                             <small class="text-muted" style="font-size: 11px; font-weight: bold;">' . $percent . '%</small>';
+                    return $html;
+                })
                 ->editColumn('created_at', '{{@format_datetime($created_at)}}')
                 ->editColumn('blind_count', function ($row) {
                     return $row->blind_count ? __('messages.yes') : __('messages.no');
                 })
-                ->rawColumns(['action', 'status', 'created_at'])
+                ->rawColumns(['action', 'status', 'created_at', 'completion'])
                 ->make(true);
 
             $data = $dt->getData(true);
-            
+
             // Calculate stats based on the filtered query
             $filtered_sessions_query = clone $sessions;
             $session_ids = $filtered_sessions_query->pluck('id')->toArray();
-            
+
             $active_sessions = $filtered_sessions_query->clone()->where('status', 'active')->count();
             $completed_sessions = $filtered_sessions_query->clone()->where('status', 'completed')->count();
-            
+
             $total_items = 0;
             $total_counted = 0;
             if (!empty($session_ids)) {
@@ -146,9 +184,9 @@ class StockCountController extends Controller
                     ->whereNotNull('counted_by')
                     ->count();
             }
-            
+
             $progress_percent = $total_items > 0 ? round(($total_counted / $total_items) * 100, 1) : 0;
-            
+
             $data['stats'] = [
                 'active_sessions' => $active_sessions,
                 'completed_sessions' => $completed_sessions,
@@ -156,7 +194,7 @@ class StockCountController extends Controller
                 'total_items' => $total_items,
                 'progress_percent' => $progress_percent
             ];
-            
+
             return response()->json($data);
         }
 
@@ -187,7 +225,10 @@ class StockCountController extends Controller
             ->distinct()
             ->pluck('rack', 'rack');
 
-        return view('stockcount::create', compact('business_locations', 'categories', 'brands', 'racks', 'products'));
+        $business = \App\Business::where('id', $business_id)->first();
+        $settings = $business->common_settings ?? [];
+
+        return view('stockcount::create', compact('business_locations', 'categories', 'brands', 'racks', 'products', 'settings'));
     }
 
     public function store(Request $request)
@@ -250,6 +291,15 @@ class StockCountController extends Controller
                 $query->whereIn('p.id', $filters['products']);
             }
 
+            $business = \App\Business::where('id', $business_id)->first();
+            $settings = $business->common_settings ?? [];
+            $skip_zero = isset($settings['stock_count_skip_zero_stock']) ? $settings['stock_count_skip_zero_stock'] : false;
+            
+            if ($skip_zero) {
+                $query->whereNotNull('vld.qty_available')
+                    ->where('vld.qty_available', '!=', 0);
+            }
+
             $variations = $query->get();
 
             $lines = [];
@@ -307,13 +357,13 @@ class StockCountController extends Controller
 
         // Apply filters
         if (!empty(request()->get('category_id'))) {
-            $query->whereHas('product', function($q) {
+            $query->whereHas('product', function ($q) {
                 $q->where('category_id', request()->get('category_id'));
             });
         }
 
         if (!empty(request()->get('brand_id'))) {
-            $query->whereHas('product', function($q) {
+            $query->whereHas('product', function ($q) {
                 $q->where('brand_id', request()->get('brand_id'));
             });
         }
@@ -372,7 +422,7 @@ class StockCountController extends Controller
         $session = StockCountSession::where('business_id', $business_id)
             ->findOrFail($id);
 
-        if ($session->status !== 'active') {
+        if (!in_array($session->status, ['active', 'in_progress'])) {
             return redirect()->action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$id]);
         }
 
@@ -398,7 +448,7 @@ class StockCountController extends Controller
             if (!empty($lines) && is_array($lines)) {
                 foreach ($lines as $line_data) {
                     $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
-                        $query->where('id', $id)->where('business_id', $business_id)->where('status', 'active');
+                        $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress']);
                     })->find($line_data['line_id']);
 
                     if (!empty($line)) {
@@ -415,7 +465,7 @@ class StockCountController extends Controller
                 $note = $request->input('note', '');
 
                 $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
-                    $query->where('id', $id)->where('business_id', $business_id)->where('status', 'active');
+                    $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress']);
                 })->findOrFail($line_id);
 
                 $line->counted_quantity = $quantity;
@@ -445,7 +495,7 @@ class StockCountController extends Controller
             $barcode = trim($request->input('barcode'));
 
             $session = StockCountSession::where('business_id', $business_id)
-                ->where('status', 'active')
+                ->whereIn('status', ['active', 'in_progress'])
                 ->findOrFail($id);
 
             // Find variation matching barcode (SKU or Sub-SKU)
@@ -526,7 +576,7 @@ class StockCountController extends Controller
 
         try {
             $session = StockCountSession::where('business_id', $business_id)
-                ->where('status', 'active')
+                ->whereIn('status', ['active', 'in_progress'])
                 ->findOrFail($id);
 
             $lines = StockCountLine::where('stock_count_session_id', $id)->get();
@@ -933,7 +983,6 @@ class StockCountController extends Controller
                     'success' => true,
                     'msg' => 'Count session duplicated successfully.'
                 ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
@@ -943,5 +992,401 @@ class StockCountController extends Controller
                     'msg' => __('messages.something_went_wrong')
                 ]);
         }
+    }
+
+    public function updateStatus(Request $request)
+    {
+        $business_id = $request->session()->get('user.business_id');
+
+        if (!auth()->user()->can('stock_count.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $session_id = $request->input('session_id');
+            $status = $request->input('status');
+
+            $session = StockCountSession::where('business_id', $business_id)
+                ->findOrFail($session_id);
+
+            // Prevent reverting status if it has already been reconciled/completed
+            if (!empty($session->completed_at) && in_array($status, ['draft', 'active', 'in_progress', 'cancelled'])) {
+                $output = [
+                    'success' => false,
+                    'msg' => 'Cannot revert status after stock has been reconciled.'
+                ];
+                if ($request->ajax()) {
+                    return response()->json($output);
+                }
+                return redirect()->back()->with('status', $output);
+            }
+
+            // Fetch business settings
+            $business = \App\Business::where('id', $business_id)->first();
+            $settings = $business->common_settings ?? [];
+            $auto_adjust = isset($settings['stock_count_auto_adjust_stock']) ? $settings['stock_count_auto_adjust_stock'] : false;
+            $require_approval = isset($settings['stock_count_require_approval']) ? $settings['stock_count_require_approval'] : true;
+
+            // Determine if we should perform inventory reconciliation / stock adjustments
+            $should_reconcile = false;
+            $should_lock = false;
+
+            if (empty($session->completed_at)) {
+                if ($require_approval) {
+                    if ($status === 'approved') {
+                        $should_lock = true;
+                        $should_reconcile = $auto_adjust;
+                    }
+                } else {
+                    if ($status === 'completed' || $status === 'approved') {
+                        $should_lock = true;
+                        $should_reconcile = $auto_adjust;
+                    }
+                }
+            }
+
+            if ($should_lock) {
+                DB::beginTransaction();
+
+                if ($should_reconcile) {
+                    $lines = StockCountLine::where('stock_count_session_id', $session->id)->get();
+                    $shortage_items = [];
+                    $total_shortage_value = 0;
+
+                    foreach ($lines as $line) {
+                        $qty_difference = $line->counted_quantity - $line->book_quantity;
+
+                        if ($qty_difference != 0) {
+                            // Update product quantity in database
+                            $this->productUtil->updateProductQuantity(
+                                $session->location_id,
+                                $line->product_id,
+                                $line->variation_id,
+                                $line->counted_quantity,
+                                $line->book_quantity,
+                                null,
+                                false
+                            );
+
+                            if ($qty_difference < 0) {
+                                // Add shortages to stock adjustment collection
+                                $shortage_items[] = [
+                                    'product_id' => $line->product_id,
+                                    'variation_id' => $line->variation_id,
+                                    'quantity' => abs($qty_difference),
+                                    'unit_price' => $line->unit_price,
+                                ];
+                                $total_shortage_value += abs($qty_difference) * $line->unit_price;
+                            }
+                        }
+                    }
+
+                    // Create stock adjustment transaction if shortages exist
+                    if (!empty($shortage_items)) {
+                        $transaction_data = [
+                            'type' => 'stock_adjustment',
+                            'business_id' => $business_id,
+                            'location_id' => $session->location_id,
+                            'transaction_date' => Carbon::now()->toDateTimeString(),
+                            'adjustment_type' => 'normal',
+                            'additional_notes' => 'Reconciliation for count session: ' . $session->name,
+                            'final_total' => $total_shortage_value,
+                            'created_by' => auth()->user()->id,
+                        ];
+
+                        $ref_count = $this->productUtil->setAndGetReferenceCount('stock_adjustment');
+                        $transaction_data['ref_no'] = $this->productUtil->generateReferenceNumber('stock_adjustment', $ref_count);
+
+                        $stock_adjustment = Transaction::create($transaction_data);
+
+                        foreach ($shortage_items as $item) {
+                            StockAdjustmentLine::create([
+                                'transaction_id' => $stock_adjustment->id,
+                                'product_id' => $item['product_id'],
+                                'variation_id' => $item['variation_id'],
+                                'quantity' => $item['quantity'],
+                                'unit_price' => $item['unit_price'],
+                            ]);
+                        }
+
+                        $this->transactionUtil->activityLog($stock_adjustment, 'added', null, [], false);
+                    }
+                }
+
+                $session->completed_by = auth()->user()->id;
+                $session->completed_at = Carbon::now();
+                $session->status = $status;
+                $session->save();
+
+                DB::commit();
+            } else {
+                $session->status = $status;
+                $session->save();
+            }
+
+            $output = [
+                'success' => true,
+                'msg' => 'Status updated successfully.'
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $output = [
+                'success' => false,
+                'msg' => 'Error: ' . $e->getMessage()
+            ];
+        }
+
+        if ($request->ajax()) {
+            return response()->json($output);
+        }
+
+        return redirect()->back()->with('status', $output);
+    }
+
+    public function getSettings()
+    {
+        if (!auth()->user()->can('stock_count.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $business = \App\Business::where('id', $business_id)->first();
+        
+        $settings = $business->common_settings ?? [];
+
+        return view('stockcount::settings', compact('settings'));
+    }
+
+    public function postSettings(\Illuminate\Http\Request $request)
+    {
+        if (!auth()->user()->can('stock_count.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = request()->session()->get('user.business_id');
+            $business = \App\Business::where('id', $business_id)->first();
+            
+            $common_settings = $business->common_settings ?? [];
+            
+            $common_settings['stock_count_auto_adjust_stock'] = $request->has('stock_count_auto_adjust_stock');
+            $common_settings['stock_count_require_approval'] = $request->has('stock_count_require_approval');
+            $common_settings['stock_count_lock_after_approval'] = $request->has('stock_count_lock_after_approval');
+            $common_settings['stock_count_allow_recount'] = $request->has('stock_count_allow_recount');
+            $common_settings['stock_count_show_expected_qty'] = $request->has('stock_count_show_expected_qty');
+            $common_settings['stock_count_default_count_type'] = $request->input('stock_count_default_count_type', 'full_count');
+            $common_settings['stock_count_skip_zero_stock'] = $request->has('stock_count_skip_zero_stock');
+            $common_settings['stock_count_notify_on_completion'] = $request->has('stock_count_notify_on_completion');
+            $common_settings['stock_count_notify_on_large_discrepancies'] = $request->has('stock_count_notify_on_large_discrepancies');
+            $common_settings['stock_count_discrepancy_threshold'] = (float)$request->input('stock_count_discrepancy_threshold', 0);
+            
+            $business->common_settings = $common_settings;
+            $business->save();
+            
+            // Update session
+            request()->session()->put('business.common_settings', $common_settings);
+
+            $output = [
+                'success' => true,
+                'msg' => 'Settings saved successfully.'
+            ];
+        } catch (\Exception $e) {
+            $output = [
+                'success' => false,
+                'msg' => 'Error: ' . $e->getMessage()
+            ];
+        }
+
+        return redirect()->route('stock-counts.index')->with('status', $output);
+    }
+
+    public function compare(Request $request)
+    {
+        $business_id = $request->session()->get('user.business_id');
+
+        if (!auth()->user()->can('stock_count.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $session_1_id = $request->get('session_1');
+        $session_2_id = $request->get('session_2');
+
+        if (empty($session_1_id) || empty($session_2_id)) {
+            $output = [
+                'success' => false,
+                'msg' => 'Please select two sessions to compare.'
+            ];
+            return redirect()->route('stock-counts.index')->with('status', $output);
+        }
+
+        $session_1 = StockCountSession::with(['location', 'creator'])
+            ->where('business_id', $business_id)
+            ->findOrFail($session_1_id);
+
+        $session_2 = StockCountSession::with(['location', 'creator'])
+            ->where('business_id', $business_id)
+            ->findOrFail($session_2_id);
+
+        // Load lines keying by variation_id for direct alignment
+        $lines_1 = StockCountLine::with(['product', 'variation'])
+            ->where('stock_count_session_id', $session_1->id)
+            ->get()
+            ->keyBy('variation_id');
+
+        $lines_2 = StockCountLine::with(['product', 'variation'])
+            ->where('stock_count_session_id', $session_2->id)
+            ->get()
+            ->keyBy('variation_id');
+
+        // Union of all variation IDs
+        $variation_ids = $lines_1->keys()->merge($lines_2->keys())->unique();
+
+        $comparison = [];
+        foreach ($variation_ids as $var_id) {
+            $line_1 = $lines_1->get($var_id);
+            $line_2 = $lines_2->get($var_id);
+
+            // Fetch info from whichever is present
+            $product_name = '';
+            $sub_sku = '';
+            $unit = '';
+            $unit_price = 0;
+
+            if (!empty($line_1)) {
+                $product_name = ($line_1->product->name ?? '') . (!empty($line_1->variation->name) && $line_1->variation->name !== 'DUMMY' ? ' (' . $line_1->variation->name . ')' : '');
+                $sub_sku = $line_1->variation->sub_sku ?? '';
+                $unit = $line_1->product->unit->short_name ?? '';
+                $unit_price = $line_1->unit_price;
+            } elseif (!empty($line_2)) {
+                $product_name = ($line_2->product->name ?? '') . (!empty($line_2->variation->name) && $line_2->variation->name !== 'DUMMY' ? ' (' . $line_2->variation->name . ')' : '');
+                $sub_sku = $line_2->variation->sub_sku ?? '';
+                $unit = $line_2->product->unit->short_name ?? '';
+                $unit_price = $line_2->unit_price;
+            }
+
+            $qty_1 = !empty($line_1) ? (float)$line_1->counted_quantity : 0.0;
+            $qty_2 = !empty($line_2) ? (float)$line_2->counted_quantity : 0.0;
+            $diff = $qty_1 - $qty_2;
+
+            $comparison[] = [
+                'product_name' => $product_name,
+                'sub_sku' => $sub_sku,
+                'unit' => $unit,
+                'unit_price' => $unit_price,
+                'qty_1' => $qty_1,
+                'qty_2' => $qty_2,
+                'diff' => $diff
+            ];
+        }
+
+        return view('stockcount::compare', compact('session_1', 'session_2', 'comparison'));
+    }
+
+    public function getAllSessionsJson(Request $request)
+    {
+        $business_id = $request->session()->get('user.business_id');
+        $exclude_id = $request->get('exclude_id');
+
+        $query = StockCountSession::where('business_id', $business_id);
+        if (!empty($exclude_id)) {
+            $query->where('id', '!=', $exclude_id);
+        }
+
+        $sessions = $query->select('id', 'name', 'reference_no')->get();
+
+        return response()->json($sessions);
+    }
+
+    public function getFilteredData(Request $request, $id)
+    {
+        $business_id = $request->session()->get('user.business_id');
+
+        if (!auth()->user()->can('stock_count.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Verify session belongs to this business
+        StockCountSession::where('business_id', $business_id)->findOrFail($id);
+
+        $query = StockCountLine::with(['product', 'variation', 'counter'])
+            ->where('stock_count_session_id', $id)
+            ->whereNotNull('counted_by');
+
+        if (!empty($request->get('category_id'))) {
+            $query->whereHas('product', function ($q) use ($request) {
+                $q->where('category_id', $request->get('category_id'));
+            });
+        }
+
+        if (!empty($request->get('brand_id'))) {
+            $query->whereHas('product', function ($q) use ($request) {
+                $q->where('brand_id', $request->get('brand_id'));
+            });
+        }
+
+        $variance_type = $request->get('variance_type');
+        if (!empty($variance_type) && $variance_type != 'all') {
+            if ($variance_type == 'shortage') {
+                $query->whereColumn('counted_quantity', '<', 'book_quantity');
+            } elseif ($variance_type == 'surplus') {
+                $query->whereColumn('counted_quantity', '>', 'book_quantity');
+            } elseif ($variance_type == 'no_variance') {
+                $query->whereColumn('counted_quantity', '=', 'book_quantity');
+            } elseif ($variance_type == 'variance') {
+                $query->whereColumn('counted_quantity', '!=', 'book_quantity');
+            }
+        }
+
+        $lines = $query->get();
+
+        $summary = [
+            'total_items'    => count($lines),
+            'shortage_qty'   => 0,
+            'shortage_value' => 0,
+            'surplus_qty'    => 0,
+            'surplus_value'  => 0,
+            'exact_qty'      => 0,
+        ];
+
+        foreach ($lines as $line) {
+            $diff = $line->counted_quantity - $line->book_quantity;
+            if ($diff < 0) {
+                $summary['shortage_qty']   += abs($diff);
+                $summary['shortage_value'] += abs($diff) * $line->unit_price;
+            } elseif ($diff > 0) {
+                $summary['surplus_qty']    += $diff;
+                $summary['surplus_value']  += $diff * $line->unit_price;
+            } else {
+                $summary['exact_qty']++;
+            }
+        }
+
+        // Build rows
+        $rows = $lines->map(function ($line, $index) {
+            $variance      = $line->counted_quantity - $line->book_quantity;
+            $financial_diff = $variance * $line->unit_price;
+            $variationName = (!empty($line->variation->name) && $line->variation->name !== 'DUMMY')
+                ? $line->variation->name : null;
+
+            return [
+                'index'           => $index + 1,
+                'product_name'    => $line->product->name ?? '',
+                'variation_name'  => $variationName,
+                'sku'             => $line->variation->sub_sku ?? '',
+                'book_quantity'   => $line->book_quantity,
+                'counted_quantity'=> $line->counted_quantity,
+                'variance'        => $variance,
+                'unit_price'      => $line->unit_price,
+                'financial_diff'  => $financial_diff,
+                'counter_name'    => $line->counter->user_full_name ?? '',
+                'counted_at'      => $line->counted_at ? \Carbon\Carbon::parse($line->counted_at)->format('d M Y H:i') : '',
+                'note'            => $line->note ?? '',
+            ];
+        });
+
+        return response()->json([
+            'rows'    => $rows,
+            'summary' => $summary,
+        ]);
     }
 }

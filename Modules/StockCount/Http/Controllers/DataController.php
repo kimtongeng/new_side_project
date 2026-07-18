@@ -86,11 +86,26 @@ class DataController extends Controller
 
         if (auth()->user()->can('stock_count.view')) {
             $menu = Menu::instance('admin-sidebar-menu');
-            $menu->url(
-                action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']),
-                __('stockcount::lang.stock_count'),
-                ['icon' => 'fa fas fa-clipboard-list', 'active' => request()->segment(1) == 'stock-counts']
-            )->order(26);
+            $added = false;
+
+            $menu->whereTitle(__('lang_v1.stock_transfers'), function ($sub) use (&$added) {
+                if (!empty($sub)) {
+                    $sub->url(
+                        action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']),
+                        __('stockcount::lang.stock_count'),
+                        ['icon' => '', 'active' => request()->segment(1) == 'stock-counts']
+                    );
+                    $added = true;
+                }
+            });
+
+            if (!$added) {
+                $menu->url(
+                    action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']),
+                    __('stockcount::lang.stock_count'),
+                    ['icon' => 'fa fas fa-clipboard-list', 'active' => request()->segment(1) == 'stock-counts']
+                )->order(26);
+            }
         }
     }
 }

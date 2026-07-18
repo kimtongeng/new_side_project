@@ -195,23 +195,131 @@
             border-radius: 4px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
         }
+        /* Worksheet Summary Info Boxes style */
+        .worksheet-info-box {
+            border-radius: 12px !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+            color: #fff !important;
+            padding: 15px !important;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .worksheet-info-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+        }
+        .worksheet-info-box .info-number {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+        .worksheet-info-box .info-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+        .worksheet-info-box.bg-total {
+            background: linear-gradient(135deg, #1e3c72, #2a5298) !important;
+        }
+        .worksheet-info-box.bg-counted {
+            background: linear-gradient(135deg, #11998e, #38ef7d) !important;
+        }
+        .worksheet-info-box.bg-pending {
+            background: linear-gradient(135deg, #f57c00, #ffb74d) !important;
+        }
+        .worksheet-info-box.bg-match {
+            background: linear-gradient(135deg, #00b0ff, #80d8ff) !important;
+        }
+        .worksheet-info-box.bg-surplus {
+            background: linear-gradient(135deg, #009688, #4db6ac) !important;
+        }
+        .worksheet-info-box.bg-shortage {
+            background: linear-gradient(135deg, #d32f2f, #ef5350) !important;
+        }
     </style>
 @endsection
 
 @section('content')
     <section class="content-header no-print">
-        <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">
-            @lang('stockcount::lang.worksheet'): {{ $session->name }}
-            <small class="text-muted" style="font-size: 16px; margin-left: 10px;">Ref No:
-                {{ $session->reference_no }}</small>
-            <span
-                class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active') bg-blue @else bg-gray @endif font-size-17">
-                {{ __('stockcount::lang.' . $session->status) }}
-            </span>
-        </h1>
+        <div class="row">
+            <div class="col-md-8 col-xs-12">
+                <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black" style="margin: 0; line-height: 1.2;">
+                    @lang('stockcount::lang.worksheet'): {{ $session->name }}
+                    @if(!empty($session->reference_no))
+                        <br><small class="text-muted" style="font-size: 14px; display: inline-block; margin-top: 5px;">Ref No: {{ $session->reference_no }}</small>
+                    @endif
+                </h1>
+            </div>
+            <div class="col-md-4 col-xs-12 text-right">
+                <div style="margin-top: 8px;">
+                    <span class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active' || $session->status == 'in_progress') bg-blue @elseif($session->status == 'reviewed') bg-purple @elseif($session->status == 'approved') bg-navy @elseif($session->status == 'rejected' || $session->status == 'cancelled') bg-red @else bg-gray @endif" style="font-size: 14px; padding: 6px 12px; border-radius: 4px; display: inline-block; font-weight: bold;">
+                        Status: {{ __('stockcount::lang.' . $session->status) }}
+                    </span>
+                </div>
+            </div>
+        </div>
     </section>
 
     <section class="content">
+        <!-- Completion Progress Bar -->
+        <div class="row no-print" style="margin-bottom: 20px;">
+            <div class="col-md-12">
+                <div style="background: #fff; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #eaeaea;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: #6d4c41;">% COUNT COMPLETION</strong>
+                        <span id="stat_completion_percent" style="font-size: 14px; font-weight: 800; color: #1aa784;">0%</span>
+                    </div>
+                    <div style="background-color: #1aa784; height: 8px; border-radius: 4px; width: 100%; overflow: hidden;">
+                        <div id="stat_completion_bar" style="width: 0%; background-color: #2eff8c; height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Summary Section -->
+        <div class="row no-print">
+            <div class="col-md-2 col-sm-4 col-xs-6">
+                <div class="worksheet-info-box bg-total">
+                    <div class="info-number" id="stat_total_items">0</div>
+                    <div class="info-label">Total Items</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 col-xs-6">
+                <div class="worksheet-info-box bg-counted">
+                    <div class="info-number" id="stat_counted">0</div>
+                    <div class="info-label">Counted</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 col-xs-6">
+                <div class="worksheet-info-box bg-pending">
+                    <div class="info-number" id="stat_pending">0</div>
+                    <div class="info-label">Pending</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 col-xs-6">
+                <div class="worksheet-info-box bg-match">
+                    <div class="info-number" id="stat_match">0</div>
+                    <div class="info-label">Match</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 col-xs-6">
+                <div class="worksheet-info-box bg-surplus">
+                    <div class="info-number" id="stat_surplus">0</div>
+                    <div class="info-label">Surplus</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-4 col-xs-6">
+                <div class="worksheet-info-box bg-shortage">
+                    <div class="info-number" id="stat_shortage">0</div>
+                    <div class="info-label">Shortage</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Barcode Scan Card -->
         @component('components.widget', ['class' => 'box-solid'])
         <div class="row" style="display: flex; align-items: center; flex-wrap: wrap;">
@@ -685,6 +793,16 @@
                     },
                     success: function (result) {
                         if (result.success) {
+                            var allowRecount = {{ (isset(session('business.common_settings')['stock_count_allow_recount']) ? session('business.common_settings')['stock_count_allow_recount'] : true) ? 'true' : 'false' }};
+                            var isCounted = $('#line_' + result.line_id).hasClass('is-counted');
+                            if (!allowRecount && isCounted) {
+                                $('#barcode_scanner').val('').focus();
+                                showSaveStatus('Disabled ✖', 'times');
+                                toastr.warning('Recounting is disabled in settings.');
+                                if (typeof callback === 'function') callback(result);
+                                return;
+                            }
+
                             showSaveStatus('Saved ✔', 'check');
                             if (result.appended) {
                                 $('#worksheet_body').prepend(result.row_html);
@@ -695,6 +813,8 @@
                             if (input.length) {
                                 updateRowInputs(result.line_id, result.new_qty);
                             }
+                            $('#line_' + result.line_id).addClass('is-counted');
+                            recalculateStats();
 
                             // Set value, select & focus so the user can easily scan the next barcode to overwrite it
                             $('#barcode_scanner').val(barcode).select().focus();
@@ -772,6 +892,8 @@
                 }
 
                 $('#new_qoh_' + id).val(newQoh.toFixed(4));
+                $('#line_' + id).addClass('is-counted');
+                recalculateStats();
             });
 
             $(document).on('change', '.input-note', function () {
@@ -780,6 +902,9 @@
 
             $(document).on('change keyup', '.input-new-qoh', function () {
                 if ($(this).attr('readonly')) return;
+                var id = $(this).data('id');
+                $('#line_' + id).addClass('is-counted');
+                recalculateStats();
             });
 
             function saveProgress(line_id) {
@@ -817,6 +942,42 @@
                 }
             }
 
+            function recalculateStats() {
+                var total = $('#worksheet_body tr.worksheet-row').length;
+                var counted = $('#worksheet_body tr.is-counted').length;
+                var pending = total - counted;
+                
+                var match = 0;
+                var surplus = 0;
+                var shortage = 0;
+                
+                $('#worksheet_body tr.is-counted').each(function() {
+                    var newQohInput = $(this).find('.input-new-qoh');
+                    var newQoh = parseFloat(newQohInput.val()) || 0;
+                    var bookQty = parseFloat(newQohInput.data('book-qty')) || 0;
+                    
+                    if (newQoh === bookQty) {
+                        match++;
+                    } else if (newQoh > bookQty) {
+                        surplus++;
+                    } else {
+                        shortage++;
+                    }
+                });
+                
+                $('#stat_total_items').text(total);
+                $('#stat_counted').text(counted);
+                $('#stat_pending').text(pending);
+                $('#stat_match').text(match);
+                $('#stat_surplus').text(surplus);
+                $('#stat_shortage').text(shortage);
+
+                var percent = total > 0 ? Math.round((counted / total) * 100) : 0;
+                $('#stat_completion_percent').text(percent + '%');
+                $('#stat_completion_bar').css('width', percent + '%');
+            }
+
+            recalculateStats();
             updatePagination();
 
             // ── Mobile / Smart Phone Popup Counting Logic ───────────────────
@@ -855,6 +1016,14 @@
                 select: function (event, ui) {
                     event.preventDefault();
                     $('#barcode_scanner').val('');
+                    
+                    var allowRecount = {{ (isset(session('business.common_settings')['stock_count_allow_recount']) ? session('business.common_settings')['stock_count_allow_recount'] : true) ? 'true' : 'false' }};
+                    var isCounted = $('#line_' + ui.item.line_id).hasClass('is-counted');
+                    if (!allowRecount && isCounted) {
+                        toastr.warning('Recounting is disabled in settings.');
+                        return;
+                    }
+                    
                     openCountModal(ui.item.line_id);
                 }
             });
@@ -865,6 +1034,14 @@
                     return;
                 }
                 var line_id = $(this).attr('id').replace('line_', '');
+                
+                var allowRecount = {{ (isset(session('business.common_settings')['stock_count_allow_recount']) ? session('business.common_settings')['stock_count_allow_recount'] : true) ? 'true' : 'false' }};
+                var isCounted = $(this).hasClass('is-counted');
+                if (!allowRecount && isCounted) {
+                    toastr.warning('Recounting is disabled in settings.');
+                    return;
+                }
+                
                 openCountModal(line_id);
             });
 
@@ -928,6 +1105,8 @@
                 }
 
                 $('#note_' + activeLineId).val(note);
+                $('#line_' + activeLineId).addClass('is-counted');
+                recalculateStats();
 
                 $('#mobileCountModal').modal('hide');
 
@@ -1016,6 +1195,7 @@
                             var line_id = row.attr('id').replace('line_', '');
                             
                             // Reset inputs in DOM
+                            row.removeClass('is-counted');
                             var isBlindCount = {{ $session->blind_count ? 'true' : 'false' }};
                             if (isBlindCount) {
                                 $('#new_qoh_' + line_id).val('0.0000');
@@ -1043,6 +1223,7 @@
                                     if (processed === totalRows) {
                                         showSaveStatus('Reset Completed ✔', 'check');
                                         toastr.success('All counted quantities reset to 0.');
+                                        recalculateStats();
                                         updatePagination();
                                     }
                                 },
@@ -1051,6 +1232,7 @@
                                     if (processed === totalRows) {
                                         showSaveStatus('Reset Error ✖', 'times');
                                         toastr.error('Some lines failed to reset.');
+                                        recalculateStats();
                                         updatePagination();
                                     }
                                 }

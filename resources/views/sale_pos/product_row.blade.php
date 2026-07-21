@@ -250,7 +250,7 @@
         @endforeach
 		<div class="input-group input-number">
 			<span class="input-group-btn"><button type="button" class="btn btn-default btn-flat quantity-down"><i class="fa fa-minus text-danger"></i></button></span>
-		<input type="text" data-min="1" style="width: auto"
+		<input type="text" data-min="1"
 			class="form-control pos_quantity input_number mousetrap input_quantity" 
 			value="{{@format_quantity($product->quantity_ordered)}}" name="products[{{$row_count}}][quantity]" data-allow-overselling="@if(empty($pos_settings['allow_overselling'])){{'false'}}@else{{'true'}}@endif" 
 			@if($allow_decimal) 

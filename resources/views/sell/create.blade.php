@@ -561,7 +561,6 @@
 					</div>
 			    </div>
 				<input type="hidden" name="is_direct_sale" value="1">
-				<input type="hidden" name="is_serial_no" value="1">
 			@endcomponent
 			@component('components.widget', ['class' => 'box-solid'])
 			<div class="col-md-4">

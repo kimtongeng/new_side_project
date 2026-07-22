@@ -14,7 +14,7 @@
             line-height: 1.4;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
         }
         .header {
@@ -69,10 +69,6 @@
             border: 1px solid #999;
             padding: 8px 10px;
             vertical-align: middle;
-        }
-        .blank-line {
-            height: 25px;
-            border-bottom: 1px solid #999 !important;
         }
         .text-center {
             text-align: center;
@@ -148,37 +144,49 @@
         <table class="worksheet-table">
             <thead>
                 <tr>
-                    <th style="width: 5%;">No</th>
-                    <th style="width: 45%;">Product Description</th>
-                    <th style="width: 15%;">SKU</th>
-                    <th style="width: 12%;">Rack / Shelf</th>
+                    <th>Product Name (Product Code)</th>
                     @if(!$session->blind_count)
-                        <th style="width: 10%; text-align: right;">QOH (Expected)</th>
+                        <th style="min-width: 60px; text-align: center;">QOH</th>
+                        <th style="min-width: 60px; text-align: center;">Type</th>
+                        <th style="min-width: 90px; text-align: center;">Quantity</th>
+                        <th style="min-width: 60px; text-align: center;">Unit</th>
                     @endif
-                    <th style="width: 13%;">Physical Count</th>
+                    <th style="min-width: 90px; text-align: center;">{{ $session->blind_count ? 'Counted Qty' : 'New QOH' }}</th>
+                    <th style="min-width: 60px; text-align: center;">Unit</th>
+                    <th style="min-width: 150px;">Note</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($lines as $line)
                     @php
-                        $rack = \App\ProductRack::where('product_id', $line->product_id)
-                            ->where('location_id', $session->location_id)
-                            ->value('rack');
+                        $unit_name = $line->product->unit->short_name ?? '';
+                        if ($line->counted_by !== null) {
+                            $diff = (float)$line->counted_quantity - (float)$line->book_quantity;
+                            $type = $diff >= 0 ? '+' : '-';
+                            $qty = abs($diff);
+                            $new_qoh = (float)$line->counted_quantity;
+                        } else {
+                            $type = '+';
+                            $qty = 0;
+                            $new_qoh = (float)$line->book_quantity;
+                        }
                     @endphp
                     <tr>
-                        <td class="text-center">{{ $loop->iteration }}</td>
                         <td>
-                            <strong>{{ $line->product->name ?? '' }}</strong>
+                            <strong>{{ $line->product->name ?? '' }}</strong> ({{ $line->variation->sub_sku ?? '' }})
                             @if(!empty($line->variation->name) && $line->variation->name !== 'DUMMY')
                                 <br><small style="color: #555;">{{ $line->variation->name }}</small>
                             @endif
                         </td>
-                        <td>{{ $line->variation->sub_sku ?? '' }}</td>
-                        <td>{{ $rack ?? '' }}</td>
                         @if(!$session->blind_count)
-                            <td class="text-right">{{ number_format($line->book_quantity, 2) }}</td>
+                            <td class="text-center">{{ (float)$line->book_quantity }}</td>
+                            <td class="text-center">{{ $type }}</td>
+                            <td class="text-center">{{ (float)$qty }}</td>
+                            <td class="text-center">{{ $unit_name }}</td>
                         @endif
-                        <td class="blank-line"></td>
+                        <td class="text-center">{{ (float)$new_qoh }}</td>
+                        <td class="text-center">{{ $unit_name }}</td>
+                        <td>{{ $line->note ?? '' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -204,7 +212,6 @@
     <!-- Auto-trigger print dialog -->
     <script>
         window.addEventListener('DOMContentLoaded', () => {
-            // Auto trigger browser print dialog shortly after page load
             setTimeout(() => {
                 window.print();
             }, 500);

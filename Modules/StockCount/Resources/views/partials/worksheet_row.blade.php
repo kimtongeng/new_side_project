@@ -13,9 +13,16 @@
         <td id="book_qty_{{ $line->id }}">{{ (float)$line->book_quantity }}</td>
         <td>
             @php
-                $diff = (float)$line->counted_quantity - (float)$line->book_quantity;
-                $type = $diff >= 0 ? '+' : '-';
-                $qty = abs($diff);
+                if ($line->counted_by !== null) {
+                    $diff = (float)$line->counted_quantity - (float)$line->book_quantity;
+                    $type = $diff >= 0 ? '+' : '-';
+                    $qty = abs($diff);
+                    $new_qoh = (float)$line->counted_quantity;
+                } else {
+                    $type = '+';
+                    $qty = 0;
+                    $new_qoh = (float)$line->book_quantity;
+                }
             @endphp
             <select class="form-control select-type" id="type_{{ $line->id }}" data-id="{{ $line->id }}" @if($is_recount_disabled) disabled @endif>
                 <option value="+" {{ $type == '+' ? 'selected' : '' }}>+</option>
@@ -34,9 +41,13 @@
             </div>
         </td>
         <td>{{ $line->product->unit->short_name ?? '' }}</td>
+    @else
+        @php
+            $new_qoh = (float)$line->counted_quantity;
+        @endphp
     @endif
     <td>
-        <input type="number" class="form-control text-center input-new-qoh" id="new_qoh_{{ $line->id }}" value="{{ (float)$line->counted_quantity }}" @if(!$session->blind_count || $is_recount_disabled) readonly @endif data-book-qty="{{ (float)$line->book_quantity }}" data-id="{{ $line->id }}">
+        <input type="number" class="form-control text-center input-new-qoh" id="new_qoh_{{ $line->id }}" value="{{ (float)$new_qoh }}" @if(!$session->blind_count || $is_recount_disabled) readonly @endif data-book-qty="{{ (float)$line->book_quantity }}" data-id="{{ $line->id }}">
     </td>
     <td>{{ $line->product->unit->short_name ?? '' }}</td>
     <td>

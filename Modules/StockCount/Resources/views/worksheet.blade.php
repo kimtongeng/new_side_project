@@ -40,9 +40,9 @@
         }
 
         /* ── Barcode scanner input-group fix ─────────────────────────────
-               Forces the text input + buttons to render as one seamless
-               control regardless of which Bootstrap version is loaded
-               (fixes the "floating pill buttons with a gap" look). */
+                           Forces the text input + buttons to render as one seamless
+                           control regardless of which Bootstrap version is loaded
+                           (fixes the "floating pill buttons with a gap" look). */
         #barcode_scanner_group {
             display: flex;
             align-items: stretch;
@@ -195,6 +195,7 @@
             border-radius: 4px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
         }
+
         /* Worksheet Summary Info Boxes style */
         .worksheet-info-box {
             border-radius: 12px !important;
@@ -205,16 +206,19 @@
             margin-bottom: 20px;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+
         .worksheet-info-box:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
         }
+
         .worksheet-info-box .info-number {
             font-size: 28px;
             font-weight: 800;
             line-height: 1;
             margin-bottom: 5px;
         }
+
         .worksheet-info-box .info-label {
             font-size: 11px;
             font-weight: 700;
@@ -222,21 +226,27 @@
             letter-spacing: 1px;
             opacity: 0.9;
         }
+
         .worksheet-info-box.bg-total {
             background: linear-gradient(135deg, #1e3c72, #2a5298) !important;
         }
+
         .worksheet-info-box.bg-counted {
             background: linear-gradient(135deg, #11998e, #38ef7d) !important;
         }
+
         .worksheet-info-box.bg-pending {
             background: linear-gradient(135deg, #f57c00, #ffb74d) !important;
         }
+
         .worksheet-info-box.bg-match {
             background: linear-gradient(135deg, #00b0ff, #80d8ff) !important;
         }
+
         .worksheet-info-box.bg-surplus {
             background: linear-gradient(135deg, #009688, #4db6ac) !important;
         }
+
         .worksheet-info-box.bg-shortage {
             background: linear-gradient(135deg, #d32f2f, #ef5350) !important;
         }
@@ -250,13 +260,16 @@
                 <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black" style="margin: 0; line-height: 1.2;">
                     @lang('stockcount::lang.worksheet'): {{ $session->name }}
                     @if(!empty($session->reference_no))
-                        <br><small class="text-muted" style="font-size: 14px; display: inline-block; margin-top: 5px;">Ref No: {{ $session->reference_no }}</small>
+                        <br><small class="text-muted" style="font-size: 14px; display: inline-block; margin-top: 5px;">Ref No:
+                            {{ $session->reference_no }}</small>
                     @endif
                 </h1>
             </div>
             <div class="col-md-4 col-xs-12 text-right">
                 <div style="margin-top: 8px;">
-                    <span class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active' || $session->status == 'in_progress') bg-blue @elseif($session->status == 'reviewed') bg-purple @elseif($session->status == 'approved') bg-navy @elseif($session->status == 'rejected' || $session->status == 'cancelled') bg-red @else bg-gray @endif" style="font-size: 14px; padding: 6px 12px; border-radius: 4px; display: inline-block; font-weight: bold;">
+                    <span
+                        class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active' || $session->status == 'in_progress') bg-blue @elseif($session->status == 'reviewed') bg-purple @elseif($session->status == 'approved') bg-navy @elseif($session->status == 'rejected' || $session->status == 'cancelled') bg-red @else bg-gray @endif"
+                        style="font-size: 14px; padding: 6px 12px; border-radius: 4px; display: inline-block; font-weight: bold;">
                         Status: {{ __('stockcount::lang.' . $session->status) }}
                     </span>
                 </div>
@@ -268,13 +281,18 @@
         <!-- Completion Progress Bar -->
         <div class="row no-print" style="margin-bottom: 20px;">
             <div class="col-md-12">
-                <div style="background: #fff; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #eaeaea;">
+                <div
+                    style="background: #fff; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); border: 1px solid #eaeaea;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <strong style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: #6d4c41;">% COUNT COMPLETION</strong>
-                        <span id="stat_completion_percent" style="font-size: 14px; font-weight: 800; color: #1aa784;">0%</span>
+                        <strong style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: #6d4c41;">%
+                            COUNT COMPLETION</strong>
+                        <span id="stat_completion_percent"
+                            style="font-size: 14px; font-weight: 800; color: #1aa784;">0%</span>
                     </div>
                     <div style="background-color: #1aa784; height: 8px; border-radius: 4px; width: 100%; overflow: hidden;">
-                        <div id="stat_completion_bar" style="width: 0%; background-color: #2eff8c; height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
+                        <div id="stat_completion_bar"
+                            style="width: 0%; background-color: #2eff8c; height: 100%; border-radius: 4px; transition: width 0.4s ease;">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -353,6 +371,10 @@
                         class="btn btn-info btn-flat">
                         <i class="fa fa-eye"></i> Back to Session
                     </a>
+                    <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"
+                        class="btn btn-default btn-flat" target="_blank">
+                        <i class="fa fa-print"></i> Print Worksheet
+                    </a>
                     <button type="button" class="btn btn-warning btn-flat" id="btn_camera_scan">
                         <i class="fa fa-camera"></i> Scan Camera
                     </button>
@@ -412,11 +434,18 @@
             </div>
         </div>
         <hr>
-        <div class="row" style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 15px;">
-            <button type="button" class="btn btn-primary btn-lg btn-flat" id="btn_save_submit" style="min-width: 150px; font-weight: bold;">
+        <div class="row"
+            style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 15px;">
+            <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}"
+                class="btn btn-default btn-lg btn-flat" style="font-weight: bold;">
+                <i class="fa fa-arrow-left"></i> Back to List
+            </a>
+            <button type="button" class="btn btn-primary btn-lg btn-flat" id="btn_save_submit"
+                style="min-width: 160px; font-weight: bold;">
                 <i class="fa fa-save"></i> Save & Submit
             </button>
-            <button type="button" class="btn btn-danger btn-lg btn-flat" id="btn_reset_worksheet" style="min-width: 150px; font-weight: bold;">
+            <button type="button" class="btn btn-danger btn-lg btn-flat" id="btn_reset_worksheet"
+                style="min-width: 160px; font-weight: bold;">
                 <i class="fa fa-refresh"></i> Reset All Counts
             </button>
         </div>
@@ -875,44 +904,14 @@
                 }
             });
 
-            // ── Auto-save on qty / note change (DISABLED - Save & Submit used instead) ────────────────────────────
-            var saveTimeout = null;
-            $(document).on('change keyup', '.select-type, .input-adjust-qty', function () {
-                var id = $(this).data('id');
-                var type = $('#type_' + id).val();
-                var adjustQty = parseFloat($('#qty_' + id).val()) || 0;
-                var bookQty = parseFloat($('#new_qoh_' + id).data('book-qty')) || 0;
-
-                var newQoh = bookQty;
-                if (type === '+') {
-                    newQoh = bookQty + adjustQty;
-                } else {
-                    newQoh = bookQty - adjustQty;
-                    if (newQoh < 0) newQoh = 0;
-                }
-
-                $('#new_qoh_' + id).val(newQoh.toFixed(4));
-                $('#line_' + id).addClass('is-counted');
-                recalculateStats();
-            });
-
-            $(document).on('change', '.input-note', function () {
-                // DOM updated automatically via default input behavior
-            });
-
-            $(document).on('change keyup', '.input-new-qoh', function () {
-                if ($(this).attr('readonly')) return;
-                var id = $(this).data('id');
-                $('#line_' + id).addClass('is-counted');
-                recalculateStats();
-            });
-
+            // ── Auto-save on qty / note change ────────────────────────────────────────────
+            var saveTimeouts = {};
             function saveProgress(line_id) {
                 var qty = $('#new_qoh_' + line_id).val();
                 var note = $('#note_' + line_id).val();
                 showSaveStatus('Saving...', 'spinner');
-                if (saveTimeout) clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(function () {
+                if (saveTimeouts[line_id]) clearTimeout(saveTimeouts[line_id]);
+                saveTimeouts[line_id] = setTimeout(function () {
                     $.ajax({
                         method: "POST",
                         url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'], [$session->id]) }}",
@@ -930,6 +929,39 @@
                 }, 500);
             }
 
+            $(document).on('change keyup', '.select-type, .input-adjust-qty', function () {
+                var id = $(this).data('id');
+                var type = $('#type_' + id).val();
+                var adjustQty = parseFloat($('#qty_' + id).val()) || 0;
+                var bookQty = parseFloat($('#new_qoh_' + id).data('book-qty')) || 0;
+
+                var newQoh = bookQty;
+                if (type === '+') {
+                    newQoh = bookQty + adjustQty;
+                } else {
+                    newQoh = bookQty - adjustQty;
+                    if (newQoh < 0) newQoh = 0;
+                }
+
+                $('#new_qoh_' + id).val(newQoh.toFixed(4));
+                $('#line_' + id).addClass('is-counted');
+                recalculateStats();
+                saveProgress(id);
+            });
+
+            $(document).on('change keyup', '.input-note', function () {
+                var id = $(this).data('id');
+                saveProgress(id);
+            });
+
+            $(document).on('change keyup', '.input-new-qoh', function () {
+                if ($(this).attr('readonly')) return;
+                var id = $(this).data('id');
+                $('#line_' + id).addClass('is-counted');
+                recalculateStats();
+                saveProgress(id);
+            });
+
             // ── Save-status floating toast ────────────────────────────────
             function showSaveStatus(text, icon) {
                 var statusDiv = $('#save_status');
@@ -946,16 +978,16 @@
                 var total = $('#worksheet_body tr.worksheet-row').length;
                 var counted = $('#worksheet_body tr.is-counted').length;
                 var pending = total - counted;
-                
+
                 var match = 0;
                 var surplus = 0;
                 var shortage = 0;
-                
-                $('#worksheet_body tr.is-counted').each(function() {
+
+                $('#worksheet_body tr.is-counted').each(function () {
                     var newQohInput = $(this).find('.input-new-qoh');
                     var newQoh = parseFloat(newQohInput.val()) || 0;
                     var bookQty = parseFloat(newQohInput.data('book-qty')) || 0;
-                    
+
                     if (newQoh === bookQty) {
                         match++;
                     } else if (newQoh > bookQty) {
@@ -964,7 +996,7 @@
                         shortage++;
                     }
                 });
-                
+
                 $('#stat_total_items').text(total);
                 $('#stat_counted').text(counted);
                 $('#stat_pending').text(pending);
@@ -1016,14 +1048,14 @@
                 select: function (event, ui) {
                     event.preventDefault();
                     $('#barcode_scanner').val('');
-                    
+
                     var allowRecount = {{ (isset(session('business.common_settings')['stock_count_allow_recount']) ? session('business.common_settings')['stock_count_allow_recount'] : true) ? 'true' : 'false' }};
                     var isCounted = $('#line_' + ui.item.line_id).hasClass('is-counted');
                     if (!allowRecount && isCounted) {
                         toastr.warning('Recounting is disabled in settings.');
                         return;
                     }
-                    
+
                     openCountModal(ui.item.line_id);
                 }
             });
@@ -1034,14 +1066,14 @@
                     return;
                 }
                 var line_id = $(this).attr('id').replace('line_', '');
-                
+
                 var allowRecount = {{ (isset(session('business.common_settings')['stock_count_allow_recount']) ? session('business.common_settings')['stock_count_allow_recount'] : true) ? 'true' : 'false' }};
                 var isCounted = $(this).hasClass('is-counted');
                 if (!allowRecount && isCounted) {
                     toastr.warning('Recounting is disabled in settings.');
                     return;
                 }
-                
+
                 openCountModal(line_id);
             });
 
@@ -1108,6 +1140,8 @@
                 $('#line_' + activeLineId).addClass('is-counted');
                 recalculateStats();
 
+                saveProgress(activeLineId);
+
                 $('#mobileCountModal').modal('hide');
 
                 setTimeout(function () {
@@ -1116,25 +1150,25 @@
             });
 
             // Handle Save & Submit bulk post
-            $('#btn_save_submit').on('click', function() {
+            $('#btn_save_submit').on('click', function () {
                 var btn = $(this);
                 btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
                 showSaveStatus('Saving worksheet...', 'spinner');
-                
+
                 var lines = [];
-                $('#worksheet_body tr').each(function() {
+                $('#worksheet_body tr').each(function () {
                     var row = $(this);
                     var line_id = row.attr('id').replace('line_', '');
                     var qty = $('#new_qoh_' + line_id).val();
                     var note = $('#note_' + line_id).val();
-                    
+
                     lines.push({
                         line_id: line_id,
                         quantity: qty,
                         note: note
                     });
                 });
-                
+
                 $.ajax({
                     method: "POST",
                     url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'], [$session->id]) }}",
@@ -1143,7 +1177,7 @@
                         lines: lines,
                         _token: "{{ csrf_token() }}"
                     },
-                    success: function(result) {
+                    success: function (result) {
                         if (result.success) {
                             showSaveStatus('Saved ✔', 'check');
                             toastr.success('Worksheet saved successfully.');
@@ -1154,7 +1188,7 @@
                             toastr.error(result.message || 'Failed to save worksheet.');
                         }
                     },
-                    error: function() {
+                    error: function () {
                         btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save & Submit');
                         showSaveStatus('Error ✖', 'times');
                         toastr.error('Network error while saving worksheet.');
@@ -1170,7 +1204,7 @@
             });
 
             // Handle Reset All Counts
-            $('#btn_reset_worksheet').on('click', function() {
+            $('#btn_reset_worksheet').on('click', function () {
                 swal({
                     title: "Are you sure you want to reset all counted quantities?",
                     text: "This will set all your counted quantities on this worksheet back to 0.",
@@ -1180,20 +1214,20 @@
                 }).then((willReset) => {
                     if (willReset) {
                         showSaveStatus('Resetting...', 'spinner');
-                        
+
                         var rows = $('#worksheet_body tr');
                         var totalRows = rows.length;
                         var processed = 0;
-                        
+
                         if (totalRows === 0) {
                             showSaveStatus('Reset ✔', 'check');
                             return;
                         }
-                        
-                        rows.each(function() {
+
+                        rows.each(function () {
                             var row = $(this);
                             var line_id = row.attr('id').replace('line_', '');
-                            
+
                             // Reset inputs in DOM
                             row.removeClass('is-counted');
                             var isBlindCount = {{ $session->blind_count ? 'true' : 'false' }};
@@ -1201,12 +1235,12 @@
                                 $('#new_qoh_' + line_id).val('0.0000');
                             } else {
                                 var bookQty = parseFloat($('#new_qoh_' + line_id).data('book-qty')) || 0;
-                                $('#type_' + line_id).val('-');
-                                $('#qty_' + line_id).val(bookQty.toFixed(4));
-                                $('#new_qoh_' + line_id).val('0.0000');
+                                $('#type_' + line_id).val('+');
+                                $('#qty_' + line_id).val('0');
+                                $('#new_qoh_' + line_id).val(bookQty.toFixed(4));
                             }
                             $('#note_' + line_id).val('');
-                            
+
                             // Call AJAX to save progress
                             $.ajax({
                                 method: "POST",
@@ -1218,7 +1252,7 @@
                                     note: '',
                                     _token: "{{ csrf_token() }}"
                                 },
-                                success: function() {
+                                success: function () {
                                     processed++;
                                     if (processed === totalRows) {
                                         showSaveStatus('Reset Completed ✔', 'check');
@@ -1227,7 +1261,7 @@
                                         updatePagination();
                                     }
                                 },
-                                error: function() {
+                                error: function () {
                                     processed++;
                                     if (processed === totalRows) {
                                         showSaveStatus('Reset Error ✖', 'times');

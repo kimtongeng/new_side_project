@@ -3,6 +3,13 @@
     $is_recount_disabled = !$allow_recount && $line->counted_by !== null;
 @endphp
 <tr id="line_{{ $line->id }}" class="worksheet-row @if($line->counted_by !== null) is-counted @endif">
+    <td class="text-center" id="status_cell_{{ $line->id }}">
+        @if($line->counted_by !== null)
+            <span class="label label-success">Counted</span>
+        @else
+            <span class="label label-warning">Pending</span>
+        @endif
+    </td>
     <td>
         <strong>{{ $line->product->name ?? '' }}</strong> ({{ $line->variation->sub_sku ?? '' }})
         @if(!empty($line->variation->name) && $line->variation->name !== 'DUMMY')

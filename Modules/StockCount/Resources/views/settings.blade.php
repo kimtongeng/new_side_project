@@ -212,6 +212,7 @@
         $lock_after = isset($settings['stock_count_lock_after_approval']) ? $settings['stock_count_lock_after_approval'] : true;
         $allow_recount = isset($settings['stock_count_allow_recount']) ? $settings['stock_count_allow_recount'] : true;
         $show_expected = isset($settings['stock_count_show_expected_qty']) ? $settings['stock_count_show_expected_qty'] : true;
+        $default_blind_count = isset($settings['stock_count_default_blind_count']) ? $settings['stock_count_default_blind_count'] : false;
         $default_type = isset($settings['stock_count_default_count_type']) ? $settings['stock_count_default_count_type'] : 'full_count';
         $skip_zero = isset($settings['stock_count_skip_zero_stock']) ? $settings['stock_count_skip_zero_stock'] : false;
         $notify_completion = isset($settings['stock_count_notify_on_completion']) ? $settings['stock_count_notify_on_completion'] : false;
@@ -219,8 +220,11 @@
         $threshold = isset($settings['stock_count_discrepancy_threshold']) ? $settings['stock_count_discrepancy_threshold'] : 0;
     @endphp
 
-    <section class="content-header">
+    <section class="content-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black">Stock Count Settings</h1>
+        <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}" class="btn btn-default">
+            <i class="fa fa-arrow-left"></i> Back
+        </a>
     </section>
 
     <section class="content">
@@ -305,12 +309,27 @@
                         <!-- Show Expected Qty -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-eye-slash text-muted"></i> Show Expected Qty</h4>
-                                <p class="setting-desc">Show system quantity during counting (disabling enables blind count mode)</p>
+                                <h4 class="setting-title"><i class="fa fa-eye text-muted"></i> Show Expected Qty</h4>
+                                <p class="setting-desc">Show system quantity during counting</p>
                             </div>
                             <div>
                                 <label class="switch">
                                     <input type="checkbox" name="stock_count_show_expected_qty" value="1" @if($show_expected) checked @endif>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="setting-divider"></div>
+
+                        <!-- Blind Count Mode -->
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <h4 class="setting-title"><i class="fa fa-eye-slash text-danger"></i> Blind Count Mode</h4>
+                                <p class="setting-desc">Enable Blind Count Mode by default for new stocktakes (hides system QOH from counting staff to ensure unbiased results)</p>
+                            </div>
+                            <div>
+                                <label class="switch">
+                                    <input type="checkbox" name="stock_count_default_blind_count" value="1" @if($default_blind_count) checked @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -400,8 +419,11 @@
                     </div>
                 </div>
 
-                <!-- Submit Button -->
-                <div class="text-center" style="margin-top: 10px; margin-bottom: 50px;">
+                <!-- Submit & Back Buttons -->
+                <div class="text-center" style="margin-top: 10px; margin-bottom: 50px; display: flex; justify-content: center; align-items: center; gap: 15px;">
+                    <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}" class="btn btn-default" style="padding: 10px 24px; font-size: 15px; font-weight: 600; border-radius: 6px;">
+                        <i class="fa fa-arrow-left"></i> Back
+                    </a>
                     <button type="submit" class="btn-save-settings">
                         <i class="fa fa-save"></i> Save Settings
                     </button>

@@ -89,13 +89,16 @@ class StockCountController extends Controller
                         $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'worksheet'], [$row->id]) . '"><i class="fa fa-edit"></i> Edit (worksheet)</a></li>';
                     }
 
-                    $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$row->id]) . '" target="_blank"><i class="fa fa-print"></i> Print worksheet</a></li>';
+                    $html .= '<li><a href="#" class="print-invoice" data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$row->id]) . '"><i class="fa fa-print"></i> Print worksheet</a></li>';
 
                     if (auth()->user()->can('stock_count.create')) {
                         $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'duplicate'], [$row->id]) . '"><i class="fa fa-copy"></i> Duplicate</a></li>';
                     }
 
-                    if (auth()->user()->can('stock_count.create')) {
+                    $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+                    $can_update_status = $is_admin || auth()->user()->can('stock_count.update_status') || auth()->user()->can('stock_count.edit') || auth()->user()->can('stock_count.create');
+
+                    if ($can_update_status) {
                         $html .= '<li>
                                     <a data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '" class="btn_update_status cursor-pointer">
                                         <i class="fa fa-sync"></i> Update Status
@@ -123,19 +126,21 @@ class StockCountController extends Controller
                     return $html;
                 })
                 ->editColumn('status', function ($row) {
-                    $color = 'bg-gray';
-                    if ($row->status === 'active' || $row->status === 'in_progress') {
-                        $color = 'bg-blue';
-                    } elseif ($row->status === 'completed') {
+                    $color = 'bg-yellow';
+                    $status_name = 'Pending';
+
+                    if ($row->status === 'completed' || $row->status === 'approved') {
                         $color = 'bg-green';
-                    } elseif ($row->status === 'reviewed') {
-                        $color = 'bg-purple';
-                    } elseif ($row->status === 'approved') {
-                        $color = 'bg-navy';
-                    } elseif ($row->status === 'rejected' || $row->status === 'cancelled') {
-                        $color = 'bg-red';
+                        $status_name = 'Completed';
+                    } elseif ($row->status === 'pending' || $row->status === 'draft' || $row->status === 'active' || $row->status === 'in_progress') {
+                        $color = 'bg-yellow';
+                        $status_name = 'Pending';
+                    } else {
+                        $color = 'bg-gray';
+                        $status_name = ucfirst(str_replace('_', ' ', $row->status));
                     }
-                    return '<span class="label ' . $color . ' btn_update_status" style="cursor: pointer;" data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '">' . __('stockcount::lang.' . $row->status) . '</span>';
+
+                    return '<span class="label ' . $color . ' btn_update_status" style="cursor: pointer;" data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '">' . $status_name . '</span>';
                 })
                 ->addColumn('total_items', function ($row) {
                     return $row->lines()->count();
@@ -244,8 +249,14 @@ class StockCountController extends Controller
         }
 
         try {
-            $input = $request->only(['name', 'location_id', 'blind_count', 'reference_no']);
-            $input['blind_count'] = !empty($input['blind_count']) ? true : false;
+            $business = \App\Business::where('id', $business_id)->first();
+            $settings = $business->common_settings ?? [];
+            $default_blind_count = isset($settings['stock_count_default_blind_count'])
+                ? $settings['stock_count_default_blind_count']
+                : (isset($settings['stock_count_show_expected_qty']) ? !$settings['stock_count_show_expected_qty'] : false);
+
+            $input = $request->only(['name', 'location_id', 'reference_no']);
+            $input['blind_count'] = $default_blind_count ? true : false;
             $input['business_id'] = $business_id;
             $input['created_by'] = auth()->user()->id;
             $input['status'] = 'active';
@@ -934,6 +945,17 @@ class StockCountController extends Controller
             ->where('stock_count_session_id', $id)
             ->get();
 
+        if (request()->ajax()) {
+            $html_content = view('stockcount::print_worksheet', compact('session', 'lines'))->render();
+            return [
+                'success' => 1,
+                'receipt' => [
+                    'html_content' => $html_content
+                ],
+                'print_title' => 'Stock Count Worksheet - ' . $session->name
+            ];
+        }
+
         return view('stockcount::print_worksheet', compact('session', 'lines'));
     }
 
@@ -1013,8 +1035,10 @@ class StockCountController extends Controller
     public function updateStatus(Request $request)
     {
         $business_id = $request->session()->get('user.business_id');
+        $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+        $can_update_status = $is_admin || auth()->user()->can('stock_count.update_status') || auth()->user()->can('stock_count.edit') || auth()->user()->can('stock_count.create');
 
-        if (!auth()->user()->can('stock_count.create')) {
+        if (!$can_update_status) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1070,7 +1094,11 @@ class StockCountController extends Controller
                     $total_shortage_value = 0;
 
                     foreach ($lines as $line) {
-                        $qty_difference = $line->counted_quantity - $line->book_quantity;
+                        if ($line->counted_quantity === null) {
+                            continue;
+                        }
+
+                        $qty_difference = (float)$line->counted_quantity - (float)$line->book_quantity;
 
                         if ($qty_difference != 0) {
                             // Update product quantity in database
@@ -1078,8 +1106,8 @@ class StockCountController extends Controller
                                 $session->location_id,
                                 $line->product_id,
                                 $line->variation_id,
-                                $line->counted_quantity,
-                                $line->book_quantity,
+                                (float)$line->counted_quantity,
+                                (float)$line->book_quantity,
                                 null,
                                 false
                             );
@@ -1161,11 +1189,13 @@ class StockCountController extends Controller
 
     public function getSettings()
     {
-        if (!auth()->user()->can('stock_count.create')) {
+        $business_id = request()->session()->get('user.business_id');
+        $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+
+        if (!$is_admin && !auth()->user()->can('stock_count.settings')) {
             abort(403, 'Unauthorized action.');
         }
 
-        $business_id = request()->session()->get('user.business_id');
         $business = \App\Business::where('id', $business_id)->first();
         
         $settings = $business->common_settings ?? [];
@@ -1175,26 +1205,40 @@ class StockCountController extends Controller
 
     public function postSettings(\Illuminate\Http\Request $request)
     {
-        if (!auth()->user()->can('stock_count.create')) {
+        $business_id = request()->session()->get('user.business_id');
+        $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+
+        if (!$is_admin && !auth()->user()->can('stock_count.settings')) {
             abort(403, 'Unauthorized action.');
         }
 
         try {
-            $business_id = request()->session()->get('user.business_id');
             $business = \App\Business::where('id', $business_id)->first();
             
             $common_settings = $business->common_settings ?? [];
             
-            $common_settings['stock_count_auto_adjust_stock'] = $request->has('stock_count_auto_adjust_stock');
-            $common_settings['stock_count_require_approval'] = $request->has('stock_count_require_approval');
-            $common_settings['stock_count_lock_after_approval'] = $request->has('stock_count_lock_after_approval');
-            $common_settings['stock_count_allow_recount'] = $request->has('stock_count_allow_recount');
-            $common_settings['stock_count_show_expected_qty'] = $request->has('stock_count_show_expected_qty');
-            $common_settings['stock_count_default_count_type'] = $request->input('stock_count_default_count_type', 'full_count');
-            $common_settings['stock_count_skip_zero_stock'] = $request->has('stock_count_skip_zero_stock');
-            $common_settings['stock_count_notify_on_completion'] = $request->has('stock_count_notify_on_completion');
-            $common_settings['stock_count_notify_on_large_discrepancies'] = $request->has('stock_count_notify_on_large_discrepancies');
-            $common_settings['stock_count_discrepancy_threshold'] = (float)$request->input('stock_count_discrepancy_threshold', 0);
+            if ($is_admin || auth()->user()->can('stock_count.settings_auto_adjust')) {
+                $common_settings['stock_count_auto_adjust_stock'] = $request->has('stock_count_auto_adjust_stock');
+            }
+
+            if ($is_admin || auth()->user()->can('stock_count.settings_approval')) {
+                $common_settings['stock_count_require_approval'] = $request->has('stock_count_require_approval');
+                $common_settings['stock_count_lock_after_approval'] = $request->has('stock_count_lock_after_approval');
+            }
+
+            if ($is_admin || auth()->user()->can('stock_count.settings_counting')) {
+                $common_settings['stock_count_allow_recount'] = $request->has('stock_count_allow_recount');
+                $common_settings['stock_count_show_expected_qty'] = $request->has('stock_count_show_expected_qty');
+                $common_settings['stock_count_default_blind_count'] = $request->has('stock_count_default_blind_count');
+                $common_settings['stock_count_default_count_type'] = $request->input('stock_count_default_count_type', 'full_count');
+                $common_settings['stock_count_skip_zero_stock'] = $request->has('stock_count_skip_zero_stock');
+            }
+
+            if ($is_admin || auth()->user()->can('stock_count.settings_notifications')) {
+                $common_settings['stock_count_notify_on_completion'] = $request->has('stock_count_notify_on_completion');
+                $common_settings['stock_count_notify_on_large_discrepancies'] = $request->has('stock_count_notify_on_large_discrepancies');
+                $common_settings['stock_count_discrepancy_threshold'] = (float)$request->input('stock_count_discrepancy_threshold', 0);
+            }
             
             $business->common_settings = $common_settings;
             $business->save();

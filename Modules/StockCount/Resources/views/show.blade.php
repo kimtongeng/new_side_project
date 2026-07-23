@@ -124,6 +124,11 @@
         }
 
         @media print {
+            @page {
+                size: auto;
+                margin: 5mm;
+            }
+
             body.printing-active>*:not(#stock_count_print_template) {
                 display: none !important;
             }
@@ -634,11 +639,14 @@
         <table class="print-table">
             <thead>
                 <tr>
-                    <th style="width: 5%;">No</th>
-                    <th style="width: 65%;">Description</th>
-                    <th style="width: 10%; text-align: right;">Expected</th>
-                    <th style="width: 10%; text-align: right;">Counted</th>
+                    <th style="width: 4%; text-align: center;">No</th>
+                    <th style="width: 32%;">Description</th>
+                    <th style="width: 11%; text-align: right;">Cost Price</th>
+                    <th style="width: 9%; text-align: right;">Expected</th>
+                    <th style="width: 9%; text-align: right;">Counted</th>
                     <th style="width: 10%; text-align: right;">Difference</th>
+                    <th style="width: 13%; text-align: right;">Financial Impact</th>
+                    <th style="width: 12%; text-align: right;">Total Cost</th>
                 </tr>
             </thead>
             <tbody>
@@ -700,6 +708,11 @@
                     {
                         extend: 'excel',
                         text: '<i class="fa fa-file-excel" aria-hidden="true"></i> ' + LANG.export_to_excel,
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fa fa-print" aria-hidden="true"></i> ' + LANG.print,
                         className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
                     },
                     {

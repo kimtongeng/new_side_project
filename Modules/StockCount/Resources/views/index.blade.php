@@ -130,13 +130,8 @@
             <div class="form-group">
                 {!! Form::label('filter_status', __('sale.status') . ':') !!}
                 {!! Form::select('filter_status', [
-        'draft' => __('stockcount::lang.draft'),
-        'in_progress' => __('stockcount::lang.in_progress'),
-        'completed' => __('stockcount::lang.completed'),
-        'reviewed' => __('stockcount::lang.reviewed'),
-        'approved' => __('stockcount::lang.approved'),
-        'rejected' => __('stockcount::lang.rejected'),
-        'cancelled' => __('stockcount::lang.cancelled')
+        'pending' => 'Pending',
+        'completed' => 'Completed'
     ], null, [
         'class' => 'form-control select2',
         'style' => 'width:100%',
@@ -205,11 +200,13 @@
         @slot('tool')
         <div class="box-tools" style="display: flex; gap: 5px; align-items: center;">
 
-            @can('stock_count.create')
+            @if(auth()->user()->hasRole('Admin#' . session()->get('user.business_id')) || auth()->user()->can('superadmin') || auth()->user()->can('stock_count.settings'))
                 <a class="btn btn-default"
                     href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'getSettings']) }}">
                     <i class="fa fa-cog"></i> Settings
                 </a>
+            @endif
+            @can('stock_count.create')
                 <a class="btn btn-primary"
                     href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'create']) }}">
                     <i class="fa fa-plus"></i> @lang('messages.add')
@@ -253,19 +250,14 @@
                         <div class="form-group">
                             {!! Form::label('modal_status', 'Status:') !!}
                             <select name="status" id="modal_status" class="form-control" style="width: 100%;">
-                                <option value="draft">Draft</option>
-                                <option value="in_progress">In progress</option>
+                                <option value="pending">Pending</option>
                                 <option value="completed">Completed</option>
-                                <option value="reviewed">Reviewed</option>
-                                <option value="approved">Approved</option>
-                                <option value="rejected">Rejected</option>
-                                <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Update</button>
                         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Update</button>
                     </div>
                     {!! Form::close() !!}
                 </div>
@@ -311,6 +303,35 @@
             var stock_count_table = $('#stock_count_table').DataTable({
                 processing: true,
                 serverSide: true,
+                aaSorting: [[10, 'desc']],
+                dom: '<"row margin-bottom-20 text-center"<"col-sm-2"l><"col-sm-7"B><"col-sm-3"f> r>tip',
+                buttons: [
+                    {
+                        extend: 'csv',
+                        text: '<i class="fa fa-file-csv"></i> Export CSV',
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    },
+                    {
+                        extend: 'excel',
+                        text: '<i class="fa fa-file-excel"></i> Export Excel',
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fa fa-print"></i> Print',
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    },
+                    {
+                        extend: 'colvis',
+                        text: '<i class="fa fa-columns"></i> Column visibility',
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    },
+                    {
+                        extend: 'pdf',
+                        text: '<i class="fa fa-file-pdf"></i> Export PDF',
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                    }
+                ],
                 ajax: {
                     url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}",
                     data: function (d) {
@@ -405,7 +426,21 @@
                 var action = $(this).data('href');
                 
                 $('#modal_session_id').val(session_id);
-                $('#modal_status').val(status);
+
+                if ($('#modal_status option[value="' + status + '"]').length > 0) {
+                    $('#modal_status').val(status);
+                } else if (status === 'active' || status === 'in_progress' || status === 'draft') {
+                    $('#modal_status').val('pending');
+                } else if (status === 'approved' || status === 'reviewed') {
+                    $('#modal_status').val('completed');
+                } else {
+                    $('#modal_status').val($('#modal_status option:first').val());
+                }
+
+                if ($('#modal_status').hasClass('select2-hidden-accessible')) {
+                    $('#modal_status').trigger('change');
+                }
+
                 $('#update_status_modal_form').attr('action', action);
                 
                 $('#update_status_modal').modal('show');

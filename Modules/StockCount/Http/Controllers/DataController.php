@@ -32,8 +32,48 @@ class DataController extends Controller
                 'default' => false,
             ],
             [
+                'value' => 'stock_count.settings',
+                'label' => 'Stock Count Settings (Access Page)',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.settings_auto_adjust',
+                'label' => 'Setting: Change Auto Adjust Stock',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.settings_approval',
+                'label' => 'Setting: Change Approval & Locking',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.settings_counting',
+                'label' => 'Setting: Change Counting & Blind Count Rules',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.settings_notifications',
+                'label' => 'Setting: Change Notification Alerts',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.print_blind',
+                'label' => 'Print Blind Count Worksheet (User Level)',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.print_all',
+                'label' => 'Print All / Full Worksheet (Admin & Permitted Users)',
+                'default' => false,
+            ],
+            [
                 'value' => 'stock_count.create',
                 'label' => __('stockcount::lang.create_stock_count_session'),
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.update_status',
+                'label' => 'Update Stock Count Status',
                 'default' => false,
             ],
             [

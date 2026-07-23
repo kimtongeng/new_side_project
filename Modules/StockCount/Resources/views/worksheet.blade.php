@@ -371,8 +371,8 @@
                         class="btn btn-info btn-flat">
                         <i class="fa fa-eye"></i> Back to Session
                     </a>
-                    <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"
-                        class="btn btn-default btn-flat" target="_blank">
+                    <a href="#" data-href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"
+                        class="btn btn-default btn-flat print-invoice">
                         <i class="fa fa-print"></i> Print Worksheet
                     </a>
                     <button type="button" class="btn btn-warning btn-flat" id="btn_camera_scan">
@@ -386,10 +386,51 @@
             </div>
         </div>
         @endcomponent
+        <!-- Worksheet Filters -->
+        @component('components.filters', ['title' => __('report.filters')])
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="filter_worksheet_status">Count Status:</label>
+                    <select id="filter_worksheet_status" class="form-control select2" style="width:100%;">
+                        <option value="all">All Items</option>
+                        <option value="pending">Pending Items Only</option>
+                        <option value="counted">Counted Items Only</option>
+                    </select>
+                </div>
+            </div>
+            @if(!$session->blind_count)
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="filter_worksheet_variance">Variance Filter:</label>
+                    <select id="filter_worksheet_variance" class="form-control select2" style="width:100%;">
+                        <option value="all">All Items</option>
+                        <option value="match">Match (No Variance)</option>
+                        <option value="surplus">Surplus (+)</option>
+                        <option value="shortage">Shortage (-)</option>
+                        <option value="discrepancy">Discrepancies Only</option>
+                    </select>
+                </div>
+            </div>
+            @endif
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="worksheet_filter_search">Search Product / SKU:</label>
+                    <input type="text" id="worksheet_filter_search" class="form-control" placeholder="Search product name or SKU...">
+                </div>
+            </div>
+            <div class="col-md-2" style="padding-top: 25px;">
+                <button type="button" id="btn_reset_worksheet_filters" class="btn btn-default btn-block">
+                    <i class="fa fa-refresh"></i> Reset
+                </button>
+            </div>
+        </div>
+        @endcomponent
+
         <!-- Worksheet Table -->
         @component('components.widget', ['class' => 'box-primary'])
-        <div class="row" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-            <div class="col-xs-6">
+        <div class="row" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div class="col-sm-3 col-xs-12">
                 <label style="font-weight: normal; margin-bottom: 0;">Show
                     <select id="worksheet_page_length" class="form-control input-sm"
                         style="display: inline-block; width: auto; height: 30px; padding: 5px 10px; margin: 0 5px;">
@@ -401,7 +442,13 @@
                     </select> entries
                 </label>
             </div>
-            <div class="col-xs-6 text-right">
+            <div class="col-sm-6 col-xs-12 text-center" style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" id="btn_export_worksheet_csv" class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-csv"></i> Export CSV</button>
+                <button type="button" id="btn_export_worksheet_excel" class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-excel"></i> Export Excel</button>
+                <button type="button" id="btn_print_worksheet_table" class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1 print-invoice" data-href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"><i class="fa fa-print"></i> Print</button>
+                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'export'], [$session->id]) }}" class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-pdf"></i> Export PDF</a>
+            </div>
+            <div class="col-sm-3 col-xs-12 text-right">
                 <span id="worksheet_table_info" class="text-muted" style="font-size: 13px;"></span>
             </div>
         </div>
@@ -409,6 +456,7 @@
             <table class="table table-bordered table-striped" id="worksheet_table">
                 <thead>
                     <tr>
+                        <th style="min-width: 90px; text-align: center;">Status</th>
                         <th>Product Name (Product Code)</th>
                         @if(!$session->blind_count)
                             <th>QOH</th>
@@ -685,24 +733,99 @@
                 updatePagination();
             });
 
-            function filterTableRows(query) {
-                var rows = $('#worksheet_body tr');
-                if (query === '') {
-                    rows.data('filtered-out', false);
-                } else {
-                    rows.each(function () {
-                        var row = $(this);
-                        var text = row.find('td:first').text().toLowerCase();
-                        if (text.indexOf(query) !== -1) {
-                            row.data('filtered-out', false);
-                        } else {
-                            row.data('filtered-out', true);
-                        }
-                    });
+            // Worksheet filter handlers
+            $('#filter_worksheet_status, #filter_worksheet_variance').on('change', function () {
+                applyWorksheetFilters();
+            });
+
+            $('#worksheet_filter_search').on('keyup input', function () {
+                applyWorksheetFilters();
+            });
+
+            $('#btn_reset_worksheet_filters').on('click', function () {
+                $('#filter_worksheet_status').val('all').trigger('change');
+                if ($('#filter_worksheet_variance').length) {
+                    $('#filter_worksheet_variance').val('all').trigger('change');
                 }
+                $('#worksheet_filter_search').val('');
+                applyWorksheetFilters();
+            });
+
+            function applyWorksheetFilters() {
+                var statusFilter = $('#filter_worksheet_status').val() || 'all';
+                var varianceFilter = $('#filter_worksheet_variance').val() || 'all';
+                var query = ($('#worksheet_filter_search').val() || '').toLowerCase().trim();
+
+                var rows = $('#worksheet_body tr');
+                rows.each(function () {
+                    var row = $(this);
+                    var isCounted = row.hasClass('is-counted');
+                    var text = row.text().toLowerCase();
+
+                    var showStatus = true;
+                    if (statusFilter === 'pending' && isCounted) showStatus = false;
+                    if (statusFilter === 'counted' && !isCounted) showStatus = false;
+
+                    var showSearch = true;
+                    if (query !== '' && text.indexOf(query) === -1) showSearch = false;
+
+                    var showVariance = true;
+                    if (varianceFilter !== 'all') {
+                        var newQohInput = row.find('.input-new-qoh');
+                        var newQoh = parseFloat(newQohInput.val()) || 0;
+                        var bookQty = parseFloat(newQohInput.data('book-qty')) || 0;
+
+                        if (varianceFilter === 'match' && newQoh !== bookQty) showVariance = false;
+                        if (varianceFilter === 'surplus' && newQoh <= bookQty) showVariance = false;
+                        if (varianceFilter === 'shortage' && newQoh >= bookQty) showVariance = false;
+                        if (varianceFilter === 'discrepancy' && newQoh === bookQty) showVariance = false;
+                    }
+
+                    if (showStatus && showSearch && showVariance) {
+                        row.data('filtered-out', false);
+                    } else {
+                        row.data('filtered-out', true);
+                    }
+                });
+
                 currentPage = 1;
                 updatePagination();
             }
+
+            $('#btn_export_worksheet_csv, #btn_export_worksheet_excel').on('click', function () {
+                var isExcel = $(this).attr('id') === 'btn_export_worksheet_excel';
+                var csv = [];
+                var headers = [];
+
+                $('#worksheet_table thead th').each(function () {
+                    headers.push('"' + $(this).text().trim().replace(/"/g, '""') + '"');
+                });
+                csv.push(headers.join(','));
+
+                $('#worksheet_body tr').filter(function() { return !$(this).data('filtered-out'); }).each(function () {
+                    var row = [];
+                    $(this).find('td').each(function () {
+                        var text = '';
+                        var input = $(this).find('input, select');
+                        if (input.length) {
+                            text = input.val();
+                        } else {
+                            text = $(this).text().trim();
+                        }
+                        row.push('"' + text.replace(/"/g, '""') + '"');
+                    });
+                    csv.push(row.join(','));
+                });
+
+                var blob = new Blob([csv.join('\n')], { type: isExcel ? 'application/vnd.ms-excel;charset=utf-8;' : 'text/csv;charset=utf-8;' });
+                var link = document.createElement('a');
+                var url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'Worksheet_' + "{{ $session->name }}" + (isExcel ? '.xls' : '.csv'));
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
 
             function filterTableRowsForScannedId(line_id) {
                 var rows = $('#worksheet_body tr');
@@ -978,6 +1101,15 @@
                 var total = $('#worksheet_body tr.worksheet-row').length;
                 var counted = $('#worksheet_body tr.is-counted').length;
                 var pending = total - counted;
+
+                $('#worksheet_body tr.worksheet-row').each(function () {
+                    var lineId = $(this).attr('id').replace('line_', '');
+                    if ($(this).hasClass('is-counted')) {
+                        $('#status_cell_' + lineId).html('<span class="label label-success">Counted</span>');
+                    } else {
+                        $('#status_cell_' + lineId).html('<span class="label label-warning">Pending</span>');
+                    }
+                });
 
                 var match = 0;
                 var surplus = 0;

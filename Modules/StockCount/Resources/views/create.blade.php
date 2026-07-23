@@ -34,22 +34,6 @@
             </div>
         </div>
 
-        <hr>
-        <h4 class="tw-font-bold tw-text-black">@lang('stockcount::lang.blind_count')</h4>
-        <div class="row">
-            <div class="col-md-12">
-                <div class="checkbox">
-                    <label>
-                        @php
-                            $default_blind_count = isset($settings['stock_count_show_expected_qty']) ? !$settings['stock_count_show_expected_qty'] : false;
-                        @endphp
-                        {!! Form::checkbox('blind_count', 1, $default_blind_count, ['class' => 'input-icheck']) !!}
-                        <strong>@lang('stockcount::lang.blind_count')</strong>
-                    </label>
-                    <p class="help-block">@lang('stockcount::lang.blind_count_help')</p>
-                </div>
-            </div>
-        </div>
 
         <hr>
         <h4 class="tw-font-bold tw-text-black">@lang('stockcount::lang.variance_report') Filters (Optional)</h4>

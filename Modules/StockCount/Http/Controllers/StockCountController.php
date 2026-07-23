@@ -45,7 +45,7 @@ class StockCountController extends Controller
     {
         $business_id = request()->session()->get('user.business_id');
 
-        if (!auth()->user()->can('stock_count.view')) {
+        if (!auth()->user()->can('stock_count.view') && !auth()->user()->can('stock_count.view_all') && !auth()->user()->can('stock_count.view_own')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -53,6 +53,10 @@ class StockCountController extends Controller
             $sessions = StockCountSession::with(['location', 'creator'])
                 ->where('business_id', $business_id)
                 ->select('stock_count_sessions.*');
+
+            if (!auth()->user()->can('stock_count.view_all') && !auth()->user()->can('stock_count.view') && auth()->user()->can('stock_count.view_own')) {
+                $sessions->where('stock_count_sessions.created_by', auth()->user()->id);
+            }
 
             if (!empty(request()->get('location_id'))) {
                 $sessions->where('location_id', request()->get('location_id'));
@@ -77,7 +81,7 @@ class StockCountController extends Controller
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-left" role="menu">';
 
-                    if (auth()->user()->can('stock_count.view')) {
+                    if (auth()->user()->can('stock_count.view') || auth()->user()->can('stock_count.view_all') || (auth()->user()->can('stock_count.view_own') && $row->created_by == auth()->user()->id)) {
                         $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$row->id]) . '"><i class="fa fa-eye"></i> ' . __('messages.view') . '</a></li>';
                     }
 
@@ -99,7 +103,7 @@ class StockCountController extends Controller
                                  </li>';
                     }
 
-                    if (auth()->user()->can('stock_count.view')) {
+                    if (auth()->user()->can('stock_count.view') || auth()->user()->can('stock_count.view_all') || (auth()->user()->can('stock_count.view_own') && $row->created_by == auth()->user()->id)) {
                         $html .= '<li>
                                     <a data-session_id="' . $row->id . '" data-session_name="' . $row->name . '" class="btn_compare_worksheet cursor-pointer">
                                         <i class="fa fa-balance-scale"></i> Compare worksheet
@@ -343,12 +347,18 @@ class StockCountController extends Controller
     {
         $business_id = request()->session()->get('user.business_id');
 
-        if (!auth()->user()->can('stock_count.view')) {
+        $can_view_all = auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view');
+        $can_view_own = auth()->user()->can('stock_count.view_own');
+
+        if (!$can_view_all && !$can_view_own) {
             abort(403, 'Unauthorized action.');
         }
 
         $session = StockCountSession::with(['location', 'creator', 'completer'])
             ->where('business_id', $business_id)
+            ->when(!$can_view_all && $can_view_own, function ($q) {
+                return $q->where('created_by', auth()->user()->id);
+            })
             ->findOrFail($id);
 
         $query = StockCountLine::with(['product', 'variation', 'counter'])
@@ -906,12 +916,18 @@ class StockCountController extends Controller
     {
         $business_id = request()->session()->get('user.business_id');
 
-        if (!auth()->user()->can('stock_count.view')) {
+        $can_view_all = auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view');
+        $can_view_own = auth()->user()->can('stock_count.view_own');
+
+        if (!$can_view_all && !$can_view_own) {
             abort(403, 'Unauthorized action.');
         }
 
         $session = StockCountSession::with(['location', 'creator'])
             ->where('business_id', $business_id)
+            ->when(!$can_view_all && $can_view_own, function ($q) {
+                return $q->where('created_by', auth()->user()->id);
+            })
             ->findOrFail($id);
 
         $lines = StockCountLine::with(['product', 'variation'])
@@ -1204,7 +1220,10 @@ class StockCountController extends Controller
     {
         $business_id = $request->session()->get('user.business_id');
 
-        if (!auth()->user()->can('stock_count.view')) {
+        $can_view_all = auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view');
+        $can_view_own = auth()->user()->can('stock_count.view_own');
+
+        if (!$can_view_all && !$can_view_own) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1221,10 +1240,16 @@ class StockCountController extends Controller
 
         $session_1 = StockCountSession::with(['location', 'creator'])
             ->where('business_id', $business_id)
+            ->when(!$can_view_all && $can_view_own, function ($q) {
+                return $q->where('created_by', auth()->user()->id);
+            })
             ->findOrFail($session_1_id);
 
         $session_2 = StockCountSession::with(['location', 'creator'])
             ->where('business_id', $business_id)
+            ->when(!$can_view_all && $can_view_own, function ($q) {
+                return $q->where('created_by', auth()->user()->id);
+            })
             ->findOrFail($session_2_id);
 
         // Load lines keying by variation_id for direct alignment
@@ -1301,12 +1326,19 @@ class StockCountController extends Controller
     {
         $business_id = $request->session()->get('user.business_id');
 
-        if (!auth()->user()->can('stock_count.view')) {
+        $can_view_all = auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view');
+        $can_view_own = auth()->user()->can('stock_count.view_own');
+
+        if (!$can_view_all && !$can_view_own) {
             abort(403, 'Unauthorized action.');
         }
 
         // Verify session belongs to this business
-        StockCountSession::where('business_id', $business_id)->findOrFail($id);
+        StockCountSession::where('business_id', $business_id)
+            ->when(!$can_view_all && $can_view_own, function ($q) {
+                return $q->where('created_by', auth()->user()->id);
+            })
+            ->findOrFail($id);
 
         $query = StockCountLine::with(['product', 'variation', 'counter'])
             ->where('stock_count_session_id', $id)

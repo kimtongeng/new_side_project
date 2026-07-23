@@ -6,6 +6,8 @@ return [
     'stock_count_sessions' => 'Stock Count Sessions',
     'create_stock_count_session' => 'Create Stock Count Session',
     'view_stock_count_session' => 'View Stock Count Session',
+    'view_own_stock_count' => 'View own stock count',
+    'view_all_stock_count' => 'View All stock count',
     'edit_stock_count_session' => 'Edit Stock Count Session',
     'delete_stock_count_session' => 'Delete Stock Count Session',
     'count_quantities' => 'Enter Count Quantities',

@@ -22,6 +22,16 @@ class DataController extends Controller
                 'default' => false,
             ],
             [
+                'value' => 'stock_count.view_own',
+                'label' => __('stockcount::lang.view_own_stock_count'),
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.view_all',
+                'label' => __('stockcount::lang.view_all_stock_count'),
+                'default' => false,
+            ],
+            [
                 'value' => 'stock_count.create',
                 'label' => __('stockcount::lang.create_stock_count_session'),
                 'default' => false,
@@ -84,7 +94,7 @@ class DataController extends Controller
         $business_id = session()->get('user.business_id');
         $module_util = new ModuleUtil();
 
-        if (auth()->user()->can('stock_count.view')) {
+        if (auth()->user()->can('stock_count.view') || auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view_own')) {
             $menu = Menu::instance('admin-sidebar-menu');
             $added = false;
 

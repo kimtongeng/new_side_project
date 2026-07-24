@@ -40,9 +40,9 @@
         }
 
         /* ── Barcode scanner input-group fix ─────────────────────────────
-                           Forces the text input + buttons to render as one seamless
-                           control regardless of which Bootstrap version is loaded
-                           (fixes the "floating pill buttons with a gap" look). */
+                                   Forces the text input + buttons to render as one seamless
+                                   control regardless of which Bootstrap version is loaded
+                                   (fixes the "floating pill buttons with a gap" look). */
         #barcode_scanner_group {
             display: flex;
             align-items: stretch;
@@ -250,6 +250,38 @@
         .worksheet-info-box.bg-shortage {
             background: linear-gradient(135deg, #d32f2f, #ef5350) !important;
         }
+
+        /* ── Autocomplete Dropdown Suggestions Styling ─────────────────── */
+        .ui-autocomplete {
+            max-height: 280px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 99999 !important;
+            border-radius: 4px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            border: 1px solid #ccc;
+            background: #ffffff;
+        }
+
+        .ui-autocomplete .ui-menu-item {
+            padding: 8px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .ui-autocomplete .ui-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .ui-autocomplete .ui-menu-item:hover,
+        .ui-autocomplete .ui-menu-item.ui-state-focus,
+        .ui-autocomplete .ui-menu-item-wrapper.ui-state-active {
+            background-color: #3c8dbc !important;
+            color: #ffffff !important;
+            border: none;
+            margin: 0;
+        }
     </style>
 @endsection
 
@@ -371,7 +403,8 @@
                         class="btn btn-info btn-flat">
                         <i class="fa fa-eye"></i> Back to Session
                     </a>
-                    <a href="#" data-href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"
+                    <a href="#"
+                        data-href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"
                         class="btn btn-default btn-flat print-invoice">
                         <i class="fa fa-print"></i> Print Worksheet
                     </a>
@@ -389,7 +422,7 @@
         <!-- Worksheet Filters -->
         @component('components.filters', ['title' => __('report.filters')])
         <div class="row">
-            <div class="col-md-3">
+            <div class="{{ !$session->blind_count ? 'col-md-4' : 'col-md-8' }}">
                 <div class="form-group">
                     <label for="filter_worksheet_status">Count Status:</label>
                     <select id="filter_worksheet_status" class="form-control select2" style="width:100%;">
@@ -400,28 +433,22 @@
                 </div>
             </div>
             @if(!$session->blind_count)
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label for="filter_worksheet_variance">Variance Filter:</label>
-                    <select id="filter_worksheet_variance" class="form-control select2" style="width:100%;">
-                        <option value="all">All Items</option>
-                        <option value="match">Match (No Variance)</option>
-                        <option value="surplus">Surplus (+)</option>
-                        <option value="shortage">Shortage (-)</option>
-                        <option value="discrepancy">Discrepancies Only</option>
-                    </select>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="filter_worksheet_variance">Variance Filter:</label>
+                        <select id="filter_worksheet_variance" class="form-control select2" style="width:100%;">
+                            <option value="all">All Items</option>
+                            <option value="match">Match (No Variance)</option>
+                            <option value="surplus">Surplus (+)</option>
+                            <option value="shortage">Shortage (-)</option>
+                            <option value="discrepancy">Discrepancies Only</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
             @endif
-            <div class="col-md-4">
-                <div class="form-group">
-                    <label for="worksheet_filter_search">Search Product / SKU:</label>
-                    <input type="text" id="worksheet_filter_search" class="form-control" placeholder="Search product name or SKU...">
-                </div>
-            </div>
-            <div class="col-md-2" style="padding-top: 25px;">
+            <div class="col-md-4" style="padding-top: 25px;">
                 <button type="button" id="btn_reset_worksheet_filters" class="btn btn-default btn-block">
-                    <i class="fa fa-refresh"></i> Reset
+                    <i class="fa fa-refresh"></i> Reset Filters
                 </button>
             </div>
         </div>
@@ -429,7 +456,8 @@
 
         <!-- Worksheet Table -->
         @component('components.widget', ['class' => 'box-primary'])
-        <div class="row" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div class="row"
+            style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
             <div class="col-sm-3 col-xs-12">
                 <label style="font-weight: normal; margin-bottom: 0;">Show
                     <select id="worksheet_page_length" class="form-control input-sm"
@@ -442,11 +470,20 @@
                     </select> entries
                 </label>
             </div>
-            <div class="col-sm-6 col-xs-12 text-center" style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
-                <button type="button" id="btn_export_worksheet_csv" class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-csv"></i> Export CSV</button>
-                <button type="button" id="btn_export_worksheet_excel" class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-excel"></i> Export Excel</button>
-                <button type="button" id="btn_print_worksheet_table" class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1 print-invoice" data-href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"><i class="fa fa-print"></i> Print</button>
-                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'export'], [$session->id]) }}" class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-pdf"></i> Export PDF</a>
+            <div class="col-sm-6 col-xs-12 text-center"
+                style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" id="btn_export_worksheet_csv"
+                    class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-csv"></i> Export
+                    CSV</button>
+                <button type="button" id="btn_export_worksheet_excel"
+                    class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-excel"></i> Export
+                    Excel</button>
+                <button type="button" id="btn_print_worksheet_table"
+                    class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1 print-invoice"
+                    data-href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"><i
+                        class="fa fa-print"></i> Print</button>
+                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'export'], [$session->id]) }}"
+                    class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-pdf"></i> Export PDF</a>
             </div>
             <div class="col-sm-3 col-xs-12 text-right">
                 <span id="worksheet_table_info" class="text-muted" style="font-size: 13px;"></span>
@@ -456,7 +493,6 @@
             <table class="table table-bordered table-striped" id="worksheet_table">
                 <thead>
                     <tr>
-                        <th style="min-width: 90px; text-align: center;">Status</th>
                         <th>Product Name (Product Code)</th>
                         @if(!$session->blind_count)
                             <th>QOH</th>
@@ -467,6 +503,7 @@
                         <th style="min-width: 100px;">{{ $session->blind_count ? 'Counted Qty' : 'New QOH' }}</th>
                         <th>Unit</th>
                         <th style="min-width: 180px;">Note</th>
+                        <th style="min-width: 90px; text-align: center;">Status</th>
                     </tr>
                 </thead>
                 <tbody id="worksheet_body">
@@ -490,7 +527,7 @@
             </a>
             <button type="button" class="btn btn-primary btn-lg btn-flat" id="btn_save_submit"
                 style="min-width: 160px; font-weight: bold;">
-                <i class="fa fa-save"></i> Save & Submit
+                <i class="fa fa-save"></i> Count All & Submit
             </button>
             <button type="button" class="btn btn-danger btn-lg btn-flat" id="btn_reset_worksheet"
                 style="min-width: 160px; font-weight: bold;">
@@ -628,6 +665,44 @@
             </div>
         </div>
     </div>
+
+    <!-- Line Status Change Modal -->
+    <div class="modal fade" id="lineStatusModal" tabindex="-1" role="dialog" aria-labelledby="lineStatusModalLabel">
+        <div class="modal-dialog modal-sm" role="document" style="margin: 30px auto; max-width: 95%;">
+            <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                <div class="modal-header" style="background-color: #3c8dbc; color: #fff; padding: 12px 15px;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 1;"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="lineStatusModalLabel" style="font-weight: bold; font-size: 16px; margin: 0;">
+                        <i class="fa fa-tag"></i> Change Item Status
+                    </h4>
+                </div>
+                <div class="modal-body" style="padding: 15px 20px;">
+                    <input type="hidden" id="status_modal_line_id">
+                    
+                    <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <h5 id="status_modal_product_name" style="font-weight: bold; margin: 0 0 5px 0; font-size: 15px; color: #333;">Product Name</h5>
+                        <span id="status_modal_product_sku" class="text-muted" style="font-size: 13px;">SKU</span>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="status_modal_select" style="font-size: 13px; font-weight: bold;">Status:</label>
+                        <select id="status_modal_select" class="form-control" style="font-weight: bold; height: 40px; font-size: 14px;">
+                            <option value="counted">Counted (Marked as counted)</option>
+                            <option value="pending">Pending (Not counted, Qty set to 0)</option>
+                        </select>
+                    </div>
+
+                    <p id="status_modal_help_text" class="help-block" style="font-size: 12px; margin-bottom: 0;">
+                        Changing to Pending will reset the count quantity to 0 and remove counted status.
+                    </p>
+                </div>
+                <div class="modal-footer" style="padding: 10px 15px; background-color: #f9f9f9; display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-default btn-flat" data-dismiss="modal" style="flex: 1; height: 40px; font-weight: bold; margin: 0;">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-flat" id="status_modal_btn_save" style="flex: 2; height: 40px; font-weight: bold; margin: 0;">Save & Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('javascript')
@@ -639,24 +714,36 @@
             $('#barcode_scanner').on('keypress', function (e) {
                 if (e.which === 13) {
                     e.preventDefault();
-                    scanBarcode($('#barcode_scanner').val().trim());
+                    var val = $('#barcode_scanner').val().trim();
+                    applyWorksheetFilters();
+                    if (val !== '') {
+                        scanBarcode(val);
+                    }
                 }
             });
 
-            $('#barcode_scanner').on('input', function () {
-                var query = $(this).val().toLowerCase().trim();
-                filterTableRows(query);
+            $('#barcode_scanner').on('keyup input', function () {
+                applyWorksheetFilters();
             });
 
             $('#btn_search_barcode').on('click', function () {
-                scanBarcode($('#barcode_scanner').val().trim());
+                var val = $('#barcode_scanner').val().trim();
+                applyWorksheetFilters();
+                if (val !== '') {
+                    scanBarcode(val);
+                }
             });
 
             $('#btn_clear_search').on('click', function () {
                 $('#barcode_scanner').val('');
-                filterTableRows('');
+                $('#worksheet_filter_search').val('');
+                applyWorksheetFilters();
                 $('#barcode_scanner').focus();
             });
+
+            function filterTableRows(query) {
+                applyWorksheetFilters();
+            }
 
             var currentPage = 1;
             var pageSize = 25;
@@ -738,23 +825,19 @@
                 applyWorksheetFilters();
             });
 
-            $('#worksheet_filter_search').on('keyup input', function () {
-                applyWorksheetFilters();
-            });
-
             $('#btn_reset_worksheet_filters').on('click', function () {
                 $('#filter_worksheet_status').val('all').trigger('change');
                 if ($('#filter_worksheet_variance').length) {
                     $('#filter_worksheet_variance').val('all').trigger('change');
                 }
-                $('#worksheet_filter_search').val('');
+                $('#barcode_scanner').val('');
                 applyWorksheetFilters();
             });
 
             function applyWorksheetFilters() {
                 var statusFilter = $('#filter_worksheet_status').val() || 'all';
                 var varianceFilter = $('#filter_worksheet_variance').val() || 'all';
-                var query = ($('#worksheet_filter_search').val() || '').toLowerCase().trim();
+                var query = ($('#barcode_scanner').val() || '').toLowerCase().trim();
 
                 var rows = $('#worksheet_body tr');
                 rows.each(function () {
@@ -802,7 +885,7 @@
                 });
                 csv.push(headers.join(','));
 
-                $('#worksheet_body tr').filter(function() { return !$(this).data('filtered-out'); }).each(function () {
+                $('#worksheet_body tr').filter(function () { return !$(this).data('filtered-out'); }).each(function () {
                     var row = [];
                     $(this).find('td').each(function () {
                         var text = '';
@@ -979,16 +1062,14 @@
                             // Open count modal for easy phone counting
                             openCountModal(result.line_id);
                         } else {
-                            $('#barcode_scanner').val('').focus();
-                            showSaveStatus('Not Found ✖', 'exclamation-circle');
-                            toastr.error(result.message || 'Barcode not found.');
+                            applyWorksheetFilters();
+                            showSaveStatus('Filtered ✔', 'check');
                         }
                         if (typeof callback === 'function') callback(result);
                     },
                     error: function () {
-                        $('#barcode_scanner').val('').focus();
-                        showSaveStatus('Error ✖', 'times');
-                        toastr.error('Error matching barcode.');
+                        applyWorksheetFilters();
+                        showSaveStatus('Filtered ✔', 'check');
                         if (typeof callback === 'function') callback(null);
                     }
                 });
@@ -1104,10 +1185,13 @@
 
                 $('#worksheet_body tr.worksheet-row').each(function () {
                     var lineId = $(this).attr('id').replace('line_', '');
+                    var cell = $('#status_cell_' + lineId);
                     if ($(this).hasClass('is-counted')) {
-                        $('#status_cell_' + lineId).html('<span class="label label-success">Counted</span>');
+                        cell.addClass('btn_toggle_line_status').attr('data-status', 'counted');
+                        cell.html('<span class="label label-success">Counted</span>');
                     } else {
-                        $('#status_cell_' + lineId).html('<span class="label label-warning">Pending</span>');
+                        cell.addClass('btn_toggle_line_status').attr('data-status', 'pending');
+                        cell.html('<span class="label label-warning">Pending</span>');
                     }
                 });
 
@@ -1151,19 +1235,21 @@
                 $('#worksheet_body tr').each(function () {
                     var row = $(this);
                     var id = row.attr('id').replace('line_', '');
-                    var firstTd = row.find('td:first');
-                    var nameText = firstTd.find('strong').text().trim();
-                    var fullText = firstTd.text();
+                    var productTd = row.find('td:eq(1)');
+                    var nameText = productTd.find('strong').text().trim();
+                    var fullText = productTd.text().trim();
                     var skuMatch = fullText.match(/\(([^)]+)\)/);
-                    var skuText = skuMatch ? skuMatch[1] : '';
+                    var skuText = skuMatch ? skuMatch[1].trim() : '';
 
-                    worksheetProducts.push({
-                        label: nameText + ' (' + skuText + ')',
-                        value: nameText,
-                        sku: skuText,
-                        line_id: id,
-                        name: nameText
-                    });
+                    if (nameText !== '') {
+                        worksheetProducts.push({
+                            label: nameText + (skuText ? ' (' + skuText + ')' : ''),
+                            value: nameText,
+                            sku: skuText,
+                            line_id: id,
+                            name: nameText
+                        });
+                    }
                 });
             }
 
@@ -1171,15 +1257,17 @@
 
             $('#barcode_scanner').autocomplete({
                 source: function (request, response) {
-                    var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+                    var term = $.ui.autocomplete.escapeRegex(request.term);
+                    var matcher = new RegExp(term, "i");
                     response($.grep(worksheetProducts, function (value) {
-                        return matcher.test(value.name) || matcher.test(value.sku);
+                        return matcher.test(value.name) || matcher.test(value.sku) || matcher.test(value.label);
                     }));
                 },
-                minLength: 2,
+                minLength: 1,
                 select: function (event, ui) {
                     event.preventDefault();
-                    $('#barcode_scanner').val('');
+                    $('#barcode_scanner').val(ui.item.name);
+                    applyWorksheetFilters();
 
                     var allowRecount = {{ (isset(session('business.common_settings')['stock_count_allow_recount']) ? session('business.common_settings')['stock_count_allow_recount'] : true) ? 'true' : 'false' }};
                     var isCounted = $('#line_' + ui.item.line_id).hasClass('is-counted');
@@ -1192,9 +1280,9 @@
                 }
             });
 
-            // Tap row to open popup
+            // Tap row to open popup (skips status cell)
             $(document).on('click', '#worksheet_body tr', function (e) {
-                if ($(e.target).closest('input, select, button, a').length) {
+                if ($(e.target).closest('input, select, button, a, .btn_toggle_line_status, [id^="status_cell_"], td:last-child').length) {
                     return;
                 }
                 var line_id = $(this).attr('id').replace('line_', '');
@@ -1207,6 +1295,100 @@
                 }
 
                 openCountModal(line_id);
+            });
+
+            // Click status badge to open status change modal
+            $(document).on('click', '.btn_toggle_line_status', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var line_id = $(this).data('id');
+                var currentStatus = $(this).data('status') || 'pending';
+                var row = $('#line_' + line_id);
+
+                var nameText = row.find('td:eq(0) strong').text() || 'Product';
+                var fullText = row.find('td:eq(0)').text();
+                var skuMatch = fullText.match(/\(([^)]+)\)/);
+                var skuText = skuMatch ? skuMatch[1] : '';
+
+                $('#status_modal_line_id').val(line_id);
+                $('#status_modal_product_name').text(nameText);
+                $('#status_modal_product_sku').text(skuText ? 'SKU: ' + skuText : '');
+
+                $('#status_modal_select').val(currentStatus);
+                $('#status_modal_select').trigger('change');
+                $('#lineStatusModal').modal('show');
+            });
+
+            $('#status_modal_select').on('change', function () {
+                var val = $(this).val();
+                if (val === 'pending') {
+                    $('#status_modal_help_text').text('Changing to Pending will reset count quantity to 0 and remove counted status.');
+                } else {
+                    $('#status_modal_help_text').text('Changing to Counted will mark this product as counted.');
+                }
+            });
+
+            $('#status_modal_btn_save').on('click', function () {
+                var line_id = $('#status_modal_line_id').val();
+                var newStatus = $('#status_modal_select').val();
+                var row = $('#line_' + line_id);
+                var cell = $('#status_cell_' + line_id);
+
+                if (newStatus === 'pending') {
+                    // Mark as pending: remove is-counted class, set qty to 0
+                    row.removeClass('is-counted');
+
+                    $('#qty_' + line_id).val(0);
+                    $('#type_' + line_id).val('+');
+
+                    var bookQty = parseFloat($('#new_qoh_' + line_id).data('book-qty')) || 0;
+                    var isBlind = {{ $session->blind_count ? 'true' : 'false' }};
+                    $('#new_qoh_' + line_id).val(isBlind ? 0 : bookQty);
+
+                    recalculateStats();
+
+                    // Send AJAX to backend so database sets counted_by to null
+                    $.ajax({
+                        url: '{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, "saveWorksheetProgress"], [$session->id]) }}',
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            line_id: line_id,
+                            is_pending: true
+                        },
+                        success: function (res) {
+                            toastr.success('Item marked as Pending (Qty reset to 0)');
+                            updateWorksheetProductsList();
+                            applyWorksheetFilters();
+                        }
+                    });
+                } else {
+                    // Mark as counted
+                    row.addClass('is-counted');
+
+                    recalculateStats();
+
+                    var note = $('#note_' + line_id).val() || '';
+
+                    $.ajax({
+                        url: '{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, "saveWorksheetProgress"], [$session->id]) }}',
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            line_id: line_id,
+                            quantity: $('#new_qoh_' + line_id).val(),
+                            note: note
+                        },
+                        success: function (res) {
+                            toastr.success('Item marked as Counted');
+                            updateWorksheetProductsList();
+                            applyWorksheetFilters();
+                        }
+                    });
+                }
+
+                $('#lineStatusModal').modal('hide');
             });
 
             var activeLineId = null;
@@ -1277,7 +1459,8 @@
                 $('#mobileCountModal').modal('hide');
 
                 setTimeout(function () {
-                    $('#barcode_scanner').val('').focus();
+                    applyWorksheetFilters();
+                    $('#barcode_scanner').focus();
                 }, 300);
             });
 

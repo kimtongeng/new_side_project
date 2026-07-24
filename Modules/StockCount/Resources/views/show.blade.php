@@ -254,6 +254,10 @@
                 color: #000;
             }
 
+            .print-table tfoot {
+                display: table-row-group !important;
+            }
+
             .signature-container {
                 display: flex;
                 justify-content: space-between;
@@ -553,10 +557,21 @@
                             </tr>
                         </thead>
                         <tbody>
+                            @php
+                                $sum_book_qty = 0;
+                                $sum_counted_qty = 0;
+                                $sum_variance = 0;
+                                $sum_financial_impact = 0;
+                            @endphp
                             @foreach($lines as $line)
                                 @php
                                     $variance = $line->counted_quantity - $line->book_quantity;
                                     $financial_diff = $variance * $line->unit_price;
+
+                                    $sum_book_qty += (float)$line->book_quantity;
+                                    $sum_counted_qty += (float)$line->counted_quantity;
+                                    $sum_variance += $variance;
+                                    $sum_financial_impact += $financial_diff;
                                 @endphp
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
@@ -590,6 +605,22 @@
                                 </tr>
                             @endforeach
                         </tbody>
+                        <tfoot>
+                            <tr style="background-color: #f7fafc; font-weight: bold; border-top: 2px solid #2b6cb0;">
+                                <td colspan="3" style="text-align: right;">Total Summary:</td>
+                                <td>{{ number_format($sum_book_qty, 2) }}</td>
+                                <td>{{ number_format($sum_counted_qty, 2) }}</td>
+                                <td class="@if($sum_variance < 0) text-danger @elseif($sum_variance > 0) text-success @endif">
+                                    {{ $sum_variance > 0 ? '+' : '' }}{{ number_format($sum_variance, 2) }}
+                                </td>
+                                <td>-</td>
+                                <td class="@if($sum_financial_impact < 0) text-danger @elseif($sum_financial_impact > 0) text-success @endif">
+                                    <span class="display_currency" data-currency_symbol="true">{{ $sum_financial_impact }}</span>
+                                </td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
                 @endcomponent

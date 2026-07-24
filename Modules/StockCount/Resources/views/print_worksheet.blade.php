@@ -107,6 +107,9 @@
             border: 1px solid #1a202c;
             color: #000;
         }
+        #stock_count_print_template .print-table tfoot {
+            display: table-row-group !important;
+        }
         #stock_count_print_template .signature-container {
             display: flex;
             justify-content: space-between;
@@ -158,6 +161,9 @@
                 color: #ffffff !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+            #stock_count_print_template .print-table tfoot {
+                display: table-row-group !important;
             }
         }
     </style>
@@ -296,13 +302,15 @@
                     </tr>
                 @endforeach
             </tbody>
-            @if(!$is_blind)
-                <tfoot>
-                    <tr style="background-color: #f7fafc; font-weight: bold; border-top: 2px solid #2b6cb0;">
-                        <td colspan="2" style="text-align: right;">Total Summary:</td>
+            <tfoot>
+                <tr style="background-color: #f7fafc; font-weight: bold; border-top: 2px solid #2b6cb0;">
+                    <td colspan="2" style="text-align: right;">Total Summary:</td>
+                    @if(!$is_blind)
                         <td style="text-align: right;">-</td>
                         <td style="text-align: right;">{{ number_format($sum_expected, 2) }}</td>
-                        <td style="text-align: right;">{{ number_format($sum_counted, 2) }}</td>
+                    @endif
+                    <td style="text-align: right;">{{ number_format($sum_counted, 2) }}</td>
+                    @if(!$is_blind)
                         <td style="text-align: right;">
                             <span style="{{ $sum_diff < 0 ? 'color: #c53030;' : ($sum_diff > 0 ? 'color: #2f855a;' : '') }}">
                                 {{ $sum_diff > 0 ? '+' : '' }}{{ number_format($sum_diff, 2) }}
@@ -316,9 +324,9 @@
                         <td style="text-align: right; color: #2b6cb0;">
                             {{ @num_format($sum_total_cost) }}
                         </td>
-                    </tr>
-                </tfoot>
-            @endif
+                    @endif
+                </tr>
+            </tfoot>
         </table>
 
         <!-- Signatures -->

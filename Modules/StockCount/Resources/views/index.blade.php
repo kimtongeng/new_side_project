@@ -131,6 +131,7 @@
                 {!! Form::label('filter_status', __('sale.status') . ':') !!}
                 {!! Form::select('filter_status', [
         'pending' => 'Pending',
+        'in_progress' => 'In Progress',
         'completed' => 'Completed'
     ], null, [
         'class' => 'form-control select2',
@@ -251,6 +252,7 @@
                             {!! Form::label('modal_status', 'Status:') !!}
                             <select name="status" id="modal_status" class="form-control" style="width: 100%;">
                                 <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
                                 <option value="completed">Completed</option>
                             </select>
                         </div>
@@ -429,7 +431,7 @@
 
                 if ($('#modal_status option[value="' + status + '"]').length > 0) {
                     $('#modal_status').val(status);
-                } else if (status === 'active' || status === 'in_progress' || status === 'draft') {
+                } else if (status === 'active' || status === 'draft') {
                     $('#modal_status').val('pending');
                 } else if (status === 'approved' || status === 'reviewed') {
                     $('#modal_status').val('completed');

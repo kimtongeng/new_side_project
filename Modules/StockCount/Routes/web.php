@@ -10,6 +10,8 @@ Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezon
     Route::get('/settings', [Modules\StockCount\Http\Controllers\StockCountController::class, 'getSettings'])->name('stock-counts.settings');
     Route::post('/settings', [Modules\StockCount\Http\Controllers\StockCountController::class, 'postSettings'])->name('stock-counts.post-settings');
     Route::get('/compare', [Modules\StockCount\Http\Controllers\StockCountController::class, 'compare'])->name('stock-counts.compare');
+    Route::get('/reset-permissions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'resetPermissions'])->name('stock-counts.reset-permissions');
+    Route::post('/reset-permissions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'resetPermissions'])->name('stock-counts.post-reset-permissions');
     Route::get('/all-sessions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'getAllSessionsJson'])->name('stock-counts.all-sessions');
     Route::get('/{id}', [Modules\StockCount\Http\Controllers\StockCountController::class, 'show'])->name('stock-counts.show');
     Route::delete('/{id}', [Modules\StockCount\Http\Controllers\StockCountController::class, 'destroy'])->name('stock-counts.destroy');

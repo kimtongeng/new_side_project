@@ -15,7 +15,6 @@ class AddStockCountPermissions extends Migration
     public function up()
     {
         $permissions = [
-            'stock_count.view',
             'stock_count.view_own',
             'stock_count.view_all',
             'stock_count.create',
@@ -43,7 +42,6 @@ class AddStockCountPermissions extends Migration
     public function down()
     {
         $permissions = [
-            'stock_count.view',
             'stock_count.view_own',
             'stock_count.view_all',
             'stock_count.create',

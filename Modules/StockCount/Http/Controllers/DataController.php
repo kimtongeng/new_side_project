@@ -16,11 +16,7 @@ class DataController extends Controller
     public function user_permissions()
     {
         return [
-            [
-                'value' => 'stock_count.view',
-                'label' => __('stockcount::lang.view_stock_count_session'),
-                'default' => false,
-            ],
+            // Access & Visibility
             [
                 'value' => 'stock_count.view_own',
                 'label' => __('stockcount::lang.view_own_stock_count'),
@@ -32,48 +28,15 @@ class DataController extends Controller
                 'default' => false,
             ],
             [
-                'value' => 'stock_count.settings',
-                'label' => 'Stock Count Settings (Access Page)',
+                'value' => 'stock_count.audit_log',
+                'label' => __('stockcount::lang.view_audit_logs'),
                 'default' => false,
             ],
-            [
-                'value' => 'stock_count.settings_auto_adjust',
-                'label' => 'Setting: Change Auto Adjust Stock',
-                'default' => false,
-            ],
-            [
-                'value' => 'stock_count.settings_approval',
-                'label' => 'Setting: Change Approval & Locking',
-                'default' => false,
-            ],
-            [
-                'value' => 'stock_count.settings_counting',
-                'label' => 'Setting: Change Counting & Blind Count Rules',
-                'default' => false,
-            ],
-            [
-                'value' => 'stock_count.settings_notifications',
-                'label' => 'Setting: Change Notification Alerts',
-                'default' => false,
-            ],
-            [
-                'value' => 'stock_count.print_blind',
-                'label' => 'Print Blind Count Worksheet (User Level)',
-                'default' => false,
-            ],
-            [
-                'value' => 'stock_count.print_all',
-                'label' => 'Print All / Full Worksheet (Admin & Permitted Users)',
-                'default' => false,
-            ],
+
+            // Session Management & Operations
             [
                 'value' => 'stock_count.create',
                 'label' => __('stockcount::lang.create_stock_count_session'),
-                'default' => false,
-            ],
-            [
-                'value' => 'stock_count.update_status',
-                'label' => 'Update Stock Count Status',
                 'default' => false,
             ],
             [
@@ -86,6 +49,13 @@ class DataController extends Controller
                 'label' => __('stockcount::lang.delete_stock_count_session'),
                 'default' => false,
             ],
+            [
+                'value' => 'stock_count.update_status',
+                'label' => 'Update Stock Count Status',
+                'default' => false,
+            ],
+
+            // Counting & Worksheet Actions
             [
                 'value' => 'stock_count.count',
                 'label' => __('stockcount::lang.count_quantities'),
@@ -111,14 +81,48 @@ class DataController extends Controller
                 'label' => __('stockcount::lang.complete_stock_count'),
                 'default' => false,
             ],
+
+            // Printing & Exporting
             [
                 'value' => 'stock_count.export',
                 'label' => __('stockcount::lang.export_excel_pdf'),
                 'default' => false,
             ],
             [
-                'value' => 'stock_count.audit_log',
-                'label' => __('stockcount::lang.view_audit_logs'),
+                'value' => 'stock_count.print_blind',
+                'label' => 'Print Blind Count Worksheet (User Level)',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.print_all',
+                'label' => 'Print All / Full Worksheet (Admin & Permitted Users)',
+                'default' => false,
+            ],
+
+            // Settings & Configuration
+            [
+                'value' => 'stock_count.settings',
+                'label' => 'Stock Count Settings (Access Page)',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.settings_auto_adjust',
+                'label' => 'Setting: Change Auto Adjust Stock',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.settings_approval',
+                'label' => 'Setting: Change Approval & Locking',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.settings_counting',
+                'label' => 'Setting: Change Counting & Blind Count Rules',
+                'default' => false,
+            ],
+            [
+                'value' => 'stock_count.settings_notifications',
+                'label' => 'Setting: Change Notification Alerts',
                 'default' => false,
             ],
         ];
@@ -134,28 +138,22 @@ class DataController extends Controller
         $business_id = session()->get('user.business_id');
         $module_util = new ModuleUtil();
 
-        if (auth()->user()->can('stock_count.view') || auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view_own')) {
+        if (auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view_own')) {
             $menu = Menu::instance('admin-sidebar-menu');
-            $added = false;
 
-            $menu->whereTitle(__('lang_v1.stock_transfers'), function ($sub) use (&$added) {
-                if (!empty($sub)) {
-                    $sub->url(
-                        action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']),
-                        __('stockcount::lang.stock_count'),
-                        ['icon' => '', 'active' => request()->segment(1) == 'stock-counts']
-                    );
-                    $added = true;
-                }
-            });
-
-            if (!$added) {
-                $menu->url(
-                    action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']),
-                    __('stockcount::lang.stock_count'),
-                    ['icon' => 'fa fas fa-clipboard-list', 'active' => request()->segment(1) == 'stock-counts']
-                )->order(26);
-            }
+            $menu->url(
+                action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']),
+                __('stockcount::lang.stock_count'),
+                [
+                    'icon' => '<svg aria-hidden="true" class="tw-size-5 tw-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"></path>
+                    <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"></path>
+                    <path d="M9 14l2 2l4 -4"></path>
+                  </svg>',
+                    'active' => request()->segment(1) == 'stock-counts'
+                ]
+            )->order(36);
         }
     }
 }

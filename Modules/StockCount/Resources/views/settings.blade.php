@@ -195,18 +195,55 @@
             border: none;
             box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3);
             transition: all 0.2s ease;
+            cursor: pointer;
         }
 
-        .btn-save-settings:hover {
+        .btn-save-settings:hover:not([disabled]) {
             background: #1557b0;
             box-shadow: 0 6px 20px rgba(26, 115, 232, 0.4);
             transform: translateY(-1px);
+        }
+
+        .btn-save-settings[disabled] {
+            background: #95a5a6 !important;
+            box-shadow: none !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+            transform: none !important;
+        }
+
+        .switch input[disabled] + .slider {
+            background-color: #e0e0e0 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+        }
+        
+        .switch input[disabled]:checked + .slider {
+            background-color: #a8e6cf !important;
+            cursor: not-allowed !important;
+        }
+
+        .settings-select[disabled],
+        .settings-input[disabled] {
+            background-color: #f5f5f5 !important;
+            color: #95a5a6 !important;
+            cursor: not-allowed !important;
         }
     </style>
 @endsection
 
 @section('content')
     @php
+        $business_id = session()->get('user.business_id');
+        $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+
+        $can_edit_auto_adjust = $is_admin || auth()->user()->can('stock_count.settings_auto_adjust');
+        $can_edit_approval = $is_admin || auth()->user()->can('stock_count.settings_approval');
+        $can_edit_counting = $is_admin || auth()->user()->can('stock_count.settings_counting');
+        $can_edit_notifications = $is_admin || auth()->user()->can('stock_count.settings_notifications');
+
+        $can_save_settings = $can_edit_auto_adjust || $can_edit_approval || $can_edit_counting || $can_edit_notifications;
+
         $auto_adjust = isset($settings['stock_count_auto_adjust_stock']) ? $settings['stock_count_auto_adjust_stock'] : false;
         $require_approval = isset($settings['stock_count_require_approval']) ? $settings['stock_count_require_approval'] : true;
         $lock_after = isset($settings['stock_count_lock_after_approval']) ? $settings['stock_count_lock_after_approval'] : true;
@@ -247,7 +284,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_auto_adjust_stock" value="1" @if($auto_adjust) checked @endif>
+                                    <input type="checkbox" name="stock_count_auto_adjust_stock" value="1" @if($auto_adjust) checked @endif @if(!$can_edit_auto_adjust) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -262,7 +299,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_require_approval" value="1" @if($require_approval) checked @endif>
+                                    <input type="checkbox" name="stock_count_require_approval" value="1" @if($require_approval) checked @endif @if(!$can_edit_approval) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -277,7 +314,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_lock_after_approval" value="1" @if($lock_after) checked @endif>
+                                    <input type="checkbox" name="stock_count_lock_after_approval" value="1" @if($lock_after) checked @endif @if(!$can_edit_approval) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -299,7 +336,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_allow_recount" value="1" @if($allow_recount) checked @endif>
+                                    <input type="checkbox" name="stock_count_allow_recount" value="1" @if($allow_recount) checked @endif @if(!$can_edit_counting) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -314,7 +351,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_show_expected_qty" value="1" @if($show_expected) checked @endif>
+                                    <input type="checkbox" name="stock_count_show_expected_qty" value="1" @if($show_expected) checked @endif @if(!$can_edit_counting) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -329,7 +366,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_default_blind_count" value="1" @if($default_blind_count) checked @endif>
+                                    <input type="checkbox" name="stock_count_default_blind_count" value="1" @if($default_blind_count) checked @endif @if(!$can_edit_counting) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -343,7 +380,7 @@
                                 <p class="setting-desc">Default stocktake type selected when creating a new stocktake</p>
                             </div>
                             <div>
-                                <select name="stock_count_default_count_type" class="settings-select">
+                                <select name="stock_count_default_count_type" class="settings-select" @if(!$can_edit_counting) disabled @endif>
                                     <option value="full_count" @if($default_type == 'full_count') selected @endif>Full Count</option>
                                     <option value="partial_count" @if($default_type == 'partial_count') selected @endif>Partial Count</option>
                                 </select>
@@ -359,7 +396,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_skip_zero_stock" value="1" @if($skip_zero) checked @endif>
+                                    <input type="checkbox" name="stock_count_skip_zero_stock" value="1" @if($skip_zero) checked @endif @if(!$can_edit_counting) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -381,7 +418,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_notify_on_completion" value="1" @if($notify_completion) checked @endif>
+                                    <input type="checkbox" name="stock_count_notify_on_completion" value="1" @if($notify_completion) checked @endif @if(!$can_edit_notifications) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -396,7 +433,7 @@
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_notify_on_large_discrepancies" value="1" @if($notify_discrepancies) checked @endif>
+                                    <input type="checkbox" name="stock_count_notify_on_large_discrepancies" value="1" @if($notify_discrepancies) checked @endif @if(!$can_edit_notifications) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -411,7 +448,7 @@
                             </div>
                             <div>
                                 <div class="settings-input-group">
-                                    <input type="number" name="stock_count_discrepancy_threshold" class="settings-input" value="{{ $threshold }}" min="0" max="100">
+                                    <input type="number" name="stock_count_discrepancy_threshold" class="settings-input" value="{{ $threshold }}" min="0" max="100" @if(!$can_edit_notifications) disabled @endif>
                                     <span class="settings-input-addon">%</span>
                                 </div>
                             </div>
@@ -424,7 +461,7 @@
                     <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}" class="btn btn-default" style="padding: 10px 24px; font-size: 15px; font-weight: 600; border-radius: 6px;">
                         <i class="fa fa-arrow-left"></i> Back
                     </a>
-                    <button type="submit" class="btn-save-settings">
+                    <button type="submit" class="btn-save-settings" @if(!$can_save_settings) disabled @endif>
                         <i class="fa fa-save"></i> Save Settings
                     </button>
                 </div>

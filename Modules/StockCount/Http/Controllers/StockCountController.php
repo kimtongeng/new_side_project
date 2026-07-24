@@ -45,7 +45,7 @@ class StockCountController extends Controller
     {
         $business_id = request()->session()->get('user.business_id');
 
-        if (!auth()->user()->can('stock_count.view') && !auth()->user()->can('stock_count.view_all') && !auth()->user()->can('stock_count.view_own')) {
+        if (!auth()->user()->can('stock_count.view_all') && !auth()->user()->can('stock_count.view_own')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -54,7 +54,7 @@ class StockCountController extends Controller
                 ->where('business_id', $business_id)
                 ->select('stock_count_sessions.*');
 
-            if (!auth()->user()->can('stock_count.view_all') && !auth()->user()->can('stock_count.view') && auth()->user()->can('stock_count.view_own')) {
+            if (!auth()->user()->can('stock_count.view_all') && auth()->user()->can('stock_count.view_own')) {
                 $sessions->where('stock_count_sessions.created_by', auth()->user()->id);
             }
 
@@ -81,7 +81,7 @@ class StockCountController extends Controller
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-left" role="menu">';
 
-                    if (auth()->user()->can('stock_count.view') || auth()->user()->can('stock_count.view_all') || (auth()->user()->can('stock_count.view_own') && $row->created_by == auth()->user()->id)) {
+                    if (auth()->user()->can('stock_count.view_all') || (auth()->user()->can('stock_count.view_own') && $row->created_by == auth()->user()->id)) {
                         $html .= '<li><a href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$row->id]) . '"><i class="fa fa-eye"></i> ' . __('messages.view') . '</a></li>';
                     }
 
@@ -106,7 +106,7 @@ class StockCountController extends Controller
                                  </li>';
                     }
 
-                    if (auth()->user()->can('stock_count.view') || auth()->user()->can('stock_count.view_all') || (auth()->user()->can('stock_count.view_own') && $row->created_by == auth()->user()->id)) {
+                    if (auth()->user()->can('stock_count.view_all') || (auth()->user()->can('stock_count.view_own') && $row->created_by == auth()->user()->id)) {
                         $html .= '<li>
                                     <a data-session_id="' . $row->id . '" data-session_name="' . $row->name . '" class="btn_compare_worksheet cursor-pointer">
                                         <i class="fa fa-balance-scale"></i> Compare worksheet
@@ -132,7 +132,10 @@ class StockCountController extends Controller
                     if ($row->status === 'completed' || $row->status === 'approved') {
                         $color = 'bg-green';
                         $status_name = 'Completed';
-                    } elseif ($row->status === 'pending' || $row->status === 'draft' || $row->status === 'active' || $row->status === 'in_progress') {
+                    } elseif ($row->status === 'in_progress') {
+                        $color = 'bg-blue';
+                        $status_name = 'In Progress';
+                    } elseif ($row->status === 'pending' || $row->status === 'draft' || $row->status === 'active') {
                         $color = 'bg-yellow';
                         $status_name = 'Pending';
                     } else {
@@ -179,8 +182,8 @@ class StockCountController extends Controller
             $filtered_sessions_query = clone $sessions;
             $session_ids = $filtered_sessions_query->pluck('id')->toArray();
 
-            $active_sessions = $filtered_sessions_query->clone()->where('status', 'active')->count();
-            $completed_sessions = $filtered_sessions_query->clone()->where('status', 'completed')->count();
+            $active_sessions = $filtered_sessions_query->clone()->whereIn('status', ['active', 'pending', 'in_progress', 'draft'])->count();
+            $completed_sessions = $filtered_sessions_query->clone()->whereIn('status', ['completed', 'approved'])->count();
 
             $total_items = 0;
             $total_counted = 0;
@@ -358,7 +361,7 @@ class StockCountController extends Controller
     {
         $business_id = request()->session()->get('user.business_id');
 
-        $can_view_all = auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view');
+        $can_view_all = auth()->user()->can('stock_count.view_all');
         $can_view_own = auth()->user()->can('stock_count.view_own');
 
         if (!$can_view_all && !$can_view_own) {
@@ -443,8 +446,14 @@ class StockCountController extends Controller
         $session = StockCountSession::where('business_id', $business_id)
             ->findOrFail($id);
 
-        if (!in_array($session->status, ['active', 'in_progress'])) {
+        if (!in_array($session->status, ['active', 'pending', 'draft', 'in_progress'])) {
             return redirect()->action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$id]);
+        }
+
+        // Auto transition status to 'in_progress' when user opens/starts counting on worksheet
+        if (in_array($session->status, ['active', 'pending', 'draft'])) {
+            $session->status = 'in_progress';
+            $session->save();
         }
 
         $lines = StockCountLine::with(['product', 'variation'])
@@ -465,6 +474,24 @@ class StockCountController extends Controller
         try {
             DB::beginTransaction();
 
+            $line_id = $request->input('line_id');
+            $is_pending = $request->input('is_pending', false);
+
+            if ($is_pending && !empty($line_id)) {
+                $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
+                    $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress']);
+                })->find($line_id);
+
+                if (!empty($line)) {
+                    $line->counted_quantity = 0;
+                    $line->counted_by = null;
+                    $line->counted_at = null;
+                    $line->save();
+                }
+                DB::commit();
+                return response()->json(['success' => true]);
+            }
+
             $lines = $request->input('lines');
             if (!empty($lines) && is_array($lines)) {
                 foreach ($lines as $line_data) {
@@ -473,15 +500,20 @@ class StockCountController extends Controller
                     })->find($line_data['line_id']);
 
                     if (!empty($line)) {
-                        $line->counted_quantity = $line_data['quantity'] ?? 0;
-                        $line->note = $line_data['note'] ?? '';
-                        $line->counted_by = auth()->user()->id;
-                        $line->counted_at = Carbon::now();
+                        if (!empty($line_data['is_pending'])) {
+                            $line->counted_quantity = 0;
+                            $line->counted_by = null;
+                            $line->counted_at = null;
+                        } else {
+                            $line->counted_quantity = $line_data['quantity'] ?? 0;
+                            $line->note = $line_data['note'] ?? '';
+                            $line->counted_by = auth()->user()->id;
+                            $line->counted_at = Carbon::now();
+                        }
                         $line->save();
                     }
                 }
             } else {
-                $line_id = $request->input('line_id');
                 $quantity = $request->input('quantity', 0);
                 $note = $request->input('note', '');
 
@@ -927,7 +959,7 @@ class StockCountController extends Controller
     {
         $business_id = request()->session()->get('user.business_id');
 
-        $can_view_all = auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view');
+        $can_view_all = auth()->user()->can('stock_count.view_all');
         $can_view_own = auth()->user()->can('stock_count.view_own');
 
         if (!$can_view_all && !$can_view_own) {
@@ -1153,20 +1185,34 @@ class StockCountController extends Controller
                             ]);
                         }
 
-                        $this->transactionUtil->activityLog($stock_adjustment, 'added', null, [], false);
+                    $this->transactionUtil->activityLog($stock_adjustment, 'added', null, [], false);
                     }
                 }
 
-                $session->completed_by = auth()->user()->id;
-                $session->completed_at = Carbon::now();
-                $session->status = $status;
-                $session->save();
-
                 DB::commit();
-            } else {
-                $session->status = $status;
-                $session->save();
             }
+
+            // If status is set to completed or approved, fill uncounted lines so completion reaches 100%
+            if ($status === 'completed' || $status === 'approved') {
+                StockCountLine::where('stock_count_session_id', $session->id)
+                    ->whereNull('counted_by')
+                    ->update([
+                        'counted_quantity' => DB::raw('COALESCE(counted_quantity, book_quantity)'),
+                        'counted_by' => auth()->user()->id,
+                        'counted_at' => Carbon::now()
+                    ]);
+
+                if (empty($session->completed_at)) {
+                    $session->completed_by = auth()->user()->id;
+                    $session->completed_at = Carbon::now();
+                }
+            } elseif (in_array($status, ['pending', 'in_progress', 'draft'])) {
+                $session->completed_by = null;
+                $session->completed_at = null;
+            }
+
+            $session->status = $status;
+            $session->save();
 
             $output = [
                 'success' => true,
@@ -1192,7 +1238,14 @@ class StockCountController extends Controller
         $business_id = request()->session()->get('user.business_id');
         $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
 
-        if (!$is_admin && !auth()->user()->can('stock_count.settings')) {
+        $can_access = $is_admin
+            || auth()->user()->can('stock_count.settings')
+            || auth()->user()->can('stock_count.settings_auto_adjust')
+            || auth()->user()->can('stock_count.settings_approval')
+            || auth()->user()->can('stock_count.settings_counting')
+            || auth()->user()->can('stock_count.settings_notifications');
+
+        if (!$can_access) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1208,7 +1261,13 @@ class StockCountController extends Controller
         $business_id = request()->session()->get('user.business_id');
         $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
 
-        if (!$is_admin && !auth()->user()->can('stock_count.settings')) {
+        $can_save = $is_admin
+            || auth()->user()->can('stock_count.settings_auto_adjust')
+            || auth()->user()->can('stock_count.settings_approval')
+            || auth()->user()->can('stock_count.settings_counting')
+            || auth()->user()->can('stock_count.settings_notifications');
+
+        if (!$can_save) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1264,7 +1323,7 @@ class StockCountController extends Controller
     {
         $business_id = $request->session()->get('user.business_id');
 
-        $can_view_all = auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view');
+        $can_view_all = auth()->user()->can('stock_count.view_all');
         $can_view_own = auth()->user()->can('stock_count.view_own');
 
         if (!$can_view_all && !$can_view_own) {
@@ -1370,7 +1429,7 @@ class StockCountController extends Controller
     {
         $business_id = $request->session()->get('user.business_id');
 
-        $can_view_all = auth()->user()->can('stock_count.view_all') || auth()->user()->can('stock_count.view');
+        $can_view_all = auth()->user()->can('stock_count.view_all');
         $can_view_own = auth()->user()->can('stock_count.view_own');
 
         if (!$can_view_all && !$can_view_own) {
@@ -1464,5 +1523,65 @@ class StockCountController extends Controller
             'rows'    => $rows,
             'summary' => $summary,
         ]);
+    }
+
+    /**
+     * Reset and seed all Stock Count permissions, assigning them to Admin roles.
+     *
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     */
+    public function resetPermissions()
+    {
+        try {
+            $dataController = new DataController();
+            $permissions_data = $dataController->user_permissions();
+
+            $permission_names = [];
+            foreach ($permissions_data as $p) {
+                $permission_names[] = $p['value'];
+                \Spatie\Permission\Models\Permission::firstOrCreate([
+                    'name' => $p['value'],
+                    'guard_name' => 'web'
+                ]);
+            }
+
+            // Assign all stock_count permissions to Admin role for current business and Superadmin
+            $business_id = session()->get('user.business_id');
+            $admin_role_name = 'Admin#' . $business_id;
+
+            $roles = \Spatie\Permission\Models\Role::whereIn('name', [$admin_role_name, 'Admin', 'Superadmin'])
+                ->orWhere('name', 'like', 'Admin#%')
+                ->get();
+
+            foreach ($roles as $role) {
+                $role->givePermissionTo($permission_names);
+            }
+
+            // Forget cached permissions for Spatie
+            app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+            $output = [
+                'success' => true,
+                'msg' => 'All ' . count($permission_names) . ' Stock Count permissions have been reset and assigned to Admin roles successfully!',
+                'permissions' => $permission_names
+            ];
+
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json($output);
+            }
+
+            return redirect()->back()->with('status', $output);
+        } catch (\Exception $e) {
+            $output = [
+                'success' => false,
+                'msg' => 'Error: ' . $e->getMessage()
+            ];
+
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json($output, 500);
+            }
+
+            return redirect()->back()->with('status', $output);
+        }
     }
 }

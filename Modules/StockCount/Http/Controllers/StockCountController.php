@@ -312,7 +312,7 @@ class StockCountController extends Controller
             $business = \App\Business::where('id', $business_id)->first();
             $settings = $business->common_settings ?? [];
             $skip_zero = isset($settings['stock_count_skip_zero_stock']) ? $settings['stock_count_skip_zero_stock'] : false;
-            
+
             if ($skip_zero) {
                 $query->whereNotNull('vld.qty_available')
                     ->where('vld.qty_available', '!=', 0);
@@ -339,6 +339,25 @@ class StockCountController extends Controller
             }
 
             DB::commit();
+
+            // ── Telegram Notification ──────────────────────────────
+            try {
+                $session->load('location');
+                $loc_code = $session->location->location_id ?? 'PT1001';
+                $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
+                $msg = "📋 <b>New Stock Count Session Started</b>\n\n"
+                    . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
+                    . "<b>🏷️ Name:</b> {$session->name}\n"
+                    . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
+                    . "<b>🙈 Blind Count Mode:</b> " . ($session->blind_count ? 'Yes' : 'No') . "\n"
+                    . "<b>👤 Created By:</b> {$user_name}\n"
+                    . "<b>🕒 Date:</b> " . date('d/m/Y H:i');
+
+                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_adjustment', $loc_code);
+            } catch (\Exception $te) {
+                \Log::warning('Telegram stock count store notification failed: ' . $te->getMessage());
+            }
+            // ── End Telegram Notification ──────────────────────────
 
             return redirect()
                 ->action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index'])
@@ -706,6 +725,46 @@ class StockCountController extends Controller
 
             DB::commit();
 
+            // ── Telegram Notification ──────────────────────────────
+            try {
+                $session->load(['location', 'lines']);
+                $loc_code = $session->location->location_id ?? 'PT1001';
+                $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
+
+                $shortage_qty = 0;
+                $shortage_val = 0;
+                $surplus_qty = 0;
+                $surplus_val = 0;
+
+                foreach ($session->lines as $line) {
+                    $diff = (float)$line->counted_quantity - (float)$line->book_quantity;
+                    if ($diff < 0) {
+                        $shortage_qty += abs($diff);
+                        $shortage_val += abs($diff) * (float)$line->unit_price;
+                    } elseif ($diff > 0) {
+                        $surplus_qty += $diff;
+                        $surplus_val += $diff * (float)$line->unit_price;
+                    }
+                }
+                $net_impact = $surplus_val - $shortage_val;
+                $impact_text = $net_impact >= 0 ? 'Surplus/Gain' : 'Shortage/Loss';
+
+                $msg = "⚖️ <b>Stock Count Reconciled & Applied</b>\n\n"
+                    . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
+                    . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
+                    . "<b>📦 Total Items Counted:</b> " . count($session->lines) . "\n"
+                    . "🔻 <b>Shortage Loss:</b> " . number_format($shortage_qty, 2) . " Pcs (-\$" . number_format($shortage_val, 2) . ")\n"
+                    . "🔺 <b>Surplus Gain:</b> " . number_format($surplus_qty, 2) . " Pcs (+\$" . number_format($surplus_val, 2) . ")\n"
+                    . "💵 <b>Net Financial Impact:</b> \$" . number_format(abs($net_impact), 2) . " ({$impact_text})\n\n"
+                    . "<b>👤 Reconciled By:</b> {$user_name}\n"
+                    . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
+
+                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_adjustment', $loc_code);
+            } catch (\Exception $te) {
+                \Log::warning('Telegram stock count reconcile notification failed: ' . $te->getMessage());
+            }
+            // ── End Telegram Notification ──────────────────────────
+
             return redirect()
                 ->action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$id])
                 ->with('status', [
@@ -738,6 +797,23 @@ class StockCountController extends Controller
             $session = StockCountSession::where('business_id', $business_id)
                 ->where('status', '!=', 'completed')
                 ->findOrFail($id);
+
+            // ── Telegram Notification ──────────────────────────────
+            try {
+                $loc_code = $session->location->location_id ?? 'PT1001';
+                $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
+                $msg = "🗑️ <b>Stock Count Session Deleted</b>\n\n"
+                    . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
+                    . "<b>🏷️ Name:</b> {$session->name}\n"
+                    . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
+                    . "<b>👤 Deleted By:</b> {$user_name}\n"
+                    . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
+
+                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_adjustment', $loc_code);
+            } catch (\Exception $te) {
+                \Log::warning('Telegram stock count delete notification failed: ' . $te->getMessage());
+            }
+            // ── End Telegram Notification ──────────────────────────
 
             $session->delete();
 
@@ -933,6 +1009,8 @@ class StockCountController extends Controller
             }
 
             \DB::commit();
+
+
 
             $msg = "Excel imported successfully! $success_count items updated.";
             if ($failed_count > 0) {
@@ -1185,7 +1263,7 @@ class StockCountController extends Controller
                             ]);
                         }
 
-                    $this->transactionUtil->activityLog($stock_adjustment, 'added', null, [], false);
+                        $this->transactionUtil->activityLog($stock_adjustment, 'added', null, [], false);
                     }
                 }
 
@@ -1213,6 +1291,25 @@ class StockCountController extends Controller
 
             $session->status = $status;
             $session->save();
+
+            // ── Telegram Notification ──────────────────────────────
+            try {
+                $session->load('location');
+                $loc_code = $session->location->location_id ?? 'PT1001';
+                $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
+                $status_formatted = ucfirst(str_replace('_', ' ', $status));
+                $msg = "🔄 <b>Stock Count Status Updated</b>\n\n"
+                    . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
+                    . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
+                    . "<b>📌 New Status:</b> {$status_formatted}\n"
+                    . "<b>👤 Updated By:</b> {$user_name}\n"
+                    . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
+
+                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_adjustment', $loc_code);
+            } catch (\Exception $te) {
+                \Log::warning('Telegram stock count status update notification failed: ' . $te->getMessage());
+            }
+            // ── End Telegram Notification ──────────────────────────
 
             $output = [
                 'success' => true,
@@ -1250,7 +1347,7 @@ class StockCountController extends Controller
         }
 
         $business = \App\Business::where('id', $business_id)->first();
-        
+
         $settings = $business->common_settings ?? [];
 
         return view('stockcount::settings', compact('settings'));
@@ -1273,9 +1370,9 @@ class StockCountController extends Controller
 
         try {
             $business = \App\Business::where('id', $business_id)->first();
-            
+
             $common_settings = $business->common_settings ?? [];
-            
+
             if ($is_admin || auth()->user()->can('stock_count.settings_auto_adjust')) {
                 $common_settings['stock_count_auto_adjust_stock'] = $request->has('stock_count_auto_adjust_stock');
             }
@@ -1298,10 +1395,10 @@ class StockCountController extends Controller
                 $common_settings['stock_count_notify_on_large_discrepancies'] = $request->has('stock_count_notify_on_large_discrepancies');
                 $common_settings['stock_count_discrepancy_threshold'] = (float)$request->input('stock_count_discrepancy_threshold', 0);
             }
-            
+
             $business->common_settings = $common_settings;
             $business->save();
-            
+
             // Update session
             request()->session()->put('business.common_settings', $common_settings);
 
@@ -1509,7 +1606,7 @@ class StockCountController extends Controller
                 'variation_name'  => $variationName,
                 'sku'             => $line->variation->sub_sku ?? '',
                 'book_quantity'   => $line->book_quantity,
-                'counted_quantity'=> $line->counted_quantity,
+                'counted_quantity' => $line->counted_quantity,
                 'variance'        => $variance,
                 'unit_price'      => $line->unit_price,
                 'financial_diff'  => $financial_diff,

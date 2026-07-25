@@ -135,9 +135,7 @@
 
             body.printing-active #stock_count_print_template {
                 display: block !important;
-                position: absolute;
-                left: 0;
-                top: 0;
+                position: relative;
                 width: 100%;
                 font-family: Arial, Helvetica, sans-serif !important;
                 color: #000;
@@ -356,9 +354,10 @@
             <div class="col-md-6 col-xs-12 text-right">
                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                     <span
-                        class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active' || $session->status == 'in_progress') bg-blue @elseif($session->status == 'reviewed') bg-purple @elseif($session->status == 'approved') bg-navy @elseif($session->status == 'rejected' || $session->status == 'cancelled') bg-red @else bg-gray @endif"
+                        class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'cancelled' || $session->status == 'rejected') bg-red @else bg-blue @endif"
                         style="font-size: 14px; padding: 6px 12px; border-radius: 4px; display: inline-block; vertical-align: middle; line-height: 20px; height: 34px; padding-top: 7px; font-weight: bold;">
-                        Status: {{ __('stockcount::lang.' . $session->status) }}
+                        Status:
+                        {{ __('stockcount::lang.' . ($session->status == 'active' || $session->status == 'draft' || $session->status == 'pending' ? 'in_progress' : $session->status)) }}
                     </span>
 
                     @if(auth()->user()->can('stock_count.create'))
@@ -368,8 +367,8 @@
                             <select name="status" class="form-control"
                                 style="width: 140px; display: inline-block; border-radius: 4px; height: 34px; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background-color: #fff; padding: 6px 12px; box-shadow: inset 0 1px 1px rgba(0,0,0,.075);"
                                 onchange="this.form.submit()">
-                                @foreach(['draft', 'in_progress', 'completed', 'reviewed', 'approved', 'rejected', 'cancelled'] as $st)
-                                    <option value="{{ $st }}" @if($session->status == $st) selected @endif>
+                                @foreach(['in_progress', 'completed', 'cancelled'] as $st)
+                                    <option value="{{ $st }}" @if($session->status == $st || ($session->status == 'active' && $st == 'in_progress') || ($session->status == 'draft' && $st == 'in_progress') || ($session->status == 'pending' && $st == 'in_progress')) selected @endif>
                                         {{ __('stockcount::lang.' . $st) }}
                                     </option>
                                 @endforeach
@@ -425,9 +424,7 @@
                                 <button type="button" id="pdf_variance_report" class="btn btn-export-custom">
                                     <i class="fa fa-file-pdf"></i> Export PDF
                                 </button>
-                                <button type="button" id="print_variance_report" class="btn btn-back-custom">
-                                    <i class="fa fa-print"></i> Print
-                                </button>
+
                             @endif
 
                             @if(in_array($session->status, ['active', 'in_progress']) && auth()->user()->can('stock_count.reconcile'))
@@ -496,9 +493,11 @@
                     <span class="info-box-icon"><i class="fa fa-minus-circle"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Shortage Quantity</span>
-                        <span class="info-box-number" id="summary_shortage_qty">{{ number_format($summary['shortage_qty'], 2) }}</span>
+                        <span class="info-box-number"
+                            id="summary_shortage_qty">{{ number_format($summary['shortage_qty'], 2) }}</span>
                         <span class="progress-description text-white">
-                            Loss: <span id="summary_shortage_value" class="display_currency" data-currency_symbol="true">{{ $summary['shortage_value'] }}</span>
+                            Loss: <span id="summary_shortage_value" class="display_currency"
+                                data-currency_symbol="true">{{ $summary['shortage_value'] }}</span>
                         </span>
                     </div>
                 </div>
@@ -509,9 +508,11 @@
                     <span class="info-box-icon"><i class="fa fa-plus-circle"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Surplus Quantity</span>
-                        <span class="info-box-number" id="summary_surplus_qty">{{ number_format($summary['surplus_qty'], 2) }}</span>
+                        <span class="info-box-number"
+                            id="summary_surplus_qty">{{ number_format($summary['surplus_qty'], 2) }}</span>
                         <span class="progress-description text-white">
-                            Gain: <span id="summary_surplus_value" class="display_currency" data-currency_symbol="true">{{ $summary['surplus_value'] }}</span>
+                            Gain: <span id="summary_surplus_value" class="display_currency"
+                                data-currency_symbol="true">{{ $summary['surplus_value'] }}</span>
                         </span>
                     </div>
                 </div>
@@ -526,7 +527,8 @@
                             $net_impact = $summary['surplus_value'] - $summary['shortage_value'];
                         @endphp
                         <span class="info-box-number">
-                            <span id="summary_net_impact" class="display_currency" data-currency_symbol="true">{{ $net_impact }}</span>
+                            <span id="summary_net_impact" class="display_currency"
+                                data-currency_symbol="true">{{ $net_impact }}</span>
                         </span>
                         <span class="progress-description text-white" id="summary_net_label">
                             {{ $net_impact >= 0 ? 'Surplus/Gain' : 'Shortage/Loss' }}
@@ -568,8 +570,8 @@
                                     $variance = $line->counted_quantity - $line->book_quantity;
                                     $financial_diff = $variance * $line->unit_price;
 
-                                    $sum_book_qty += (float)$line->book_quantity;
-                                    $sum_counted_qty += (float)$line->counted_quantity;
+                                    $sum_book_qty += (float) $line->book_quantity;
+                                    $sum_counted_qty += (float) $line->counted_quantity;
                                     $sum_variance += $variance;
                                     $sum_financial_impact += $financial_diff;
                                 @endphp
@@ -610,12 +612,15 @@
                                 <td colspan="3" style="text-align: right;">Total Summary:</td>
                                 <td>{{ number_format($sum_book_qty, 2) }}</td>
                                 <td>{{ number_format($sum_counted_qty, 2) }}</td>
-                                <td class="@if($sum_variance < 0) text-danger @elseif($sum_variance > 0) text-success @endif">
+                                <td
+                                    class="@if($sum_variance < 0) text-danger @elseif($sum_variance > 0) text-success @endif">
                                     {{ $sum_variance > 0 ? '+' : '' }}{{ number_format($sum_variance, 2) }}
                                 </td>
                                 <td>-</td>
-                                <td class="@if($sum_financial_impact < 0) text-danger @elseif($sum_financial_impact > 0) text-success @endif">
-                                    <span class="display_currency" data-currency_symbol="true">{{ $sum_financial_impact }}</span>
+                                <td
+                                    class="@if($sum_financial_impact < 0) text-danger @elseif($sum_financial_impact > 0) text-success @endif">
+                                    <span class="display_currency"
+                                        data-currency_symbol="true">{{ $sum_financial_impact }}</span>
                                 </td>
                                 <td>-</td>
                                 <td>-</td>
@@ -889,17 +894,17 @@
 
                             // Session Info Header Block
                             var metadataHtml = `
-                                                         <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #cbd5e0; padding-bottom: 12px; margin-bottom: 20px; font-size: 13px; font-family: sans-serif;">
-                                                             <div>
-                                                                 <strong>Location:</strong> {{ $session->location->name ?? '' }}<br>
-                                                                 <strong>Blind Count Mode:</strong> {{ $session->blind_count ? 'Yes' : 'No' }}
+                                                             <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #cbd5e0; padding-bottom: 12px; margin-bottom: 20px; font-size: 13px; font-family: sans-serif;">
+                                                                 <div>
+                                                                     <strong>Location:</strong> {{ $session->location->name ?? '' }}<br>
+                                                                     <strong>Blind Count Mode:</strong> {{ $session->blind_count ? 'Yes' : 'No' }}
+                                                                 </div>
+                                                                 <div>
+                                                                     <strong>Added By:</strong> {{ $session->creator->user_full_name ?? '' }}<br>
+                                                                     <strong>Created At:</strong> {{ @format_datetime($session->created_at) }}
+                                                                 </div>
                                                              </div>
-                                                             <div>
-                                                                 <strong>Added By:</strong> {{ $session->creator->user_full_name ?? '' }}<br>
-                                                                 <strong>Created At:</strong> {{ @format_datetime($session->created_at) }}
-                                                             </div>
-                                                         </div>
-                                                     `;
+                                                         `;
                             $(metadataHtml).insertBefore($(win.document.body).find('table'));
 
                             // Table Styling
@@ -975,27 +980,95 @@
 
                 var rows = table.rows({ filter: 'applied' }).nodes();
 
+                var totalExpected = 0;
+                var totalCounted = 0;
+                var totalDifference = 0;
+                var totalFinancialImpact = 0;
+                var grandTotalCost = 0;
+
                 $(rows).each(function (index, el) {
                     var $row = $(el);
 
                     var no = index + 1;
                     var nameText = $row.find('td').eq(1).text().trim().replace(/\s+/g, ' ');
                     var sku = $row.find('td').eq(2).text().trim();
-                    var bookQty = $row.find('td').eq(3).text().trim();
-                    var countedQty = $row.find('td').eq(4).text().trim();
-                    var variance = $row.find('td').eq(5).text().trim();
+                    var bookQtyStr = $row.find('td').eq(3).text().trim();
+                    var countedQtyStr = $row.find('td').eq(4).text().trim();
+                    var varianceStr = $row.find('td').eq(5).text().trim();
+                    var costPriceStr = $row.find('td').eq(6).text().trim();
+                    var financialImpactStr = $row.find('td').eq(7).text().trim();
 
-                    var description = sku + ' - ' + nameText;
+                    var description = sku ? (sku + ' - ' + nameText) : nameText;
+
+                    var bookQty = parseFloat(bookQtyStr.replace(/,/g, '')) || 0;
+                    var countedQty = parseFloat(countedQtyStr.replace(/,/g, '')) || 0;
+                    var variance = parseFloat(varianceStr.replace(/,/g, '')) || 0;
+                    var costPrice = parseFloat(costPriceStr.replace(/[^0-9.-]+/g, '')) || 0;
+                    var financialImpact = parseFloat(financialImpactStr.replace(/[^0-9.-]+/g, '')) || 0;
+
+                    if (financialImpactStr.indexOf('-') !== -1 && financialImpact > 0) {
+                        financialImpact = -financialImpact;
+                    }
+
+                    var totalCost = countedQty * costPrice;
+
+                    totalExpected += bookQty;
+                    totalCounted += countedQty;
+                    totalDifference += variance;
+                    totalFinancialImpact += financialImpact;
+                    grandTotalCost += totalCost;
+
+                    var varianceStyle = '';
+                    if (variance < 0) {
+                        varianceStyle = 'color: #c53030; font-weight: bold;';
+                    } else if (variance > 0) {
+                        varianceStyle = 'color: #2f855a; font-weight: bold;';
+                    }
+
+                    var impactStyle = '';
+                    if (financialImpact < 0) {
+                        impactStyle = 'color: #c53030; font-weight: bold;';
+                    } else if (financialImpact > 0) {
+                        impactStyle = 'color: #2f855a; font-weight: bold;';
+                    }
+
+                    var formattedTotalCost = typeof formatCurrency === 'function' ? formatCurrency(totalCost) : totalCost.toFixed(2);
 
                     var tr = $('<tr></tr>');
                     tr.append('<td style="text-align: center;">' + no + '</td>');
                     tr.append('<td>' + description + '</td>');
-                    tr.append('<td style="text-align: right;">' + bookQty + '</td>');
-                    tr.append('<td style="text-align: right;">' + countedQty + '</td>');
-                    tr.append('<td style="text-align: right;">' + variance + '</td>');
+                    tr.append('<td style="text-align: right;">' + costPriceStr + '</td>');
+                    tr.append('<td style="text-align: right;">' + bookQtyStr + '</td>');
+                    tr.append('<td style="text-align: right;">' + countedQtyStr + '</td>');
+                    tr.append('<td style="text-align: right; ' + varianceStyle + '">' + varianceStr + '</td>');
+                    tr.append('<td style="text-align: right; ' + impactStyle + '">' + financialImpactStr + '</td>');
+                    tr.append('<td style="text-align: right; font-weight: 600;">' + formattedTotalCost + '</td>');
 
                     printTbody.append(tr);
                 });
+
+                var diffStyle = totalDifference < 0 ? 'color: #c53030; font-weight: bold;' : (totalDifference > 0 ? 'color: #2f855a; font-weight: bold;' : 'font-weight: bold;');
+                var finStyle = totalFinancialImpact < 0 ? 'color: #c53030; font-weight: bold;' : (totalFinancialImpact > 0 ? 'color: #2f855a; font-weight: bold;' : 'font-weight: bold;');
+                var diffSign = totalDifference > 0 ? '+' : '';
+                var finSign = totalFinancialImpact > 0 ? '+' : '';
+
+                var formattedFinImpact = typeof formatCurrency === 'function' ? formatCurrency(totalFinancialImpact) : totalFinancialImpact.toFixed(2);
+                var formattedGrandTotalCost = typeof formatCurrency === 'function' ? formatCurrency(grandTotalCost) : grandTotalCost.toFixed(2);
+
+                var tfootHtml = '<tfoot>' +
+                    '<tr style="font-weight: bold; background-color: #f7fafc; border-top: 2px solid #2b82c9;">' +
+                    '<td colspan="2" style="text-align: right;">Total Summary:</td>' +
+                    '<td style="text-align: right;">-</td>' +
+                    '<td style="text-align: right;">' + totalExpected.toFixed(2) + '</td>' +
+                    '<td style="text-align: right;">' + totalCounted.toFixed(2) + '</td>' +
+                    '<td style="text-align: right; ' + diffStyle + '">' + diffSign + totalDifference.toFixed(2) + '</td>' +
+                    '<td style="text-align: right; ' + finStyle + '">' + (totalFinancialImpact < 0 ? '-' : finSign) + formattedFinImpact + '</td>' +
+                    '<td style="text-align: right; font-weight: bold;">' + formattedGrandTotalCost + '</td>' +
+                    '</tr>' +
+                    '</tfoot>';
+
+                $('#stock_count_print_template .print-table').find('tfoot').remove();
+                $('#stock_count_print_template .print-table').append(tfootHtml);
             }
 
             $(document).on('click', '#print_variance_report, #pdf_variance_report', function (e) {
@@ -1042,8 +1115,8 @@
 
             function loadFilteredData() {
                 var params = {
-                    category_id:   $('#filter_category_id').val(),
-                    brand_id:      $('#filter_brand_id').val(),
+                    category_id: $('#filter_category_id').val(),
+                    brand_id: $('#filter_brand_id').val(),
                     variance_type: $('#filter_variance_type').val()
                 };
 
@@ -1076,21 +1149,21 @@
                         } else {
                             $.each(rows, function (i, r) {
                                 var varianceClass = r.variance < 0 ? 'text-danger' : (r.variance > 0 ? 'text-success' : '');
-                                var varianceSign  = r.variance > 0 ? '+' : '';
-                                var finClass      = r.financial_diff < 0 ? 'text-danger' : (r.financial_diff > 0 ? 'text-success' : '');
-                                var variationHtml = r.variation_name ? ' <span class="text-muted">('+r.variation_name+')</span>' : '';
+                                var varianceSign = r.variance > 0 ? '+' : '';
+                                var finClass = r.financial_diff < 0 ? 'text-danger' : (r.financial_diff > 0 ? 'text-success' : '');
+                                var variationHtml = r.variation_name ? ' <span class="text-muted">(' + r.variation_name + ')</span>' : '';
 
                                 tbody += '<tr>';
-                                tbody += '<td>'+r.index+'</td>';
-                                tbody += '<td>'+r.product_name+variationHtml+'</td>';
-                                tbody += '<td>'+r.sku+'</td>';
-                                tbody += '<td>'+parseFloat(r.book_quantity).toFixed(2)+'</td>';
-                                tbody += '<td>'+parseFloat(r.counted_quantity).toFixed(2)+'</td>';
-                                tbody += '<td class="'+varianceClass+' font-weight-bold">'+varianceSign+parseFloat(r.variance).toFixed(2)+'</td>';
-                                tbody += '<td>'+formatCurrency(r.unit_price)+'</td>';
-                                tbody += '<td class="'+finClass+' font-weight-bold">'+formatCurrency(r.financial_diff)+'</td>';
-                                tbody += '<td>'+r.counter_name+'<br><small class="text-muted">'+r.counted_at+'</small></td>';
-                                tbody += '<td>'+r.note+'</td>';
+                                tbody += '<td>' + r.index + '</td>';
+                                tbody += '<td>' + r.product_name + variationHtml + '</td>';
+                                tbody += '<td>' + r.sku + '</td>';
+                                tbody += '<td>' + parseFloat(r.book_quantity).toFixed(2) + '</td>';
+                                tbody += '<td>' + parseFloat(r.counted_quantity).toFixed(2) + '</td>';
+                                tbody += '<td class="' + varianceClass + ' font-weight-bold">' + varianceSign + parseFloat(r.variance).toFixed(2) + '</td>';
+                                tbody += '<td>' + formatCurrency(r.unit_price) + '</td>';
+                                tbody += '<td class="' + finClass + ' font-weight-bold">' + formatCurrency(r.financial_diff) + '</td>';
+                                tbody += '<td>' + r.counter_name + '<br><small class="text-muted">' + r.counted_at + '</small></td>';
+                                tbody += '<td>' + r.note + '</td>';
                                 tbody += '</tr>';
                             });
                         }

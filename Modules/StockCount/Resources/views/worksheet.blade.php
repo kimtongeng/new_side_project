@@ -40,9 +40,9 @@
         }
 
         /* ── Barcode scanner input-group fix ─────────────────────────────
-                                   Forces the text input + buttons to render as one seamless
-                                   control regardless of which Bootstrap version is loaded
-                                   (fixes the "floating pill buttons with a gap" look). */
+                                       Forces the text input + buttons to render as one seamless
+                                       control regardless of which Bootstrap version is loaded
+                                       (fixes the "floating pill buttons with a gap" look). */
         #barcode_scanner_group {
             display: flex;
             align-items: stretch;
@@ -113,7 +113,7 @@
             height: 2px;
             background: rgba(255, 80, 80, 0.85);
             box-shadow: 0 0 8px 2px rgba(255, 80, 80, 0.6);
-            animation: scanline 2s linear infinite;
+            animation: scanline 4s ease-in-out infinite;
             pointer-events: none;
             z-index: 10;
         }
@@ -575,7 +575,6 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-danger" id="btn_stop_camera"><i class="fa fa-stop"></i> Stop
                         Camera</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -680,24 +679,29 @@
     <!-- Line Status Change Modal -->
     <div class="modal fade" id="lineStatusModal" tabindex="-1" role="dialog" aria-labelledby="lineStatusModalLabel">
         <div class="modal-dialog modal-sm" role="document" style="margin: 30px auto; max-width: 95%;">
-            <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+            <div class="modal-content"
+                style="border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
                 <div class="modal-header" style="background-color: #3c8dbc; color: #fff; padding: 12px 15px;">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 1;"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="lineStatusModalLabel" style="font-weight: bold; font-size: 16px; margin: 0;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"
+                        style="color: #fff; opacity: 1;"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="lineStatusModalLabel"
+                        style="font-weight: bold; font-size: 16px; margin: 0;">
                         <i class="fa fa-tag"></i> Change Item Status
                     </h4>
                 </div>
                 <div class="modal-body" style="padding: 15px 20px;">
                     <input type="hidden" id="status_modal_line_id">
-                    
+
                     <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                        <h5 id="status_modal_product_name" style="font-weight: bold; margin: 0 0 5px 0; font-size: 15px; color: #333;">Product Name</h5>
+                        <h5 id="status_modal_product_name"
+                            style="font-weight: bold; margin: 0 0 5px 0; font-size: 15px; color: #333;">Product Name</h5>
                         <span id="status_modal_product_sku" class="text-muted" style="font-size: 13px;">SKU</span>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label for="status_modal_select" style="font-size: 13px; font-weight: bold;">Status:</label>
-                        <select id="status_modal_select" class="form-control" style="font-weight: bold; height: 40px; font-size: 14px;">
+                        <select id="status_modal_select" class="form-control"
+                            style="font-weight: bold; height: 40px; font-size: 14px;">
                             <option value="counted">Counted (Marked as counted)</option>
                             <option value="pending">Pending (Not counted, Qty set to 0)</option>
                         </select>
@@ -708,8 +712,10 @@
                     </p>
                 </div>
                 <div class="modal-footer" style="padding: 10px 15px; background-color: #f9f9f9; display: flex; gap: 10px;">
-                    <button type="button" class="btn btn-default btn-flat" data-dismiss="modal" style="flex: 1; height: 40px; font-weight: bold; margin: 0;">Cancel</button>
-                    <button type="button" class="btn btn-primary btn-flat" id="status_modal_btn_save" style="flex: 2; height: 40px; font-weight: bold; margin: 0;">Save & Update</button>
+                    <button type="button" class="btn btn-default btn-flat" data-dismiss="modal"
+                        style="flex: 1; height: 40px; font-weight: bold; margin: 0;">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-flat" id="status_modal_btn_save"
+                        style="flex: 2; height: 40px; font-weight: bold; margin: 0;">Save & Update</button>
                 </div>
             </div>
         </div>

@@ -130,14 +130,14 @@
             <div class="form-group">
                 {!! Form::label('filter_status', __('sale.status') . ':') !!}
                 {!! Form::select('filter_status', [
-        'pending' => 'Pending',
-        'in_progress' => 'In Progress',
-        'completed' => 'Completed'
-    ], null, [
-        'class' => 'form-control select2',
-        'style' => 'width:100%',
-        'placeholder' => __('lang_v1.all'),
-    ]) !!}
+                    'in_progress' => __('stockcount::lang.in_progress'),
+                    'completed' => __('stockcount::lang.completed'),
+                    'cancelled' => __('stockcount::lang.cancelled')
+                ], null, [
+                    'class' => 'form-control select2',
+                    'style' => 'width:100%',
+                    'placeholder' => __('lang_v1.all'),
+                ]) !!}
             </div>
         </div>
         <div class="col-md-3">
@@ -251,9 +251,9 @@
                         <div class="form-group">
                             {!! Form::label('modal_status', 'Status:') !!}
                             <select name="status" id="modal_status" class="form-control" style="width: 100%;">
-                                <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="completed">Completed</option>
+                                <option value="in_progress">@lang('stockcount::lang.in_progress')</option>
+                                <option value="completed">@lang('stockcount::lang.completed')</option>
+                                <option value="cancelled">@lang('stockcount::lang.cancelled')</option>
                             </select>
                         </div>
                     </div>

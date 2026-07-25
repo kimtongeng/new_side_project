@@ -536,6 +536,35 @@ class StockCountController extends Controller
         }
     }
 
+    public function updateName(Request $request, $id)
+    {
+        $business_id = $request->session()->get('user.business_id');
+
+        $can_edit = auth()->user()->can('stock_count.count') || auth()->user()->can('stock_count.edit') || auth()->user()->can('stock_count.create');
+        if (!$can_edit) {
+            return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+        }
+
+        try {
+            $name = trim($request->input('name'));
+            if (empty($name)) {
+                return response()->json(['success' => false, 'message' => 'Session name cannot be empty.'], 422);
+            }
+
+            $session = StockCountSession::where('business_id', $business_id)->findOrFail($id);
+            $session->name = $name;
+            $session->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => __('lang_v1.success'),
+                'name' => $session->name
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function scanBarcode(Request $request, $id)
     {
         $business_id = $request->session()->get('user.business_id');

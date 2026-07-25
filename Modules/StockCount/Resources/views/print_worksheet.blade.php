@@ -134,10 +134,11 @@
             body * {
                 visibility: hidden;
             }
-            #receipt_section, #receipt_section * {
-                visibility: visible;
+            #receipt_section, #receipt_section *,
+            #stock_count_print_template, #stock_count_print_template * {
+                visibility: visible !important;
             }
-            #receipt_section {
+            #receipt_section, #stock_count_print_template {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
@@ -356,13 +357,5 @@
         });
     </script>
     @endif
-
-    <script>
-        window.addEventListener('afterprint', function () {
-            if (typeof $ !== 'undefined') {
-                $('#receipt_section').empty();
-            }
-        });
-    </script>
 </body>
 </html>

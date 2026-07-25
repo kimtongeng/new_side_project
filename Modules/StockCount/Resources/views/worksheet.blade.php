@@ -289,10 +289,21 @@
     <section class="content-header no-print">
         <div class="row">
             <div class="col-md-8 col-xs-12">
-                <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black" style="margin: 0; line-height: 1.2;">
-                    @lang('stockcount::lang.worksheet'): {{ $session->name }}
+                <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black" style="margin: 0; line-height: 1.3; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <span>@lang('stockcount::lang.worksheet'):</span>
+                    <span id="session_name_display" title="Click to edit session name" style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                        <span id="session_name_text" style="border-bottom: 2px dashed #3c8dbc; padding-bottom: 2px;">{{ $session->name }}</span>
+                        <button type="button" class="btn btn-default btn-xs" style="color: #3c8dbc; border-color: #3c8dbc; border-radius: 4px; font-size: 13px; font-weight: bold; padding: 3px 8px; display: inline-flex; align-items: center; gap: 4px;" title="Click to edit session name">
+                            <i class="fa fa-edit" style="font-size: 14px;"></i> Edit
+                        </button>
+                    </span>
+                    <span id="session_name_edit_box" style="display: none; align-items: center; gap: 6px;">
+                        <input type="text" id="session_name_input" class="form-control" value="{{ $session->name }}" style="display: inline-block; width: 280px; font-size: 18px; font-weight: bold; height: 38px; vertical-align: middle;">
+                        <button type="button" class="btn btn-success btn-sm btn-flat" id="btn_save_session_name" style="height: 38px; padding: 6px 12px; font-weight: bold;" title="Save"><i class="fa fa-check"></i> Save</button>
+                        <button type="button" class="btn btn-default btn-sm btn-flat" id="btn_cancel_session_name" style="height: 38px; padding: 6px 12px;" title="Cancel"><i class="fa fa-times"></i></button>
+                    </span>
                     @if(!empty($session->reference_no))
-                        <br><small class="text-muted" style="font-size: 14px; display: inline-block; margin-top: 5px;">Ref No:
+                        <small class="text-muted" style="font-size: 14px; display: block; width: 100%; margin-top: 5px;">Ref No:
                             {{ $session->reference_no }}</small>
                     @endif
                 </h1>
@@ -710,6 +721,83 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script>
         $(document).ready(function () {
+            // ── Inline Edit Session Name ──────────────────────────────────
+            $('#session_name_display').on('click', function () {
+                $('#session_name_display').hide();
+                $('#session_name_edit_box').css('display', 'inline-flex');
+                $('#session_name_input').focus().select();
+            });
+
+            $('#btn_cancel_session_name').on('click', function () {
+                var currentName = $('#session_name_text').text().trim();
+                $('#session_name_input').val(currentName);
+                $('#session_name_edit_box').hide();
+                $('#session_name_display').show();
+            });
+
+            function saveSessionName() {
+                var newName = $('#session_name_input').val().trim();
+                var currentName = $('#session_name_text').text().trim();
+
+                if (newName === '') {
+                    toastr.error('Session name cannot be empty.');
+                    return;
+                }
+
+                if (newName === currentName) {
+                    $('#session_name_edit_box').hide();
+                    $('#session_name_display').show();
+                    return;
+                }
+
+                var btn = $('#btn_save_session_name');
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+
+                $.ajax({
+                    method: 'POST',
+                    url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateName'], [$session->id]) }}",
+                    dataType: 'json',
+                    data: {
+                        name: newName,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function (result) {
+                        btn.prop('disabled', false).html('<i class="fa fa-check"></i> Save');
+                        if (result.success) {
+                            $('#session_name_text').text(result.name);
+                            $('#session_name_input').val(result.name);
+                            $('#session_name_edit_box').hide();
+                            $('#session_name_display').show();
+                            toastr.success(result.message || 'Session name updated successfully.');
+                        } else {
+                            toastr.error(result.message || 'Failed to update session name.');
+                        }
+                    },
+                    error: function (xhr) {
+                        btn.prop('disabled', false).html('<i class="fa fa-check"></i> Save');
+                        var msg = 'Error updating session name.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg = xhr.responseJSON.message;
+                        }
+                        toastr.error(msg);
+                    }
+                });
+            }
+
+            $('#btn_save_session_name').on('click', function () {
+                saveSessionName();
+            });
+
+            $('#session_name_input').on('keydown', function (e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    saveSessionName();
+                } else if (e.which === 27) { // Escape key
+                    e.preventDefault();
+                    $('#btn_cancel_session_name').trigger('click');
+                }
+            });
+
             // ── Barcode text input scanning & filtering ────────────────────
             $('#barcode_scanner').on('keypress', function (e) {
                 if (e.which === 13) {

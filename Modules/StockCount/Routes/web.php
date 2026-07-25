@@ -19,6 +19,7 @@ Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezon
     Route::get('/{id}/print-worksheet', [Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'])->name('stock-counts.print-worksheet');
     Route::get('/{id}/duplicate', [Modules\StockCount\Http\Controllers\StockCountController::class, 'duplicate'])->name('stock-counts.duplicate');
     Route::post('/{id}/save-progress', [Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'])->name('stock-counts.save-progress');
+    Route::post('/{id}/update-name', [Modules\StockCount\Http\Controllers\StockCountController::class, 'updateName'])->name('stock-counts.update-name');
     Route::post('/{id}/scan-barcode', [Modules\StockCount\Http\Controllers\StockCountController::class, 'scanBarcode'])->name('stock-counts.scan-barcode');
     Route::post('/{id}/reconcile', [Modules\StockCount\Http\Controllers\StockCountController::class, 'reconcile'])->name('stock-counts.reconcile');
     Route::get('/{id}/export', [Modules\StockCount\Http\Controllers\StockCountController::class, 'export'])->name('stock-counts.export');

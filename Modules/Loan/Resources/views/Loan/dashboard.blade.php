@@ -6,59 +6,7 @@
 
     @include('Loan::layouts.nav')
 
-    <style>
-        .floating-buttons {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 1000;
-        }
 
-        .floating-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            color: white;
-            font-size: 24px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .floating-btn:hover {
-            transform: scale(1.1);
-        }
-
-        .whatsapp-btn {
-            background-color: #25D366;
-        }
-
-        .purchase-btn {
-            background-color: #007BFF;
-        }
-
-        .floating-btn span {
-            display: none;
-            position: absolute;
-            right: 70px;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        .floating-btn:hover span {
-            display: block;
-        }
-    </style>
 
     <!-- Content Header (Page header) -->
     <section class="content-header no-print">
@@ -188,18 +136,7 @@
             </div>
         </div>
 
-        <!-- Floating Buttons -->
-        <div class="floating-buttons">
-            <a href="https://wa.me/201144420094" target="_blank" class="floating-btn whatsapp-btn" title="Contact Support">
-                <i class="fab fa-whatsapp"></i>
-                <span>{{ __('Loan::lang.contact_support') }}</span>
-            </a>
-            <a href="https://hooksource.com/product/loan-management-module-for-ultimatepos/" target="_blank"
-                class="floating-btn purchase-btn" title="Purchase Module">
-                <i class="fas fa-shopping-cart"></i>
-                <span>{{ __('Loan::lang.purchase_module') }}</span>
-            </a>
-        </div>
+
     </section>
 
 @endsection

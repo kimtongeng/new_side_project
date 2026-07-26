@@ -111,10 +111,10 @@ class AccountController extends Controller
                 if ($permitted_locations != 'all') {
                     $accounts->where(function ($q) use ($permitted_locations, $account_ids) {
                         $q->whereNull('accounts.location_id')
-                          ->orWhereIn('accounts.location_id', $permitted_locations);
+                            ->orWhereIn('accounts.location_id', $permitted_locations);
                         foreach ((array)$permitted_locations as $loc_id) {
                             $q->orWhereJsonContains('accounts.location_id', (string)$loc_id)
-                              ->orWhereJsonContains('accounts.location_id', (int)$loc_id);
+                                ->orWhereJsonContains('accounts.location_id', (int)$loc_id);
                         }
                         if (!empty($account_ids)) {
                             $q->orWhereIn('accounts.id', $account_ids);
@@ -125,7 +125,7 @@ class AccountController extends Controller
                 $user_role_ids = auth()->user()->roles()->pluck('id')->toArray();
                 $accounts->where(function ($q) use ($user_role_ids) {
                     $q->whereIn('accounts.user_level', $user_role_ids)
-                      ->orWhereNull('accounts.user_level');
+                        ->orWhereNull('accounts.user_level');
                 });
             }
 
@@ -171,9 +171,9 @@ class AccountController extends Controller
                     if (empty($row->role_name)) {
                         return __('messages.all');
                     }
-                    $role = str_replace('#'.$business_id, '', $row->role_name);
+                    $role = str_replace('#' . $business_id, '', $row->role_name);
                     if (in_array($role, ['Admin', 'Cashier'])) {
-                        $role = __('lang_v1.'.$role);
+                        $role = __('lang_v1.' . $role);
                     }
                     return $role;
                 })
@@ -263,15 +263,15 @@ class AccountController extends Controller
             ->get();
 
         $business_locations = BusinessLocation::forDropdown($business_id);
-        
+
         $roles_array = Role::where('business_id', $business_id)->get()->pluck('name', 'id');
         $roles = [];
         $is_admin = $this->moduleUtil->is_admin(auth()->user(), $business_id);
         foreach ($roles_array as $key => $value) {
-            if (! $is_admin && $value == 'Admin#'.$business_id) {
+            if (! $is_admin && $value == 'Admin#' . $business_id) {
                 continue;
             }
-            $roles[$key] = str_replace('#'.$business_id, '', $value);
+            $roles[$key] = str_replace('#' . $business_id, '', $value);
         }
 
         return view('account.create')
@@ -626,15 +626,15 @@ class AccountController extends Controller
                 ->get();
 
             $business_locations = BusinessLocation::forDropdown($business_id);
-            
+
             $roles_array = Role::where('business_id', $business_id)->get()->pluck('name', 'id');
             $roles = [];
             $is_admin = $this->moduleUtil->is_admin(auth()->user(), $business_id);
             foreach ($roles_array as $key => $value) {
-                if (! $is_admin && $value == 'Admin#'.$business_id) {
+                if (! $is_admin && $value == 'Admin#' . $business_id) {
                     continue;
                 }
-                $roles[$key] = str_replace('#'.$business_id, '', $value);
+                $roles[$key] = str_replace('#' . $business_id, '', $value);
             }
 
             return view('account.edit')

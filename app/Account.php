@@ -89,7 +89,10 @@ class Account extends Model
             $account_ids = array_unique($account_ids);
         }
 
-        if ($user && !$user->hasRole('Admin#' . $business_id)) {
+        $moduleUtil = new \App\Utils\ModuleUtil;
+        $is_admin = $user ? $moduleUtil->is_admin($user, $business_id) : false;
+
+        if ($user && ! $is_admin) {
             if ($permitted_locations != 'all') {
                 $query->where(function ($q) use ($permitted_locations, $account_ids) {
                     $q->whereNull('accounts.location_id')

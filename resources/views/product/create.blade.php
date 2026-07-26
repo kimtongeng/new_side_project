@@ -160,6 +160,13 @@
                 'placeholder' => __('product.product_name')]); !!}
             </div>
         </div>
+        <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('secondary_name', 'Second Language Name:') !!}
+                {!! Form::text('secondary_name', !empty($duplicate_product->secondary_name) ? $duplicate_product->secondary_name : null, ['class' => 'form-control',
+                'placeholder' => 'Second Language Name (e.g. Khmer Name)']); !!}
+            </div>
+        </div>
 
         <div class="col-sm-4">
             <div class="form-group">

@@ -771,3 +771,24 @@
       cursor: pointer;
     }
   </style>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Hanuman:wght@400;700&family=Inter:wght@400;600;700&family=Kantumruy+Pro:wght@400;600;700&family=Koh+Santepheap:wght@400;700&family=Moul&family=Noto+Sans+Khmer:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Outfit:wght@400;600;700&family=Roboto:wght@400;500;700&family=Siemreap&display=swap" rel="stylesheet">
+
+  @php
+      $sec_font_setting = session('business.common_settings.secondary_font_family', 'Koh Santepheap');
+      $pri_font_setting = session('business.common_settings.primary_font_family', '');
+  @endphp
+  <style>
+      @if(!empty($pri_font_setting))
+          body, .content, .table {
+              font-family: '{{ $pri_font_setting }}', sans-serif !important;
+          }
+      @endif
+      @if(!empty($sec_font_setting))
+          .product-secondary-name, .font-khmer, [data-font="secondary"] {
+              font-family: '{{ $sec_font_setting }}', 'Koh Santepheap', sans-serif !important;
+          }
+      @endif
+  </style>

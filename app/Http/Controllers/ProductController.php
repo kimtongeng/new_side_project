@@ -105,14 +105,21 @@ class ProductController extends Controller
                     $query->whereHas('product_locations', function ($query) use ($permitted_locations) {
                         $query->whereIn('product_locations.location_id', $permitted_locations);
                     });
-                } else {
-                    $query->with('product_locations');
                 }
+            }
+
+            if ($permitted_locations != 'all') {
+                $query->with(['product_locations' => function ($q) use ($permitted_locations) {
+                    $q->whereIn('product_locations.location_id', $permitted_locations);
+                }]);
+            } else {
+                $query->with('product_locations');
             }
 
             $products = $query->select(
                 'products.id',
                 'products.name as product',
+                'products.secondary_name',
                 'products.type',
                 'c1.name as category',
                 'c2.name as sub_category',
@@ -120,6 +127,7 @@ class ProductController extends Controller
                 'brands.name as brand',
                 'tax_rates.name as tax',
                 'products.sku',
+                'products.product_description',
                 'products.image',
                 'products.enable_stock',
                 'products.is_inactive',
@@ -205,14 +213,58 @@ class ProductController extends Controller
                 $products->where('products.repair_model_id', request()->get('repair_model_id'));
             }
 
+            $variation_name = request()->get('variation_name', null);
+            if (! empty($variation_name)) {
+                $products->whereHas('variations', function ($q) use ($variation_name) {
+                    $q->where('variations.name', 'like', "%{$variation_name}%")
+                      ->orWhere('variations.sub_sku', 'like', "%{$variation_name}%");
+                });
+            }
+
             return Datatables::of($products)
                 ->addColumn(
                     'product_locations',
                     function ($row) {
+                        $permitted_locations = auth()->user()->permitted_locations();
+                        if ($permitted_locations != 'all') {
+                            $locations = $row->product_locations->filter(function ($loc) use ($permitted_locations) {
+                                return in_array($loc->id, $permitted_locations);
+                            });
+                            return $locations->implode('name', ', ');
+                        }
                         return $row->product_locations->implode('name', ', ');
                     }
                 )
-                ->editColumn('category', '{{$category}} @if(!empty($sub_category))<br/> -- {{$sub_category}}@endif')
+                ->addColumn(
+                    'product_description',
+                    function ($row) {
+                        $desc = strip_tags($row->product_description ?? '');
+                        $is_long = mb_strlen($desc) > 50;
+                        $truncated = $is_long ? mb_substr($desc, 0, 50) : $desc;
+
+                        $edit_url = action([\App\Http\Controllers\ProductController::class, 'editDescription'], [$row->id]);
+
+                        if (empty($desc)) {
+                            return '<a href="#" data-href="' . $edit_url . '" class="btn-modal text-muted" data-container=".view_modal"><i>No Description</i></a>';
+                        }
+
+                        if ($is_long) {
+                            return e($truncated) . '... <a href="#" data-href="' . $edit_url . '" class="btn-modal tw-text-blue-600 tw-font-semibold" data-container=".view_modal">See More</a>';
+                        }
+
+                        return '<a href="#" data-href="' . $edit_url . '" class="btn-modal text-dark" data-container=".view_modal">' . e($desc) . '</a>';
+                    }
+                )
+                ->editColumn('category', function ($row) {
+                    $category_text = $row->category;
+                    if (!empty($row->sub_category)) {
+                        $category_text .= '<br/> -- ' . $row->sub_category;
+                    }
+                    if (auth()->user()->can('product.update')) {
+                        return '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editCategory'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $category_text . '</a>';
+                    }
+                    return $category_text;
+                })
                 ->addColumn(
                     'action',
                     function ($row) use ($selling_price_group_count) {
@@ -227,6 +279,12 @@ class ProductController extends Controller
                         if (auth()->user()->can('product.update')) {
                             $html .=
                                 '<li><a href="' . action([\App\Http\Controllers\ProductController::class, 'edit'], [$row->id]) . '"><i class="glyphicon glyphicon-edit"></i> ' . __('messages.edit') . '</a></li>';
+
+                            $html .=
+                                '<li><a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editCategory'], [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="fa fa-folder"></i> ' . __('category.category') . '</a></li>';
+
+                            $html .=
+                                '<li><a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editDescription'], [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="fa fa-align-left"></i> ' . __('lang_v1.product_description') . '</a></li>';
                         }
 
                         if (auth()->user()->can('product.rename_product') || auth()->user()->can('product.rename_sku') || auth()->user()->can('product.update_price')) {
@@ -284,7 +342,34 @@ class ProductController extends Controller
                     }
                 )
                 ->editColumn('product', function ($row) use ($is_woocommerce) {
-                    $product = $row->is_inactive == 1 ? $row->product . ' <span class="label bg-gray">' . __('lang_v1.inactive') . '</span>' : $row->product;
+                    $secondary_name_position = session('business.common_settings.secondary_name_position', 'right');
+                    $sec_font = session('business.common_settings.secondary_font_family', 'Koh Santepheap');
+
+                    $display_primary = e($row->product);
+                    $display_secondary = '';
+
+                    if (!empty($row->secondary_name) && (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view'))) {
+                        $style = !empty($sec_font) ? 'font-family: \'' . e($sec_font) . '\', \'Koh Santepheap\', sans-serif;' : '';
+                        $display_secondary = '<span class="product-secondary-name text-muted" style="' . $style . '">(' . e($row->secondary_name) . ')</span>';
+                    }
+
+                    if (!empty($display_secondary)) {
+                        if ($secondary_name_position == 'left') {
+                            $full_name_html = $display_secondary . ' ' . $display_primary;
+                        } else {
+                            $full_name_html = $display_primary . ' ' . $display_secondary;
+                        }
+                    } else {
+                        $full_name_html = $display_primary;
+                    }
+
+                    if (auth()->user()->can('product.rename_product') || auth()->user()->can('product.update')) {
+                        $product_name = '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editName'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $full_name_html . '</a>';
+                    } else {
+                        $product_name = $full_name_html;
+                    }
+
+                    $product = $row->is_inactive == 1 ? $product_name . ' <span class="label bg-gray">' . __('lang_v1.inactive') . '</span>' : $product_name;
 
                     $product = $row->not_for_selling == 1 ? $product . ' <span class="label bg-gray">' . __('lang_v1.not_for_selling') .
                         '</span>' : $product;
@@ -343,9 +428,20 @@ class ProductController extends Controller
                         return $html;
                     }
                 )
+                ->filterColumn('product', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('products.name', 'like', "%{$keyword}%")
+                          ->orWhere('products.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhereHas('variations', function ($vq) use ($keyword) {
+                              $vq->where('variations.name', 'like', "%{$keyword}%")
+                                ->orWhere('variations.sub_sku', 'like', "%{$keyword}%");
+                          });
+                    });
+                })
                 ->filterColumn('products.sku', function ($query, $keyword) {
                     $query->whereHas('variations', function ($q) use ($keyword) {
-                        $q->where('sub_sku', 'like', "%{$keyword}%");
+                        $q->where('sub_sku', 'like', "%{$keyword}%")
+                          ->orWhere('name', 'like', "%{$keyword}%");
                     })
                         ->orWhere('products.sku', 'like', "%{$keyword}%");
                 })
@@ -358,7 +454,7 @@ class ProductController extends Controller
                         }
                     },
                 ])
-                ->rawColumns(['action', 'image', 'mass_delete', 'product', 'sku', 'selling_price', 'purchase_price', 'category', 'current_stock'])
+                ->rawColumns(['action', 'image', 'mass_delete', 'product', 'sku', 'product_description', 'selling_price', 'purchase_price', 'category', 'current_stock'])
                 ->make(true);
         }
 
@@ -671,7 +767,7 @@ class ProductController extends Controller
         }
         try {
             $business_id = $request->session()->get('user.business_id');
-            $form_fields = ['name', 'brand_id', 'unit_id', 'category_id', 'tax', 'type', 'barcode_type', 'sku', 'alert_quantity', 'tax_type', 'weight', 'product_description', 'sub_unit_ids', 'preparation_time_in_minutes', 'product_custom_field1', 'product_custom_field2', 'product_custom_field3', 'product_custom_field4', 'product_custom_field5', 'product_custom_field6', 'product_custom_field7', 'product_custom_field8', 'product_custom_field9', 'product_custom_field10', 'product_custom_field11', 'product_custom_field12', 'product_custom_field13', 'product_custom_field14', 'product_custom_field15', 'product_custom_field16', 'product_custom_field17', 'product_custom_field18', 'product_custom_field19', 'product_custom_field20',];
+            $form_fields = ['name', 'secondary_name', 'brand_id', 'unit_id', 'category_id', 'tax', 'type', 'barcode_type', 'sku', 'alert_quantity', 'tax_type', 'weight', 'product_description', 'sub_unit_ids', 'preparation_time_in_minutes', 'product_custom_field1', 'product_custom_field2', 'product_custom_field3', 'product_custom_field4', 'product_custom_field5', 'product_custom_field6', 'product_custom_field7', 'product_custom_field8', 'product_custom_field9', 'product_custom_field10', 'product_custom_field11', 'product_custom_field12', 'product_custom_field13', 'product_custom_field14', 'product_custom_field15', 'product_custom_field16', 'product_custom_field17', 'product_custom_field18', 'product_custom_field19', 'product_custom_field20',];
 
             $module_form_fields = $this->moduleUtil->getModuleFormField('product_form_fields');
             if (! empty($module_form_fields)) {
@@ -1183,7 +1279,7 @@ class ProductController extends Controller
 
         try {
             $business_id = $request->session()->get('user.business_id');
-            $product_details = $request->only(['name', 'brand_id', 'unit_id', 'category_id', 'tax', 'barcode_type', 'sku', 'alert_quantity', 'tax_type', 'weight', 'product_description', 'sub_unit_ids', 'preparation_time_in_minutes', 'product_custom_field1', 'product_custom_field2', 'product_custom_field3', 'product_custom_field4', 'product_custom_field5', 'product_custom_field6', 'product_custom_field7', 'product_custom_field8', 'product_custom_field9', 'product_custom_field10', 'product_custom_field11', 'product_custom_field12', 'product_custom_field13', 'product_custom_field14', 'product_custom_field15', 'product_custom_field16', 'product_custom_field17', 'product_custom_field18', 'product_custom_field19', 'product_custom_field20',]);
+            $product_details = $request->only(['name', 'secondary_name', 'brand_id', 'unit_id', 'category_id', 'tax', 'barcode_type', 'sku', 'alert_quantity', 'tax_type', 'weight', 'product_description', 'sub_unit_ids', 'preparation_time_in_minutes', 'product_custom_field1', 'product_custom_field2', 'product_custom_field3', 'product_custom_field4', 'product_custom_field5', 'product_custom_field6', 'product_custom_field7', 'product_custom_field8', 'product_custom_field9', 'product_custom_field10', 'product_custom_field11', 'product_custom_field12', 'product_custom_field13', 'product_custom_field14', 'product_custom_field15', 'product_custom_field16', 'product_custom_field17', 'product_custom_field18', 'product_custom_field19', 'product_custom_field20',]);
 
             DB::beginTransaction();
 
@@ -1249,6 +1345,7 @@ class ProductController extends Controller
             }
 
             $product->name = $product_details['name'];
+            $product->secondary_name = $product_details['secondary_name'] ?? null;
             $product->brand_id = $product_details['brand_id'];
             $product->unit_id = $product_details['unit_id'];
             $product->category_id = $product_details['category_id'];
@@ -2509,6 +2606,77 @@ class ProductController extends Controller
         }
     }
 
+    public function addGalleryImage(Request $request, $id)
+    {
+        if (! (auth()->user()->can('product.update') || auth()->user()->can('product.upload_image') || auth()->user()->can('product.create'))) {
+            return response()->json(['success' => false, 'msg' => __('messages.unauthorized_action')], 403);
+        }
+
+        try {
+            $business_id = $request->session()->get('user.business_id');
+            $product = Product::where('business_id', $business_id)->findOrFail($id);
+
+            if ($request->hasFile('file')) {
+                Media::uploadMedia($business_id, $product, $request, 'file', false, 'product_gallery');
+
+                if (empty($product->image)) {
+                    $first_gallery_media = $product->media()->where('model_media_type', 'product_gallery')->latest()->first();
+                    if (!empty($first_gallery_media)) {
+                        $product->image = $first_gallery_media->file_name;
+                        $product->save();
+                    }
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'msg' => __('lang_v1.success')
+                ]);
+            }
+
+            return response()->json(['success' => false, 'msg' => 'No file uploaded.'], 400);
+        } catch (\Exception $e) {
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'msg' => __('messages.something_went_wrong')
+            ], 500);
+        }
+    }
+
+    public function deleteMainImage($id)
+    {
+        if (! (auth()->user()->can('product.update') || auth()->user()->can('product.delete'))) {
+            return response()->json(['success' => false, 'msg' => __('messages.unauthorized_action')], 403);
+        }
+
+        try {
+            $business_id = request()->session()->get('user.business_id');
+            $product = Product::where('business_id', $business_id)->findOrFail($id);
+
+            if (!empty($product->image)) {
+                $file_path = public_path('uploads/img/' . $product->image);
+                if (file_exists($file_path)) {
+                    @unlink($file_path);
+                }
+                $product->image = null;
+                $product->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'msg' => __('lang_v1.file_deleted_successfully')
+            ]);
+        } catch (\Exception $e) {
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'msg' => __('messages.something_went_wrong')
+            ], 500);
+        }
+    }
+
 
     /**
      * Mass deletes products.
@@ -3555,9 +3723,200 @@ class ProductController extends Controller
         return view('product.edit-image-modal')->with(compact('product', 'variations', 'product_image', 'gallery_images'));
     }
 
+    public function editCategory($id)
+    {
+        if (! auth()->user()->can('product.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $product = Product::where('business_id', $business_id)->findOrFail($id);
+
+        $categories = Category::forDropdown($business_id, 'product');
+
+        $sub_categories = [];
+        if (!empty($product->category_id)) {
+            $sub_categories = Category::where('business_id', $business_id)
+                ->where('parent_id', $product->category_id)
+                ->pluck('name', 'id')
+                ->toArray();
+        }
+        $sub_categories = ['' => 'None'] + $sub_categories;
+
+        return view('product.edit_category_modal')
+            ->with(compact('product', 'categories', 'sub_categories'));
+    }
+
+    public function updateCategory(Request $request, $id)
+    {
+        if (! auth()->user()->can('product.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = $request->session()->get('user.business_id');
+            $product = Product::where('business_id', $business_id)
+                ->where('id', $id)
+                ->with(['category', 'sub_category', 'product_locations'])
+                ->firstOrFail();
+
+            $old_category_name = $product->category->name ?? 'None';
+            $old_sub_category_name = $product->sub_category->name ?? '';
+
+            $product->category_id = $request->input('category_id');
+            $product->sub_category_id = $request->input('sub_category_id');
+            $product->save();
+
+            // Refresh category relationships for notification
+            $product->load(['category', 'sub_category']);
+
+            // Send Telegram Notification
+            $product->load('product_locations');
+            $location_ids = $this->getTgLocationIds($product);
+            app()->terminating(function () use ($product, $old_category_name, $old_sub_category_name, $location_ids) {
+                foreach ($location_ids as $location_id) {
+                    try {
+                        \App\Notifications\TelegramNotification::productCategoryUpdatedMessage(
+                            $product,
+                            $old_category_name,
+                            $old_sub_category_name,
+                            'product',
+                            $location_id
+                        );
+                    } catch (\Exception $te) {
+                        \Log::warning("Telegram product category update notification failed for location {$location_id}: " . $te->getMessage());
+                    }
+                }
+            });
+
+            $output = [
+                'success' => true,
+                'msg' => __('product.product_updated_success'),
+            ];
+        } catch (\Exception $e) {
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            $output = [
+                'success' => false,
+                'msg' => __('messages.something_went_wrong'),
+            ];
+        }
+
+        return $output;
+    }
+
+    public function editDescription($id)
+    {
+        if (! auth()->user()->can('product.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $product = Product::where('business_id', $business_id)->findOrFail($id);
+
+        return view('product.edit_description_modal')
+            ->with(compact('product'));
+    }
+
+    public function updateDescription(Request $request, $id)
+    {
+        if (! auth()->user()->can('product.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = $request->session()->get('user.business_id');
+            $product = Product::where('business_id', $business_id)
+                ->where('id', $id)
+                ->with('product_locations')
+                ->firstOrFail();
+
+            $old_description = $product->product_description;
+
+            $product->product_description = $request->input('product_description');
+            $product->save();
+
+            // Send Telegram Notification after response terminates
+            $product->load('product_locations');
+            $location_ids = $this->getTgLocationIds($product);
+            app()->terminating(function () use ($product, $old_description, $location_ids) {
+                foreach ($location_ids as $location_id) {
+                    try {
+                        \App\Notifications\TelegramNotification::productDescriptionUpdatedMessage(
+                            $product,
+                            $old_description,
+                            'product',
+                            $location_id
+                        );
+                    } catch (\Exception $te) {
+                        \Log::warning("Telegram product description update notification failed for location {$location_id}: " . $te->getMessage());
+                    }
+                }
+            });
+
+            $output = [
+                'success' => true,
+                'msg' => __('product.product_updated_success'),
+            ];
+        } catch (\Exception $e) {
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            $output = [
+                'success' => false,
+                'msg' => __('messages.something_went_wrong'),
+            ];
+        }
+
+        return $output;
+    }
+
+    public function editName($id)
+    {
+        if (! (auth()->user()->can('product.rename_product') || auth()->user()->can('product.update'))) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $product = Product::where('business_id', $business_id)->findOrFail($id);
+
+        return view('product.edit_name_modal')
+            ->with(compact('product'));
+    }
+
+    public function updateName(Request $request, $id)
+    {
+        if (! (auth()->user()->can('product.rename_product') || auth()->user()->can('product.update'))) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = $request->session()->get('user.business_id');
+            $product = Product::where('business_id', $business_id)
+                ->where('id', $id)
+                ->firstOrFail();
+
+            $product->name = $request->input('name');
+            $product->save();
+
+            $output = [
+                'success' => true,
+                'msg' => __('product.product_updated_success'),
+            ];
+        } catch (\Exception $e) {
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            $output = [
+                'success' => false,
+                'msg' => __('messages.something_went_wrong'),
+            ];
+        }
+
+        return $output;
+    }
+
     public function editRename($id)
     {
-        if (! (auth()->user()->can('product.rename_product') || auth()->user()->can('product.rename_sku') || auth()->user()->can('product.update_price'))) {
+        if (! (auth()->user()->can('product.rename_product') || auth()->user()->can('product.rename_sku') || auth()->user()->can('product.update_price') || auth()->user()->can('product.update'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -3572,7 +3931,7 @@ class ProductController extends Controller
 
     public function updateRename(Request $request, $id)
     {
-        if (! (auth()->user()->can('product.rename_product') || auth()->user()->can('product.rename_sku') || auth()->user()->can('product.update_price'))) {
+        if (! (auth()->user()->can('product.rename_product') || auth()->user()->can('product.rename_sku') || auth()->user()->can('product.update_price') || auth()->user()->can('product.update'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -3601,6 +3960,9 @@ class ProductController extends Controller
             if (auth()->user()->can('product.rename_product')) {
                 $name = $request->input('name');
                 $product->name = $name;
+            }
+            if ($request->has('secondary_name')) {
+                $product->secondary_name = $request->input('secondary_name');
             }
 
             // Recalculate based on tax rate if present

@@ -183,5 +183,29 @@
             </div>
         </div>
 
+        <div class="clearfix"></div>
+        <hr>
+        <h4>Product Second Language & Font Settings</h4>
+        <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('secondary_name_position', 'Second Language Position:') !!}
+                {!! Form::select('common_settings[secondary_name_position]', ['right' => 'Show Right (e.g. Primary (Secondary))', 'left' => 'Show Left (e.g. (Secondary) Primary)'], !empty($common_settings['secondary_name_position']) ? $common_settings['secondary_name_position'] : 'right', ['class' => 'form-control select2', 'style' => 'width:100%;']); !!}
+            </div>
+        </div>
+
+        <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('primary_font_family', 'Primary Language Font (English/System):') !!}
+                {!! Form::select('common_settings[primary_font_family]', ['' => 'Default System Font', 'Inter' => 'Inter', 'Roboto' => 'Roboto', 'Outfit' => 'Outfit', 'Open Sans' => 'Open Sans'], !empty($common_settings['primary_font_family']) ? $common_settings['primary_font_family'] : '', ['class' => 'form-control select2', 'style' => 'width:100%;']); !!}
+            </div>
+        </div>
+
+        <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('secondary_font_family', 'Secondary Language Font (Khmer):') !!}
+                {!! Form::select('common_settings[secondary_font_family]', ['Koh Santepheap' => 'Koh Santepheap', 'Kantumruy Pro' => 'Kantumruy Pro', 'Siemreap' => 'Siemreap', 'Battambang' => 'Battambang', 'Hanuman' => 'Hanuman', 'Moul' => 'Moul', 'Noto Sans Khmer' => 'Noto Sans Khmer'], !empty($common_settings['secondary_font_family']) ? $common_settings['secondary_font_family'] : 'Koh Santepheap', ['class' => 'form-control select2', 'style' => 'width:100%;']); !!}
+            </div>
+        </div>
+
     </div>
 </div>

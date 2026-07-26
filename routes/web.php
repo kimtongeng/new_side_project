@@ -187,14 +187,22 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/products/save_quick_product', [ProductController::class, 'saveQuickProduct']);
     Route::get('/products/get-combo-product-entry-row', [ProductController::class, 'getComboProductEntryRow']);
     Route::post('/products/toggle-woocommerce-sync', [ProductController::class, 'toggleWooCommerceSync']);
+    Route::get('/products/edit-name/{id}', [ProductController::class, 'editName']);
+    Route::post('/products/update-name/{id}', [ProductController::class, 'updateName']);
     Route::get('/products/edit-rename/{id}', [ProductController::class, 'editRename']);
     Route::post('/products/update-rename/{id}', [ProductController::class, 'updateRename']);
     Route::get('/products/edit-sku/{id}', [ProductController::class, 'editSku']);
     Route::post('/products/update-sku/{id}', [ProductController::class, 'updateSku']);
     Route::get('/products/edit-selling-price/{id}', [ProductController::class, 'editSellingPrice']);
     Route::post('/products/update-selling-price/{id}', [ProductController::class, 'updateSellingPrice']);
+    Route::get('/products/edit-category/{id}', [ProductController::class, 'editCategory']);
+    Route::post('/products/update-category/{id}', [ProductController::class, 'updateCategory']);
+    Route::get('/products/edit-description/{id}', [ProductController::class, 'editDescription']);
+    Route::post('/products/update-description/{id}', [ProductController::class, 'updateDescription']);
 
     Route::get('/products/gallery/{id}', [ProductController::class, 'showGallery']);
+    Route::post('/products/add-gallery-image/{id}', [ProductController::class, 'addGalleryImage']);
+    Route::get('/products/delete-main-image/{id}', [ProductController::class, 'deleteMainImage']);
     Route::resource('products', ProductController::class);
     Route::get('/toggle-subscription/{id}', 'SellPosController@toggleRecurringInvoices');
     Route::post('/sells/pos/get-types-of-service-details', 'SellPosController@getTypesOfServiceDetails');

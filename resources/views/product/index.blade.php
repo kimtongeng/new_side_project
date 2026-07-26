@@ -38,6 +38,16 @@
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
+                        {!! Form::label('variation_name', __('lang_v1.variation') . ':') !!}
+                        {!! Form::text('variation_name', null, [
+                            'class' => 'form-control',
+                            'id' => 'product_list_filter_variation_name',
+                            'placeholder' => __('lang_v1.search') . ' ' . __('lang_v1.variation'),
+                        ]) !!}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
                         {!! Form::label('category_id', __('product.category') . ':') !!}
                         {!! Form::select('category_id', $categories, null, [
         'class' => 'form-control select2',
@@ -250,6 +260,7 @@
                         d.active_state = $('#active_state').val();
                         d.not_for_selling = $('#not_for_selling').is(':checked');
                         d.location_id = $('#location_id').val();
+                        d.variation_name = $('#product_list_filter_variation_name').val();
                         if ($('#repair_model_id').length == 1) {
                             d.repair_model_id = $('#repair_model_id').val();
                         }
@@ -285,6 +296,10 @@
                 {
                     data: 'sku',
                     name: 'products.sku'
+                },
+                {
+                    data: 'product_description',
+                    name: 'products.product_description'
                 },
                 {
                     data: 'product_locations',
@@ -531,8 +546,8 @@
                 });
             });
 
-            $(document).on('change',
-                '#product_list_filter_type, #product_list_filter_category_id, #product_list_filter_brand_id, #product_list_filter_unit_id, #product_list_filter_tax_id, #location_id, #active_state, #repair_model_id',
+            $(document).on('change keyup',
+                '#product_list_filter_type, #product_list_filter_category_id, #product_list_filter_brand_id, #product_list_filter_unit_id, #product_list_filter_tax_id, #location_id, #active_state, #repair_model_id, #product_list_filter_variation_name',
                 function () {
                     if ($("#product_list_tab").hasClass('active')) {
                         product_table.ajax.reload();

@@ -368,6 +368,14 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
+                {!! Form::checkbox('permissions[]', 'product.secondary_name', false, 
+                [ 'class' => 'input-icheck']); !!} {{ 'View & Edit Product Second Language' }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
                 {!! Form::checkbox('permissions[]', 'product.opening_stock', false, 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.add_opening_stock' ) }}
               </label>

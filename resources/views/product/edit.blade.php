@@ -165,6 +165,14 @@
 
             <div class="col-sm-4">
               <div class="form-group">
+                {!! Form::label('secondary_name', 'Second Language Name:') !!}
+                {!! Form::text('secondary_name', $product->secondary_name, ['class' => 'form-control',
+                'placeholder' => 'Second Language Name (e.g. Khmer Name)']); !!}
+              </div>
+            </div>
+
+            <div class="col-sm-4">
+              <div class="form-group">
                 {!! Form::label('sku', __('product.sku')  . ':*') !!} @show_tooltip(__('tooltip.sku'))
                  {!! Form::text('sku', $product->sku, ['class' => 'form-control',
                  'placeholder' => __('product.sku'), 'required', 'readonly' => !auth()->user()->can('product.rename_sku')]); !!}

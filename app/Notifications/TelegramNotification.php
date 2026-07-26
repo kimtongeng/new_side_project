@@ -197,45 +197,101 @@ class TelegramNotification
 
     public static function sendMessage(string $message, string $to = '', $location_id = "PT1001"): void
     {
-        // return;
-        // $botToken = self::PRODUCTION_BOT;
-        // $groups = self::PRODUCTION_GROUP;
+        if (function_exists('fastcgi_finish_request')) {
+            @fastcgi_finish_request();
+        }
+
         $botToken = self::LOCAL_BOT;
         $groups = self::LOCAL_GROUP;
 
-        // if (app()->environment("local")) {
-        //     $botToken = self::LOCAL_BOT;
-        //     $groups = self::LOCAL_GROUP;
-        // }
-        $group = $groups[$location_id];
+        $group = $groups[$location_id] ?? null;
+        if (! $group) return;
 
-        $topic = $group["topic"];
+        $topic = $group["topic"] ?? [];
+        $chat_id = $group["chat_id"] ?? '';
+        $topic_id = $topic[$to] ?? null;
 
-        $chat_id = $group["chat_id"];
-
-
-        $topic_id = $topic[$to];
-
-        // info($group);
-        // info("Sending Telegram message to {$group['name']} - Topic: {$to} (ID: {$topic_id}) - location: {$location_id}");
-        if (empty($topic_id)) {
-            throw new \Exception("Topic ID not found for key: {$to}");
+        if (empty($topic_id) || empty($chat_id)) {
+            return;
         }
 
-        if (empty($chat_id)) {
-            throw new \Exception("Chat ID not found for key: {$location_id}");
+        try {
+            Http::timeout(3)->get("https://api.telegram.org/bot{$botToken}/sendMessage", [
+                'chat_id' => $chat_id,
+                'message_thread_id' => $topic_id,
+                'text' => $message,
+                'parse_mode' => 'HTML',
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning("Telegram sendMessage error: " . $e->getMessage());
         }
-
-        // Try to send the main message
-        $response = Http::get("https://api.telegram.org/bot{$botToken}/sendMessage", [
-            'chat_id' => $chat_id,
-            'message_thread_id' => $topic_id,
-            'text' => $message,
-            'parse_mode' => 'HTML',
-        ]);
-
-        $data = $response->json();
     }
+
+    public static function productCategoryUpdatedMessage(
+        $product,
+        $old_category_name,
+        $old_sub_category_name,
+        string $to = 'product',
+        string $location_id = 'PT1001'
+    ): void {
+        try {
+            $product->load(['category', 'sub_category']);
+            $new_category_name = $product->category->name ?? 'None';
+            $new_sub_category_name = $product->sub_category->name ?? 'None';
+            $updated_by = self::getUpdatedBy();
+
+            $msg = "<b>📂 PRODUCT CATEGORY UPDATED</b>\n\n";
+            $msg .= "📦 <b>Product:</b> {$product->name}\n";
+            $msg .= "🔢 <b>SKU:</b> {$product->sku}\n\n";
+
+            $msg .= "📁 <b>Category:</b>\n";
+            $msg .= "  • Old: {$old_category_name}\n";
+            $msg .= "  • New: {$new_category_name}\n\n";
+
+            if (!empty($old_sub_category_name) || !empty($new_sub_category_name)) {
+                $msg .= "📂 <b>Sub Category:</b>\n";
+                $msg .= "  • Old: " . (!empty($old_sub_category_name) ? $old_sub_category_name : 'None') . "\n";
+                $msg .= "  • New: " . (!empty($new_sub_category_name) ? $new_sub_category_name : 'None') . "\n\n";
+            }
+
+            $msg .= "👤 <b>Updated By:</b> {$updated_by}\n";
+            $msg .= "⏰ <b>Updated At:</b> " . now()->format('d/m/Y H:i') . "\n";
+            $msg .= "✏️ <i>Updated via Shoper POS</i>";
+
+            self::sendMessage($msg, $to, $location_id);
+        } catch (\Exception $e) {
+            \Log::warning("Telegram product category update notification error: " . $e->getMessage());
+        }
+    }
+
+    public static function productDescriptionUpdatedMessage(
+        $product,
+        $old_description,
+        string $to = 'product',
+        string $location_id = 'PT1001'
+    ): void {
+        try {
+            $updated_by = self::getUpdatedBy();
+            $old_desc_text = !empty(trim(strip_tags($old_description))) ? trim(strip_tags($old_description)) : 'None';
+            $new_desc_text = !empty(trim(strip_tags($product->product_description))) ? trim(strip_tags($product->product_description)) : 'None';
+
+            $msg = "<b>📝 PRODUCT DESCRIPTION UPDATED</b>\n\n";
+            $msg .= "📦 <b>Product:</b> {$product->name}\n";
+            $msg .= "🔢 <b>SKU:</b> {$product->sku}\n\n";
+
+            $msg .= "📄 <b>Old Description:</b>\n<i>{$old_desc_text}</i>\n\n";
+            $msg .= "📝 <b>New Description:</b>\n<i>{$new_desc_text}</i>\n\n";
+
+            $msg .= "👤 <b>Updated By:</b> {$updated_by}\n";
+            $msg .= "⏰ <b>Updated At:</b> " . now()->format('d/m/Y H:i') . "\n";
+            $msg .= "✏️ <i>Updated via Shoper POS</i>";
+
+            self::sendMessage($msg, $to, $location_id);
+        } catch (\Exception $e) {
+            \Log::warning("Telegram product description update notification error: " . $e->getMessage());
+        }
+    }
+
     private static function getLocationAccountIds($location_id): array
     {
         $business_id = auth()->user()->business_id;

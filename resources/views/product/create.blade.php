@@ -225,14 +225,24 @@
         <div class="col-sm-4 @if(!session('business.enable_category')) hide @endif">
             <div class="form-group">
                 {!! Form::label('category_id', __('product.category') . ':') !!}
-                {!! Form::select('category_id', $categories, !empty($duplicate_product->category_id) ? $duplicate_product->category_id : null, ['placeholder' => __('messages.please_select'), 'class' => 'form-control select2']); !!}
+                <div class="input-group">
+                    {!! Form::select('category_id', $categories, !empty($duplicate_product->category_id) ? $duplicate_product->category_id : null, ['placeholder' => __('messages.please_select'), 'class' => 'form-control select2']); !!}
+                    <span class="input-group-btn">
+                        <button type="button" @if(!auth()->user()->can('category.create')) disabled @endif class="btn btn-default bg-white btn-flat btn-modal" data-href="{{action([\App\Http\Controllers\TaxonomyController::class, 'create'], ['type' => 'product'])}}" title="@lang('category.add_category')" data-container=".category_modal"><i class="fa fa-plus-circle text-primary fa-lg"></i></button>
+                    </span>
+                </div>
             </div>
         </div>
 
         <div class="col-sm-4 @if(!(session('business.enable_category') && session('business.enable_sub_category'))) hide @endif">
             <div class="form-group">
                 {!! Form::label('sub_category_id', __('product.sub_category') . ':') !!}
-                {!! Form::select('sub_category_id', $sub_categories, !empty($duplicate_product->sub_category_id) ? $duplicate_product->sub_category_id : null, ['placeholder' => __('messages.please_select'), 'class' => 'form-control select2']); !!}
+                <div class="input-group">
+                    {!! Form::select('sub_category_id', $sub_categories, !empty($duplicate_product->sub_category_id) ? $duplicate_product->sub_category_id : null, ['placeholder' => __('messages.please_select'), 'class' => 'form-control select2']); !!}
+                    <span class="input-group-btn">
+                        <button type="button" @if(!auth()->user()->can('category.create')) disabled @endif class="btn btn-default bg-white btn-flat btn-modal quick_add_sub_category" data-href="{{action([\App\Http\Controllers\TaxonomyController::class, 'create'], ['type' => 'product', 'sub_category' => 1])}}" title="@lang('category.add_as_sub_category')" data-container=".category_modal"><i class="fa fa-plus-circle text-primary fa-lg"></i></button>
+                    </span>
+                </div>
             </div>
         </div>
 

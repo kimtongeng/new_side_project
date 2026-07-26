@@ -20,6 +20,11 @@
                 {!! Form::text('name', $product->name, ['class' => 'form-control', 'required', 'placeholder' => __('product.product_name'), 'readonly' => !auth()->user()->can('product.rename_product')]) !!}
             </div>
 
+            <div class="form-group">
+                {!! Form::label('secondary_name', 'Second Language Name:') !!}
+                {!! Form::text('secondary_name', $product->secondary_name, ['class' => 'form-control', 'placeholder' => 'Second Language Name (e.g. Khmer Name)', 'readonly' => !auth()->user()->can('product.rename_product')]) !!}
+            </div>
+
             @if($product->type == 'single' || $product->type == 'combo')
                 @php
                     $variation = $product->variations->first();

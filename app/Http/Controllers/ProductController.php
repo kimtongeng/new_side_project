@@ -215,9 +215,13 @@ class ProductController extends Controller
 
             $variation_name = request()->get('variation_name', null);
             if (! empty($variation_name)) {
-                $products->whereHas('variations', function ($q) use ($variation_name) {
-                    $q->where('variations.name', 'like', "%{$variation_name}%")
-                      ->orWhere('variations.sub_sku', 'like', "%{$variation_name}%");
+                $products->where(function ($q) use ($variation_name) {
+                    $q->where('products.name', 'like', "%{$variation_name}%")
+                      ->orWhere('products.secondary_name', 'like', "%{$variation_name}%")
+                      ->orWhereHas('variations', function ($vq) use ($variation_name) {
+                          $vq->where('variations.name', 'like', "%{$variation_name}%")
+                            ->orWhere('variations.sub_sku', 'like', "%{$variation_name}%");
+                      });
                 });
             }
 
@@ -264,6 +268,13 @@ class ProductController extends Controller
                         return '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editCategory'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $category_text . '</a>';
                     }
                     return $category_text;
+                })
+                ->editColumn('brand', function ($row) {
+                    $brand_text = !empty($row->brand) ? $row->brand : '--';
+                    if (auth()->user()->can('product.update')) {
+                        return '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editBrand'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $brand_text . '</a>';
+                    }
+                    return $brand_text;
                 })
                 ->addColumn(
                     'action',
@@ -343,6 +354,7 @@ class ProductController extends Controller
                 )
                 ->editColumn('product', function ($row) use ($is_woocommerce) {
                     $secondary_name_position = session('business.common_settings.secondary_name_position', 'right');
+                    $secondary_name_format = session('business.common_settings.secondary_name_format', 'parentheses');
                     $sec_font = session('business.common_settings.secondary_font_family', 'Koh Santepheap');
 
                     $display_primary = e($row->product);
@@ -350,14 +362,31 @@ class ProductController extends Controller
 
                     if (!empty($row->secondary_name) && (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view'))) {
                         $style = !empty($sec_font) ? 'font-family: \'' . e($sec_font) . '\', \'Koh Santepheap\', sans-serif;' : '';
-                        $display_secondary = '<span class="product-secondary-name text-muted" style="' . $style . '">(' . e($row->secondary_name) . ')</span>';
+                        $sec_text = e($row->secondary_name);
+                        if ($secondary_name_format == 'parentheses') {
+                            $sec_text = '(' . $sec_text . ')';
+                        }
+                        $display_secondary = '<span class="product-secondary-name text-muted" style="' . $style . '">' . $sec_text . '</span>';
                     }
 
                     if (!empty($display_secondary)) {
+                        $delimiter = ' ';
+                        if ($secondary_name_format == 'comma') {
+                            $delimiter = ', ';
+                        } elseif ($secondary_name_format == 'hyphen') {
+                            $delimiter = ' - ';
+                        } elseif ($secondary_name_format == 'pipe') {
+                            $delimiter = ' | ';
+                        } elseif ($secondary_name_format == 'backslash') {
+                            $delimiter = ' \\ ';
+                        } elseif ($secondary_name_format == 'slash') {
+                            $delimiter = ' / ';
+                        }
+
                         if ($secondary_name_position == 'left') {
-                            $full_name_html = $display_secondary . ' ' . $display_primary;
+                            $full_name_html = $display_secondary . $delimiter . $display_primary;
                         } else {
-                            $full_name_html = $display_primary . ' ' . $display_secondary;
+                            $full_name_html = $display_primary . $delimiter . $display_secondary;
                         }
                     } else {
                         $full_name_html = $display_primary;
@@ -454,7 +483,7 @@ class ProductController extends Controller
                         }
                     },
                 ])
-                ->rawColumns(['action', 'image', 'mass_delete', 'product', 'sku', 'product_description', 'selling_price', 'purchase_price', 'category', 'current_stock'])
+                ->rawColumns(['action', 'image', 'mass_delete', 'product', 'sku', 'product_description', 'selling_price', 'purchase_price', 'category', 'brand', 'current_stock'])
                 ->make(true);
         }
 
@@ -3805,6 +3834,52 @@ class ProductController extends Controller
         return $output;
     }
 
+    public function editBrand($id)
+    {
+        if (! auth()->user()->can('product.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = request()->session()->get('user.business_id');
+        $product = Product::where('business_id', $business_id)->findOrFail($id);
+
+        $brands = Brands::forDropdown($business_id);
+
+        return view('product.edit_brand_modal')
+            ->with(compact('product', 'brands'));
+    }
+
+    public function updateBrand(Request $request, $id)
+    {
+        if (! auth()->user()->can('product.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = $request->session()->get('user.business_id');
+            $product = Product::where('business_id', $business_id)
+                ->where('id', $id)
+                ->firstOrFail();
+
+            $product->brand_id = $request->input('brand_id');
+            $product->save();
+
+            $output = [
+                'success' => true,
+                'msg' => __('product.product_updated_success'),
+            ];
+        } catch (\Exception $e) {
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            $output = [
+                'success' => false,
+                'msg' => __('messages.something_went_wrong'),
+            ];
+        }
+
+        return $output;
+    }
+
     public function editDescription($id)
     {
         if (! auth()->user()->can('product.update')) {
@@ -3896,6 +3971,9 @@ class ProductController extends Controller
                 ->firstOrFail();
 
             $product->name = $request->input('name');
+            if ($request->has('secondary_name')) {
+                $product->secondary_name = $request->input('secondary_name');
+            }
             $product->save();
 
             $output = [

@@ -207,5 +207,20 @@
             </div>
         </div>
 
+        <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('secondary_name_format', 'Second Language Format / Separator:') !!}
+                {!! Form::select('common_settings[secondary_name_format]', [
+                    'parentheses' => 'Parentheses ( ) e.g. Primary (Secondary)',
+                    'space' => 'Space \' \' e.g. Primary Secondary',
+                    'comma' => 'Comma \',\' e.g. Primary, Secondary',
+                    'hyphen' => 'Hyphen \'-\' e.g. Primary - Secondary',
+                    'pipe' => 'Pipe \'|\' e.g. Primary | Secondary',
+                    'backslash' => 'Backslash \'\\\' e.g. Primary \\ Secondary',
+                    'slash' => 'Slash \'/\' e.g. Primary / Secondary'
+                ], !empty($common_settings['secondary_name_format']) ? $common_settings['secondary_name_format'] : 'parentheses', ['class' => 'form-control select2', 'style' => 'width:100%;']); !!}
+            </div>
+        </div>
+
     </div>
 </div>

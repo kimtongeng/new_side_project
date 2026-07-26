@@ -197,6 +197,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/products/update-selling-price/{id}', [ProductController::class, 'updateSellingPrice']);
     Route::get('/products/edit-category/{id}', [ProductController::class, 'editCategory']);
     Route::post('/products/update-category/{id}', [ProductController::class, 'updateCategory']);
+    Route::get('/products/edit-brand/{id}', [ProductController::class, 'editBrand']);
+    Route::post('/products/update-brand/{id}', [ProductController::class, 'updateBrand']);
     Route::get('/products/edit-description/{id}', [ProductController::class, 'editDescription']);
     Route::post('/products/update-description/{id}', [ProductController::class, 'updateDescription']);
 

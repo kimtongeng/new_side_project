@@ -35,16 +35,19 @@
         {!! Form::textarea('description', null, ['class' => 'form-control', 'placeholder' => __( 'lang_v1.description'), 'rows' => 3]); !!}
       </div>
       @if(!empty($parent_categories) && $enable_sub_category)
+        @php
+            $is_sub_cat = !empty($parent_id) || !empty($quick_add_sub);
+        @endphp
         <div class="form-group">
             <div class="checkbox">
               <label>
-                 {!! Form::checkbox('add_as_sub_cat', 1, false,[ 'class' => 'toggler', 'data-toggle_id' => 'parent_cat_div' ]); !!} @lang( 'lang_v1.add_as_sub_txonomy' )
+                 {!! Form::checkbox('add_as_sub_cat', 1, $is_sub_cat,[ 'class' => 'toggler', 'data-toggle_id' => 'parent_cat_div' ]); !!} @lang( 'lang_v1.add_as_sub_txonomy' )
               </label>
             </div>
         </div>
-        <div class="form-group hide" id="parent_cat_div">
+        <div class="form-group @if(!$is_sub_cat) hide @endif" id="parent_cat_div">
           {!! Form::label('parent_id', __( 'category.select_parent_category' ) . ':') !!}
-          {!! Form::select('parent_id', $parent_categories, null, ['class' => 'form-control']); !!}
+          {!! Form::select('parent_id', $parent_categories, $parent_id, ['class' => 'form-control', 'placeholder' => __('messages.please_select')]); !!}
         </div>
       @endif
     </div>

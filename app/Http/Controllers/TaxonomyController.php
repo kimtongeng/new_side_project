@@ -134,8 +134,11 @@ class TaxonomyController extends Controller
             }
         }
 
+        $parent_id = request()->get('parent_id', null);
+        $quick_add_sub = request()->get('sub_category', false);
+
         return view('taxonomy.create')
-                    ->with(compact('parent_categories', 'module_category_data', 'category_type'));
+                    ->with(compact('parent_categories', 'module_category_data', 'category_type', 'parent_id', 'quick_add_sub'));
     }
 
     /**

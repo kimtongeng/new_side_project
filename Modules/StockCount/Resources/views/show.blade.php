@@ -449,7 +449,7 @@
 
                             @endif
 
-                            @if(in_array($session->status, ['active', 'in_progress']) && auth()->user()->can('stock_count.reconcile'))
+                            @if(in_array($session->status, ['active', 'in_progress', 'completed']) && auth()->user()->can('stock_count.reconcile'))
                                 {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'reconcile'], [$session->id]), 'method' => 'post', 'class' => 'inline-form', 'id' => 'reconcile_form']) !!}
                                 <button type="submit" class="btn btn-reconcile-custom btn-reconcile">
                                     <i class="fa fa-check-circle"></i> @lang('stockcount::lang.reconcile')

@@ -123,7 +123,7 @@ class StockCountController extends Controller
                                  </li>';
                     }
 
-                    if ($row->status !== 'completed' && auth()->user()->can('stock_count.delete')) {
+                    if (!in_array($row->status, ['completed', 'approved', 'reconciled', 'reconcile']) && auth()->user()->can('stock_count.delete')) {
                         $html .= '<li>
                                     <a data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'destroy'], [$row->id]) . '" class="delete_stock_count text-danger cursor-pointer">
                                         <i class="fa fa-trash"></i> ' . __('messages.delete') . '
@@ -684,13 +684,25 @@ class StockCountController extends Controller
         $business_id = $request->session()->get('user.business_id');
 
         if (!auth()->user()->can('stock_count.reconcile')) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'msg' => __('messages.unauthorized')], 403);
+            }
             abort(403, 'Unauthorized action.');
         }
 
         try {
             $session = StockCountSession::where('business_id', $business_id)
-                ->whereIn('status', ['active', 'in_progress'])
+                ->whereIn('status', ['active', 'in_progress', 'completed', 'pending', 'draft'])
                 ->findOrFail($id);
+
+            // Fill uncounted lines so completion reaches 100%
+            StockCountLine::where('stock_count_session_id', $session->id)
+                ->whereNull('counted_by')
+                ->update([
+                    'counted_quantity' => DB::raw('COALESCE(counted_quantity, book_quantity)'),
+                    'counted_by' => auth()->user()->id,
+                    'counted_at' => Carbon::now()
+                ]);
 
             $lines = StockCountLine::where('stock_count_session_id', $id)->get();
 
@@ -700,7 +712,8 @@ class StockCountController extends Controller
             $total_shortage_value = 0;
 
             foreach ($lines as $line) {
-                $qty_difference = $line->counted_quantity - $line->book_quantity;
+                $counted_qty = !is_null($line->counted_quantity) ? (float)$line->counted_quantity : (float)$line->book_quantity;
+                $qty_difference = $counted_qty - (float)$line->book_quantity;
 
                 if ($qty_difference != 0) {
                     // Update current stock to counted quantity
@@ -708,8 +721,8 @@ class StockCountController extends Controller
                         $session->location_id,
                         $line->product_id,
                         $line->variation_id,
-                        $line->counted_quantity,
-                        $line->book_quantity,
+                        $counted_qty,
+                        (float)$line->book_quantity,
                         null,
                         false
                     );
@@ -806,20 +819,29 @@ class StockCountController extends Controller
             }
             // ── End Telegram Notification ──────────────────────────
 
+            $output = [
+                'success' => true,
+                'msg' => __('stockcount::lang.reconciled_successfully')
+            ];
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json($output);
+            }
+
             return redirect()
                 ->action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$id])
-                ->with('status', [
-                    'success' => true,
-                    'msg' => __('stockcount::lang.reconciled_successfully')
-                ]);
+                ->with('status', $output);
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
-            return redirect()->back()
-                ->with('status', [
-                    'success' => false,
-                    'msg' => __('messages.something_went_wrong')
-                ]);
+            $output = [
+                'success' => false,
+                'msg' => __('messages.something_went_wrong')
+            ];
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json($output, 500);
+            }
+            return redirect()->back()->with('status', $output);
         }
     }
 
@@ -1270,16 +1292,20 @@ class StockCountController extends Controller
             $session = StockCountSession::where('business_id', $business_id)
                 ->findOrFail($session_id);
 
-            // Prevent reverting status if it has already been reconciled/completed
-            if (!empty($session->completed_at) && in_array($status, ['draft', 'active', 'in_progress', 'cancelled'])) {
-                $output = [
-                    'success' => false,
-                    'msg' => 'Cannot revert status after stock has been reconciled.'
-                ];
-                if ($request->ajax()) {
-                    return response()->json($output);
+            // If user selected 'reconciled' / 'reconcile', trigger full reconciliation logic
+            if ($status === 'reconciled' || $status === 'reconcile') {
+                if ($session->status === 'reconciled' || $session->status === 'reconcile') {
+                    $output = [
+                        'success' => true,
+                        'msg' => 'Session is already reconciled.'
+                    ];
+                    if ($request->ajax()) {
+                        return response()->json($output);
+                    }
+                    return redirect()->back()->with('status', $output);
                 }
-                return redirect()->back()->with('status', $output);
+
+                return $this->reconcile($request, $session_id);
             }
 
             // Fetch business settings
@@ -1292,14 +1318,19 @@ class StockCountController extends Controller
             $should_reconcile = false;
             $should_lock = false;
 
-            if (empty($session->completed_at)) {
+            if ($status === 'reconciled' || $status === 'reconcile') {
+                if ($session->status !== 'reconciled' && $session->status !== 'reconcile') {
+                    $should_lock = true;
+                    $should_reconcile = true;
+                }
+            } elseif (empty($session->completed_at)) {
                 if ($require_approval) {
                     if ($status === 'approved') {
                         $should_lock = true;
                         $should_reconcile = $auto_adjust;
                     }
                 } else {
-                    if (in_array($status, ['completed', 'approved', 'reconciled', 'reconcile'])) {
+                    if (in_array($status, ['completed', 'approved'])) {
                         $should_lock = true;
                         $should_reconcile = $auto_adjust;
                     }

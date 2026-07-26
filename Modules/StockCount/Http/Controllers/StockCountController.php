@@ -365,7 +365,7 @@ class StockCountController extends Controller
                     . "<b>👤 Created By:</b> {$user_name}\n"
                     . "<b>🕒 Date:</b> " . date('d/m/Y H:i');
 
-                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_adjustment', $loc_code);
+                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
             } catch (\Exception $te) {
                 \Log::warning('Telegram stock count store notification failed: ' . $te->getMessage());
             }
@@ -813,7 +813,7 @@ class StockCountController extends Controller
                     . "<b>👤 Reconciled By:</b> {$user_name}\n"
                     . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
 
-                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_adjustment', $loc_code);
+                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
             } catch (\Exception $te) {
                 \Log::warning('Telegram stock count reconcile notification failed: ' . $te->getMessage());
             }
@@ -872,7 +872,7 @@ class StockCountController extends Controller
                     . "<b>👤 Deleted By:</b> {$user_name}\n"
                     . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
 
-                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_adjustment', $loc_code);
+                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
             } catch (\Exception $te) {
                 \Log::warning('Telegram stock count delete notification failed: ' . $te->getMessage());
             }
@@ -1447,7 +1447,7 @@ class StockCountController extends Controller
                     . "<b>👤 Updated By:</b> {$user_name}\n"
                     . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
 
-                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_adjustment', $loc_code);
+                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
             } catch (\Exception $te) {
                 \Log::warning('Telegram stock count status update notification failed: ' . $te->getMessage());
             }

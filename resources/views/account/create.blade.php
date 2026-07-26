@@ -32,7 +32,7 @@
             <div class="form-group">
                 {!! Form::label('account_type_id', __( 'account.account_type' ) .":") !!}
                 <select name="account_type_id" class="form-control select2">
-                    <option>@lang('messages.please_select')</option>
+                    <option value="">@lang('messages.please_select')</option>
                     @foreach($account_types as $account_type)
                         <optgroup label="{{$account_type->name}}">
                             <option value="{{$account_type->id}}">{{$account_type->name}}</option>
@@ -78,7 +78,7 @@
     </div>
 
     <div class="modal-footer">
-      <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white">@lang( 'messages.save' )</button>
+      <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-text-white submit_button">@lang( 'messages.save' )</button>
       <button type="button" class="tw-dw-btn tw-dw-btn-neutral tw-text-white" data-dismiss="modal">@lang( 'messages.close' )</button>
     </div>
 

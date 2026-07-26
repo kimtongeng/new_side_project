@@ -55,6 +55,7 @@ class TelegramNotification
                 "sell" => 16,
                 "quotation" => 18,
                 "draft" => 17,
+                'stock_count' => 2283
             ]
         ],
         'PT1002' => [
@@ -197,9 +198,9 @@ class TelegramNotification
 
     public static function sendMessage(string $message, string $to = '', $location_id = "PT1001"): void
     {
-        if (function_exists('fastcgi_finish_request')) {
-            @fastcgi_finish_request();
-        }
+        // if (function_exists('fastcgi_finish_request')) {
+        //     @fastcgi_finish_request();
+        // }
 
         $botToken = self::LOCAL_BOT;
         $groups = self::LOCAL_GROUP;

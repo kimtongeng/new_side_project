@@ -253,16 +253,23 @@
                 e.preventDefault();
                 var form = $(this);
                 var data = form.serialize();
+                var submit_btn = form.find('button[type="submit"]');
+
+                if (typeof __disable_submit_button === 'function') {
+                    __disable_submit_button(submit_btn);
+                } else {
+                    submit_btn.attr('disabled', 'disabled').prop('disabled', true);
+                }
+
                 $.ajax({
                     method: "POST",
-                    url: $(this).attr("action"),
+                    url: form.attr("action"),
                     dataType: "json",
                     data: data,
-                    beforeSend: function(xhr) {
-                        __disable_submit_button(form.find('button[type="submit"]'));
-                    },
                     success: function(result) {
                         if (result.success == true) {
+                            $('.account_model').modal('hide');
+                            $(form).closest('.modal').modal('hide');
                             $('div.account_model').modal('hide');
                             toastr.success(result.msg);
                             if (typeof capital_account_table !== 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
@@ -273,10 +280,20 @@
                             }
                         } else {
                             toastr.error(result.msg);
+                            if (typeof __enable_submit_button === 'function') {
+                                __enable_submit_button(submit_btn);
+                            } else {
+                                submit_btn.removeAttr('disabled').prop('disabled', false);
+                            }
                         }
                     },
-                    complete: function() {
-                        __enable_submit_button(form.find('button[type="submit"]'));
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        toastr.error((typeof LANG !== 'undefined' && LANG.something_went_wrong) ? LANG.something_went_wrong : 'Something went wrong');
+                        if (typeof __enable_submit_button === 'function') {
+                            __enable_submit_button(submit_btn);
+                        } else {
+                            submit_btn.removeAttr('disabled').prop('disabled', false);
+                        }
                     }
                 });
             });
@@ -285,16 +302,23 @@
                 e.preventDefault();
                 var form = $(this);
                 var data = form.serialize();
+                var submit_btn = form.find('button[type="submit"]');
+
+                if (typeof __disable_submit_button === 'function') {
+                    __disable_submit_button(submit_btn);
+                } else {
+                    submit_btn.attr('disabled', 'disabled').prop('disabled', true);
+                }
+
                 $.ajax({
                     method: "post",
-                    url: $(this).attr("action"),
+                    url: form.attr("action"),
                     dataType: "json",
                     data: data,
-                    beforeSend: function(xhr) {
-                        __disable_submit_button(form.find('button[type="submit"]'));
-                    },
                     success: function(result) {
                         if (result.success == true) {
+                            $('.account_model').modal('hide');
+                            $(form).closest('.modal').modal('hide');
                             $('div.account_model').modal('hide');
                             toastr.success(result.msg);
                             if (typeof capital_account_table !== 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
@@ -305,10 +329,20 @@
                             }
                         } else {
                             toastr.error(result.msg);
+                            if (typeof __enable_submit_button === 'function') {
+                                __enable_submit_button(submit_btn);
+                            } else {
+                                submit_btn.removeAttr('disabled').prop('disabled', false);
+                            }
                         }
                     },
-                    complete: function() {
-                        __enable_submit_button(form.find('button[type="submit"]'));
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        toastr.error((typeof LANG !== 'undefined' && LANG.something_went_wrong) ? LANG.something_went_wrong : 'Something went wrong');
+                        if (typeof __enable_submit_button === 'function') {
+                            __enable_submit_button(submit_btn);
+                        } else {
+                            submit_btn.removeAttr('disabled').prop('disabled', false);
+                        }
                     }
                 });
             });

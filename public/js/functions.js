@@ -522,7 +522,17 @@ function __is_online() {
 
 function __disable_submit_button(element) {
     if (__is_online()) {
-        element.attr('disable', true);
+        $(element).attr('disable', true);
+        $(element).attr('disabled', 'disabled');
+        $(element).prop('disabled', true);
+    }
+}
+
+function __enable_submit_button(element) {
+    if (__is_online()) {
+        $(element).attr('disable', false);
+        $(element).removeAttr('disabled');
+        $(element).prop('disabled', false);
     }
 }
 

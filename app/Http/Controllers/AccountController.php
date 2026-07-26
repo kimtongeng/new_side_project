@@ -304,6 +304,9 @@ class AccountController extends Controller
                 if (empty($input['user_level'])) {
                     $input['user_level'] = null;
                 }
+                if (empty($input['account_type_id']) || !is_numeric($input['account_type_id'])) {
+                    $input['account_type_id'] = null;
+                }
 
                 $account = Account::create($input);
 
@@ -669,6 +672,9 @@ class AccountController extends Controller
                 }
                 if (empty($input['user_level'])) {
                     $input['user_level'] = null;
+                }
+                if (empty($input['account_type_id']) || !is_numeric($input['account_type_id'])) {
+                    $input['account_type_id'] = null;
                 }
 
                 $account->name            = $input['name'];

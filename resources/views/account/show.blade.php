@@ -215,6 +215,9 @@
                                 toastr.error(result.msg);
                             }
                         },
+                        complete: function() {
+                            __enable_submit_button($(form).find('button[type="submit"]'));
+                        }
                     });
                 },
             });

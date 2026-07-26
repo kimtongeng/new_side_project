@@ -161,7 +161,7 @@ $(document).ready(function () {
         //Add Product
         $('#search_product')
             .autocomplete({
-                delay: 1000,
+                delay: 250,
                 source: function (request, response) {
                     var price_group = '';
                     var search_fields = [];
@@ -1282,7 +1282,13 @@ $(document).ready(function () {
     //Press enter on search product to jump into last quantty and vice-versa
     $('#search_product').keydown(function (e) {
         var key = e.which;
-        if (key == 9) {
+        if (key == 13) {
+            var term = $(this).val();
+            if (term && term.trim() !== '') {
+                e.preventDefault();
+                $(this).autocomplete('search', term.trim());
+            }
+        } else if (key == 9) {
             // the tab key code
             e.preventDefault();
             if ($('#pos_table tbody tr').length > 0) {

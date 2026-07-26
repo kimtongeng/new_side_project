@@ -35,6 +35,8 @@ return [
     'financial_impact' => 'Financial Impact',
     'reconcile' => 'Reconcile',
     'completed' => 'Completed',
+    'reconciled' => 'Reconciled',
+    'pending' => 'Pending',
     'draft' => 'Draft',
     'active' => 'Active',
     'cancelled' => 'Cancelled',

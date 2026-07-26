@@ -311,7 +311,7 @@
             <div class="col-md-4 col-xs-12 text-right">
                 <div style="margin-top: 8px;">
                     <span
-                        class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'active' || $session->status == 'in_progress') bg-blue @elseif($session->status == 'reviewed') bg-purple @elseif($session->status == 'approved') bg-navy @elseif($session->status == 'rejected' || $session->status == 'cancelled') bg-red @else bg-gray @endif"
+                        class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'reconciled' || $session->status == 'reconcile') bg-purple @elseif($session->status == 'active' || $session->status == 'in_progress') bg-blue @elseif($session->status == 'reviewed') bg-purple @elseif($session->status == 'approved') bg-navy @elseif($session->status == 'rejected' || $session->status == 'cancelled') bg-red @else bg-gray @endif"
                         style="font-size: 14px; padding: 6px 12px; border-radius: 4px; display: inline-block; font-weight: bold;">
                         Status: {{ __('stockcount::lang.' . $session->status) }}
                     </span>

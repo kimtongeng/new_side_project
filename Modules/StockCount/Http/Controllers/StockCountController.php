@@ -62,7 +62,16 @@ class StockCountController extends Controller
                 $sessions->where('location_id', request()->get('location_id'));
             }
             if (!empty(request()->get('status'))) {
-                $sessions->where('status', request()->get('status'));
+                $status_filter = request()->get('status');
+                if ($status_filter === 'pending') {
+                    $sessions->whereIn('stock_count_sessions.status', ['pending', 'active', 'draft']);
+                } elseif ($status_filter === 'reconciled' || $status_filter === 'reconcile') {
+                    $sessions->whereIn('stock_count_sessions.status', ['reconciled', 'reconcile']);
+                } elseif ($status_filter === 'completed') {
+                    $sessions->whereIn('stock_count_sessions.status', ['completed', 'approved']);
+                } else {
+                    $sessions->where('stock_count_sessions.status', $status_filter);
+                }
             }
             if (!empty(request()->get('created_by'))) {
                 $sessions->where('created_by', request()->get('created_by'));
@@ -132,6 +141,9 @@ class StockCountController extends Controller
                     if ($row->status === 'completed' || $row->status === 'approved') {
                         $color = 'bg-green';
                         $status_name = 'Completed';
+                    } elseif ($row->status === 'reconciled' || $row->status === 'reconcile') {
+                        $color = 'bg-purple';
+                        $status_name = 'Reconciled';
                     } elseif ($row->status === 'in_progress') {
                         $color = 'bg-blue';
                         $status_name = 'In Progress';
@@ -183,7 +195,7 @@ class StockCountController extends Controller
             $session_ids = $filtered_sessions_query->pluck('id')->toArray();
 
             $active_sessions = $filtered_sessions_query->clone()->whereIn('status', ['active', 'pending', 'in_progress', 'draft'])->count();
-            $completed_sessions = $filtered_sessions_query->clone()->whereIn('status', ['completed', 'approved'])->count();
+            $completed_sessions = $filtered_sessions_query->clone()->whereIn('status', ['completed', 'approved', 'reconciled', 'reconcile'])->count();
 
             $total_items = 0;
             $total_counted = 0;
@@ -746,8 +758,8 @@ class StockCountController extends Controller
                 $this->transactionUtil->activityLog($stock_adjustment, 'added', null, [], false);
             }
 
-            // Complete the session
-            $session->status = 'completed';
+            // Complete and reconcile the session
+            $session->status = 'reconciled';
             $session->completed_by = auth()->user()->id;
             $session->completed_at = Carbon::now();
             $session->save();
@@ -824,7 +836,7 @@ class StockCountController extends Controller
 
         try {
             $session = StockCountSession::where('business_id', $business_id)
-                ->where('status', '!=', 'completed')
+                ->whereNotIn('status', ['completed', 'reconciled', 'reconcile'])
                 ->findOrFail($id);
 
             // ── Telegram Notification ──────────────────────────────
@@ -1098,6 +1110,76 @@ class StockCountController extends Controller
         return view('stockcount::print_worksheet', compact('session', 'lines'));
     }
 
+    public function printPdfAll(Request $request)
+    {
+        $business_id = $request->session()->get('user.business_id');
+
+        $can_view_all = auth()->user()->can('stock_count.view_all');
+        $can_view_own = auth()->user()->can('stock_count.view_own');
+
+        if (!$can_view_all && !$can_view_own) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $sessions_query = StockCountSession::with(['location', 'creator', 'lines'])
+            ->where('business_id', $business_id);
+
+        if (!$can_view_all && $can_view_own) {
+            $sessions_query->where('stock_count_sessions.created_by', auth()->user()->id);
+        }
+
+        if (!empty($request->get('location_id'))) {
+            $sessions_query->where('location_id', $request->get('location_id'));
+        }
+
+        if (!empty($request->get('status'))) {
+            $status_filter = $request->get('status');
+            if ($status_filter === 'pending') {
+                $sessions_query->whereIn('stock_count_sessions.status', ['pending', 'active', 'draft']);
+            } elseif ($status_filter === 'reconciled' || $status_filter === 'reconcile') {
+                $sessions_query->whereIn('stock_count_sessions.status', ['reconciled', 'reconcile']);
+            } elseif ($status_filter === 'completed') {
+                $sessions_query->whereIn('stock_count_sessions.status', ['completed', 'approved']);
+            } else {
+                $sessions_query->where('stock_count_sessions.status', $status_filter);
+            }
+        }
+
+        if (!empty($request->get('created_by'))) {
+            $sessions_query->where('created_by', $request->get('created_by'));
+        }
+
+        if (!empty($request->get('start_date')) && !empty($request->get('end_date'))) {
+            $sessions_query->whereDate('created_at', '>=', $request->get('start_date'))
+                ->whereDate('created_at', '<=', $request->get('end_date'));
+        }
+
+        $sessions = $sessions_query->orderBy('id', 'desc')->get();
+
+        $business = \App\Business::where('id', $business_id)->first();
+        $location_name = 'All Locations';
+        if (!empty($request->get('location_id'))) {
+            $loc = BusinessLocation::find($request->get('location_id'));
+            if ($loc) {
+                $location_name = $loc->name;
+            }
+        }
+
+        $html_content = view('stockcount::print_pdf_all', compact('sessions', 'business', 'location_name'))->render();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => 1,
+                'receipt' => [
+                    'html_content' => $html_content
+                ],
+                'print_title' => 'All Stock Count Sessions Report'
+            ]);
+        }
+
+        return view('stockcount::print_pdf_all', compact('sessions', 'business', 'location_name'));
+    }
+
     public function duplicate($id)
     {
         $business_id = request()->session()->get('user.business_id');
@@ -1217,7 +1299,7 @@ class StockCountController extends Controller
                         $should_reconcile = $auto_adjust;
                     }
                 } else {
-                    if ($status === 'completed' || $status === 'approved') {
+                    if (in_array($status, ['completed', 'approved', 'reconciled', 'reconcile'])) {
                         $should_lock = true;
                         $should_reconcile = $auto_adjust;
                     }
@@ -1299,8 +1381,8 @@ class StockCountController extends Controller
                 DB::commit();
             }
 
-            // If status is set to completed or approved, fill uncounted lines so completion reaches 100%
-            if ($status === 'completed' || $status === 'approved') {
+            // If status is set to completed, approved, or reconciled, fill uncounted lines so completion reaches 100%
+            if (in_array($status, ['completed', 'approved', 'reconciled', 'reconcile'])) {
                 StockCountLine::where('stock_count_session_id', $session->id)
                     ->whereNull('counted_by')
                     ->update([

@@ -129,18 +129,40 @@
                 margin: 5mm;
             }
 
-            body.printing-active>*:not(#stock_count_print_template) {
-                display: none !important;
+            body * {
+                visibility: hidden !important;
             }
 
-            body.printing-active #stock_count_print_template {
+            #stock_count_print_template,
+            #stock_count_print_template * {
+                visibility: visible !important;
+            }
+
+            #stock_count_print_template {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 display: block !important;
-                position: relative;
-                width: 100%;
+                background: #fff !important;
                 font-family: Arial, Helvetica, sans-serif !important;
-                color: #000;
-                padding: 10px 0;
-                background: #fff;
+                color: #000 !important;
+            }
+
+            .no-print,
+            header,
+            footer,
+            .main-header,
+            .main-sidebar,
+            .content-wrapper,
+            .content-header,
+            .content,
+            .action-btn-group,
+            .dt-buttons {
+                display: none !important;
             }
 
             .print-header {
@@ -354,7 +376,7 @@
             <div class="col-md-6 col-xs-12 text-right">
                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                     <span
-                        class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'cancelled' || $session->status == 'rejected') bg-red @else bg-blue @endif"
+                        class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'reconciled' || $session->status == 'reconcile') bg-purple @elseif($session->status == 'cancelled' || $session->status == 'rejected') bg-red @else bg-blue @endif"
                         style="font-size: 14px; padding: 6px 12px; border-radius: 4px; display: inline-block; vertical-align: middle; line-height: 20px; height: 34px; padding-top: 7px; font-weight: bold;">
                         Status:
                         {{ __('stockcount::lang.' . ($session->status == 'active' || $session->status == 'draft' || $session->status == 'pending' ? 'in_progress' : $session->status)) }}
@@ -367,7 +389,7 @@
                             <select name="status" class="form-control"
                                 style="width: 140px; display: inline-block; border-radius: 4px; height: 34px; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background-color: #fff; padding: 6px 12px; box-shadow: inset 0 1px 1px rgba(0,0,0,.075);"
                                 onchange="this.form.submit()">
-                                @foreach(['in_progress', 'completed', 'cancelled'] as $st)
+                                @foreach(['in_progress', 'completed', 'reconciled', 'cancelled'] as $st)
                                     <option value="{{ $st }}" @if($session->status == $st || ($session->status == 'active' && $st == 'in_progress') || ($session->status == 'draft' && $st == 'in_progress') || ($session->status == 'pending' && $st == 'in_progress')) selected @endif>
                                         {{ __('stockcount::lang.' . $st) }}
                                     </option>
@@ -666,7 +688,7 @@
             </table>
         </div>
         <div class="print-divider">
-            <span class="divider-text">Stock Count</span>
+            <span class="divider-text">Stock Count {{ $session->blind_count ? '(Blind Worksheet)' : '(Full Worksheet)' }}</span>
         </div>
 
 
@@ -747,11 +769,6 @@
                         className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
                     },
                     {
-                        extend: 'print',
-                        text: '<i class="fa fa-print" aria-hidden="true"></i> ' + LANG.print,
-                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
-                    },
-                    {
                         extend: 'colvis',
                         text: '<i class="fa fa-columns" aria-hidden="true"></i> ' + LANG.col_vis,
                         className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
@@ -759,7 +776,7 @@
                     {
                         extend: 'pdf',
                         text: '<i class="fa fa-file-pdf" aria-hidden="true"></i> ' + LANG.export_to_pdf,
-                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1',
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1 buttons-pdf',
                         orientation: 'landscape',
                         pageSize: 'A4',
                         exportOptions: {
@@ -770,13 +787,13 @@
                             // Page margins
                             doc.pageMargins = [30, 30, 30, 30];
 
-                            // Style title
-                            if (doc.content[0]) {
-                                doc.content[0].fontSize = 18;
-                                doc.content[0].bold = true;
-                                doc.content[0].alignment = 'center';
-                                doc.content[0].margin = [0, 0, 0, 15];
-                            }
+                            // Company Header matching print_worksheet.blade.php
+                            var headerBlock = [
+                                { text: "Ultimate POS", fontSize: 20, bold: true, alignment: 'center', margin: [0, 0, 0, 2] },
+                                { text: "#101(2nd floor), St.598, Phnom Penh Tmey, Sensok Phnom Penh", fontSize: 9, bold: true, alignment: 'center', margin: [0, 0, 0, 2] },
+                                { text: "Tel : +855 69 64 00 00 / +855 99 46 72 72", fontSize: 9, bold: true, alignment: 'center', margin: [0, 0, 0, 4] },
+                                { text: "Reference No: {{ $session->reference_no }}", fontSize: 11, bold: true, alignment: 'center', margin: [0, 0, 0, 12] }
+                            ];
 
                             // Subtitle grid with metadata
                             var metadata = {
@@ -794,13 +811,23 @@
                                     ]
                                 },
                                 layout: 'noBorders',
-                                margin: [0, 0, 0, 15]
+                                margin: [0, 0, 0, 10]
                             };
 
-                            doc.content.splice(1, 0, metadata);
+                            // Worksheet Type Divider Header
+                            var divider = {
+                                text: "Stock Count {{ $session->blind_count ? '(Blind Worksheet)' : '(Full Worksheet)' }}",
+                                fontSize: 13,
+                                bold: true,
+                                alignment: 'center',
+                                margin: [0, 5, 0, 15]
+                            };
 
-                            // The main table is now at index 2
-                            var tableNode = doc.content[2];
+                            // Replace default title with Print Worksheet Header, Metadata & Divider
+                            doc.content.splice(0, 1, headerBlock[0], headerBlock[1], headerBlock[2], headerBlock[3], metadata, divider);
+
+                            // Main Data Table index is now at 6
+                            var tableNode = doc.content[6];
                             if (tableNode && tableNode.table) {
                                 // 10 columns: #, Product Name, SKU, Book Qty, Counted Qty, Variance, Cost Price, Financial Impact, Counted By, Notes
                                 tableNode.table.widths = ['4%', '20%', '10%', '8%', '8%', '8%', '8%', '10%', '12%', '12%'];
@@ -843,7 +870,7 @@
 
                                         // Variance text highlighting (col 5)
                                         if (c === 5) {
-                                            var text = row[c].text.trim();
+                                            var text = row[c].text ? row[c].text.toString().trim() : '';
                                             if (text.indexOf('+') === 0) {
                                                 row[c].color = '#2f855a'; // dark green
                                                 row[c].bold = true;
@@ -855,7 +882,7 @@
 
                                         // Financial impact highlighting (col 7)
                                         if (c === 7) {
-                                            var fText = row[c].text.trim();
+                                            var fText = row[c].text ? row[c].text.toString().trim() : '';
                                             if (fText.indexOf('-') === 0) {
                                                 row[c].color = '#c53030';
                                                 row[c].bold = true;
@@ -867,108 +894,40 @@
                                     }
                                 }
                             }
+
+                            // Add Signature Block to PDF output
+                            var signatures = {
+                                table: {
+                                    widths: ['30%', '5%', '30%', '5%', '30%'],
+                                    body: [
+                                        [
+                                            { text: 'Stock Keeper Signature', alignment: 'center', bold: true, fontSize: 9 },
+                                            { text: '' },
+                                            { text: 'Counter Signature', alignment: 'center', bold: true, fontSize: 9 },
+                                            { text: '' },
+                                            { text: 'Preparer Signature', alignment: 'center', bold: true, fontSize: 9 }
+                                        ],
+                                        [
+                                            { text: '\n\n______________________', alignment: 'center', fontSize: 9 },
+                                            { text: '' },
+                                            { text: '\n\n______________________', alignment: 'center', fontSize: 9 },
+                                            { text: '' },
+                                            { text: '\n\n______________________', alignment: 'center', fontSize: 9 }
+                                        ]
+                                    ]
+                                },
+                                layout: 'noBorders',
+                                margin: [0, 40, 0, 0]
+                            };
+
+                            doc.content.push(signatures);
                         }
                     },
                     {
-                        extend: 'print',
                         text: '<i class="fa fa-print" aria-hidden="true"></i> ' + LANG.print,
                         className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1',
-                        exportOptions: {
-                            columns: ':visible'
-                        },
-                        title: 'Stock Count Variance Report - ' + "{{ $session->name }}",
-                        customize: function (win) {
-                            $(win.document.body).css({
-                                'font-family': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                                'color': '#2d3748',
-                                'padding': '20px'
-                            });
-
-                            $(win.document.body).find('h1').css({
-                                'text-align': 'center',
-                                'font-size': '22px',
-                                'font-weight': 'bold',
-                                'color': '#1a365d',
-                                'margin-bottom': '20px'
-                            });
-
-                            // Session Info Header Block
-                            var metadataHtml = `
-                                                             <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #cbd5e0; padding-bottom: 12px; margin-bottom: 20px; font-size: 13px; font-family: sans-serif;">
-                                                                 <div>
-                                                                     <strong>Location:</strong> {{ $session->location->name ?? '' }}<br>
-                                                                     <strong>Blind Count Mode:</strong> {{ $session->blind_count ? 'Yes' : 'No' }}
-                                                                 </div>
-                                                                 <div>
-                                                                     <strong>Added By:</strong> {{ $session->creator->user_full_name ?? '' }}<br>
-                                                                     <strong>Created At:</strong> {{ @format_datetime($session->created_at) }}
-                                                                 </div>
-                                                             </div>
-                                                         `;
-                            $(metadataHtml).insertBefore($(win.document.body).find('table'));
-
-                            // Table Styling
-                            var $table = $(win.document.body).find('table');
-                            $table.removeClass('table-bordered table-striped');
-                            $table.css({
-                                'width': '100%',
-                                'border-collapse': 'collapse',
-                                'font-size': '11px',
-                                'margin-top': '10px'
-                            });
-
-                            // Table Header styling
-                            $table.find('thead th').css({
-                                'background-color': '#1a365d',
-                                'color': '#ffffff',
-                                'font-weight': 'bold',
-                                'padding': '8px 6px',
-                                'border-bottom': '2px solid #cbd5e0',
-                                'border-top': 'none',
-                                'border-left': 'none',
-                                'border-right': 'none',
-                                'text-align': 'left'
-                            });
-
-                            $table.find('tbody tr').each(function (idx) {
-                                // zebra striping
-                                if (idx % 2 === 1) {
-                                    $(this).css('background-color', '#f7fafc');
-                                }
-
-                                $(this).find('td').css({
-                                    'padding': '6px 6px',
-                                    'border-bottom': '1px solid #e2e8f0',
-                                    'border-top': 'none',
-                                    'border-left': 'none',
-                                    'border-right': 'none'
-                                });
-
-                                // Right align numeric columns
-                                $(this).find('td').eq(3).css('text-align', 'right'); // book qty
-                                $(this).find('td').eq(4).css('text-align', 'right'); // counted qty
-                                $(this).find('td').eq(5).css('text-align', 'right'); // variance
-                                $(this).find('td').eq(6).css('text-align', 'right'); // cost price
-                                $(this).find('td').eq(7).css('text-align', 'right'); // financial impact
-
-                                // Variance Coloring
-                                var $varCell = $(this).find('td').eq(5);
-                                var varVal = $varCell.text().trim();
-                                if (varVal.indexOf('+') === 0) {
-                                    $varCell.css({ 'color': '#2f855a', 'font-weight': 'bold' });
-                                } else if (varVal.indexOf('-') === 0) {
-                                    $varCell.css({ 'color': '#c53030', 'font-weight': 'bold' });
-                                }
-
-                                // Financial Impact Coloring
-                                var $impactCell = $(this).find('td').eq(7);
-                                var impactVal = $impactCell.text().trim();
-                                if (impactVal.indexOf('-') === 0) {
-                                    $impactCell.css({ 'color': '#c53030', 'font-weight': 'bold' });
-                                } else if (impactVal.indexOf('+') === 0 || parseFloat(impactVal.replace(/[^0-9.-]+/g, "")) > 0) {
-                                    $impactCell.css({ 'color': '#2f855a', 'font-weight': 'bold' });
-                                }
-                            });
+                        action: function (e, dt, node, config) {
+                            $('#pdf_variance_report').trigger('click');
                         }
                     }
                 ]
@@ -1073,21 +1032,44 @@
 
             $(document).on('click', '#print_variance_report, #pdf_variance_report', function (e) {
                 e.preventDefault();
-                populatePrintTable();
+                var printUrl = "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}";
 
-                // Move template directly under body so it survives display: none on wrapper
-                if (!$('body > #stock_count_print_template').length) {
-                    $('body').append($('#stock_count_print_template'));
-                }
+                $.ajax({
+                    method: 'GET',
+                    url: printUrl,
+                    dataType: 'json',
+                    success: function (result) {
+                        if (result.success == 1 && result.receipt && result.receipt.html_content) {
+                            if ($('#receipt_section').length === 0) {
+                                $('body').append('<div id="receipt_section"></div>');
+                            }
+                            $('#receipt_section').html(result.receipt.html_content);
+                            if (typeof __currency_convert_recursively === 'function') {
+                                __currency_convert_recursively($('#receipt_section'));
+                            }
 
-                $('body').addClass('printing-active');
+                            var title = document.title;
+                            if (result.print_title) {
+                                document.title = result.print_title;
+                            }
 
-                window.print();
+                            if (typeof __print_receipt === 'function') {
+                                __print_receipt('receipt_section');
+                            } else {
+                                window.print();
+                            }
 
-                // Restore screen display after printing dialog closes
-                setTimeout(function () {
-                    $('body').removeClass('printing-active');
-                }, 1000);
+                            setTimeout(function () {
+                                document.title = title;
+                            }, 1200);
+                        } else {
+                            toastr.error('Failed to load print template');
+                        }
+                    },
+                    error: function () {
+                        window.open(printUrl, '_blank');
+                    }
+                });
             });
 
             $(document).on('click', '.btn-reconcile', function (e) {

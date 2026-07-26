@@ -13,6 +13,7 @@ Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezon
     Route::get('/reset-permissions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'resetPermissions'])->name('stock-counts.reset-permissions');
     Route::post('/reset-permissions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'resetPermissions'])->name('stock-counts.post-reset-permissions');
     Route::get('/all-sessions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'getAllSessionsJson'])->name('stock-counts.all-sessions');
+    Route::get('/print-pdf-all', [Modules\StockCount\Http\Controllers\StockCountController::class, 'printPdfAll'])->name('stock-counts.print-pdf-all');
     Route::get('/{id}', [Modules\StockCount\Http\Controllers\StockCountController::class, 'show'])->name('stock-counts.show');
     Route::delete('/{id}', [Modules\StockCount\Http\Controllers\StockCountController::class, 'destroy'])->name('stock-counts.destroy');
     Route::get('/{id}/worksheet', [Modules\StockCount\Http\Controllers\StockCountController::class, 'worksheet'])->name('stock-counts.worksheet');

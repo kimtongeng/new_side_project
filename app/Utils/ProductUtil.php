@@ -24,6 +24,48 @@ use Illuminate\Support\Facades\DB;
 
 class ProductUtil extends Util
 {
+    public static function getFormattedProductName($name, $secondary_name = null, $html = true)
+    {
+        $primary = $html ? e($name) : $name;
+        if (empty($secondary_name)) {
+            return $primary;
+        }
+
+        $secondary_name_position = session('business.common_settings.secondary_name_position', 'right');
+        $secondary_name_format = session('business.common_settings.secondary_name_format', 'parentheses');
+        $sec_font = session('business.common_settings.secondary_font_family', 'Koh Santepheap');
+
+        $sec_text = $html ? e($secondary_name) : $secondary_name;
+        if ($secondary_name_format == 'parentheses') {
+            $sec_text = '(' . $sec_text . ')';
+        }
+
+        if ($html) {
+            $style = !empty($sec_font) ? 'font-family: \'' . e($sec_font) . '\', \'Koh Santepheap\', sans-serif;' : '';
+            $display_secondary = '<span class="product-secondary-name text-muted" style="' . $style . '">' . $sec_text . '</span>';
+        } else {
+            $display_secondary = $sec_text;
+        }
+
+        $delimiter = ' ';
+        if ($secondary_name_format == 'comma') {
+            $delimiter = ', ';
+        } elseif ($secondary_name_format == 'hyphen') {
+            $delimiter = ' - ';
+        } elseif ($secondary_name_format == 'pipe') {
+            $delimiter = ' | ';
+        } elseif ($secondary_name_format == 'backslash') {
+            $delimiter = ' \\ ';
+        } elseif ($secondary_name_format == 'slash') {
+            $delimiter = ' / ';
+        }
+
+        if ($secondary_name_position == 'left') {
+            return $display_secondary . $delimiter . $primary;
+        } else {
+            return $primary . $delimiter . $display_secondary;
+        }
+    }
     /**
      * Create single type product variation
      *
@@ -1907,6 +1949,7 @@ class ProductUtil extends Util
             DB::raw('SUM(vld.qty_available) as stock'),
             'variations.sub_sku as sku',
             'p.name as product',
+            'p.secondary_name',
             'p.type',
             'p.alert_quantity',
             'p.id as product_id',

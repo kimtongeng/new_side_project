@@ -353,44 +353,8 @@ class ProductController extends Controller
                     }
                 )
                 ->editColumn('product', function ($row) use ($is_woocommerce) {
-                    $secondary_name_position = session('business.common_settings.secondary_name_position', 'right');
-                    $secondary_name_format = session('business.common_settings.secondary_name_format', 'parentheses');
-                    $sec_font = session('business.common_settings.secondary_font_family', 'Koh Santepheap');
-
-                    $display_primary = e($row->product);
-                    $display_secondary = '';
-
-                    if (!empty($row->secondary_name) && (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view'))) {
-                        $style = !empty($sec_font) ? 'font-family: \'' . e($sec_font) . '\', \'Koh Santepheap\', sans-serif;' : '';
-                        $sec_text = e($row->secondary_name);
-                        if ($secondary_name_format == 'parentheses') {
-                            $sec_text = '(' . $sec_text . ')';
-                        }
-                        $display_secondary = '<span class="product-secondary-name text-muted" style="' . $style . '">' . $sec_text . '</span>';
-                    }
-
-                    if (!empty($display_secondary)) {
-                        $delimiter = ' ';
-                        if ($secondary_name_format == 'comma') {
-                            $delimiter = ', ';
-                        } elseif ($secondary_name_format == 'hyphen') {
-                            $delimiter = ' - ';
-                        } elseif ($secondary_name_format == 'pipe') {
-                            $delimiter = ' | ';
-                        } elseif ($secondary_name_format == 'backslash') {
-                            $delimiter = ' \\ ';
-                        } elseif ($secondary_name_format == 'slash') {
-                            $delimiter = ' / ';
-                        }
-
-                        if ($secondary_name_position == 'left') {
-                            $full_name_html = $display_secondary . $delimiter . $display_primary;
-                        } else {
-                            $full_name_html = $display_primary . $delimiter . $display_secondary;
-                        }
-                    } else {
-                        $full_name_html = $display_primary;
-                    }
+                    $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($row->secondary_name ?? null) : null;
+                    $full_name_html = \App\Utils\ProductUtil::getFormattedProductName($row->product, $secondary_name, true);
 
                     if (auth()->user()->can('product.rename_product') || auth()->user()->can('product.update')) {
                         $product_name = '<a href="#" data-href="' . action([\App\Http\Controllers\ProductController::class, 'editName'], [$row->id]) . '" class="btn-modal" data-container=".view_modal">' . $full_name_html . '</a>';

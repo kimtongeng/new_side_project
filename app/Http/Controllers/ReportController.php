@@ -380,9 +380,8 @@ class ReportController extends Controller
                     }
                 })
                 ->editColumn('product', function ($row) {
-                    $name = $row->product;
-
-                    return $name;
+                    $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($row->secondary_name ?? null) : null;
+                    return \App\Utils\ProductUtil::getFormattedProductName($row->product, $secondary_name, true);
                 })
                 ->addColumn('action', function ($row) {
                     return '<a class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-info tw-w-max " href="'.action([\App\Http\Controllers\ProductController::class, 'productStockHistory'], [$row->product_id]).
@@ -473,7 +472,7 @@ class ReportController extends Controller
                 ->removeColumn('unit')
                 ->removeColumn('id');
 
-            $raw_columns = ['unit_price', 'total_transfered', 'total_sold',
+            $raw_columns = ['product', 'unit_price', 'total_transfered', 'total_sold',
                 'total_adjusted', 'stock', 'stock_price', 'stock_value_by_sale_price',
                 'potential_profit', 'action', ];
 

@@ -13,7 +13,12 @@ class Product extends Model
      */
     protected $guarded = ['id'];
 
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'formatted_name'];
+
+    public function getFormattedNameAttribute()
+    {
+        return \App\Utils\ProductUtil::getFormattedProductName($this->name, $this->secondary_name, true);
+    }
 
     /**
      * The attributes that should be cast to native types.

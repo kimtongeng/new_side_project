@@ -20,11 +20,52 @@ class Account extends Model
      */
     protected $casts = [
         'account_details' => 'array',
+        'location_id' => 'array',
     ];
 
-    public static function forDropdown($business_id, $prepend_none, $closed = false, $show_balance = false)
+    public static function forDropdown($business_id, $prepend_none, $closed = false, $show_balance = false, $location_id = null, $include_account_ids = [])
     {
         $query = Account::where('business_id', $business_id);
+
+        if (! empty($location_id)) {
+            $location_account_ids = [];
+            if ($location_id !== 'all_locations_only') {
+                $loc = BusinessLocation::find($location_id);
+                if ($loc && ! empty($loc->default_payment_accounts)) {
+                    $default_payment_accounts = json_decode($loc->default_payment_accounts, true);
+                    if (is_array($default_payment_accounts)) {
+                        foreach ($default_payment_accounts as $acc_setting) {
+                            if (! empty($acc_setting['is_enabled']) && ! empty($acc_setting['account'])) {
+                                $location_account_ids[] = $acc_setting['account'];
+                            }
+                        }
+                    }
+                }
+            }
+
+            $merged_include_ids = array_unique(array_merge((array)$include_account_ids, $location_account_ids));
+
+            if ($location_id === 'all_locations_only') {
+                $query->where(function ($q) use ($merged_include_ids) {
+                    $q->whereNull('accounts.location_id');
+                    if (! empty($merged_include_ids)) {
+                        $q->orWhereIn('accounts.id', $merged_include_ids);
+                    }
+                });
+            } else {
+                $query->where(function ($q) use ($location_id, $merged_include_ids) {
+                    $q->whereNull('accounts.location_id')
+                      ->orWhereIn('accounts.location_id', (array)$location_id);
+                    foreach ((array)$location_id as $loc_id) {
+                        $q->orWhereJsonContains('accounts.location_id', (string)$loc_id)
+                          ->orWhereJsonContains('accounts.location_id', (int)$loc_id);
+                    }
+                    if (! empty($merged_include_ids)) {
+                        $q->orWhereIn('accounts.id', $merged_include_ids);
+                    }
+                });
+            }
+        }
 
         $user = auth()->user();
         $permitted_locations = $user ? $user->permitted_locations() : 'all';
@@ -51,8 +92,12 @@ class Account extends Model
         if ($user && !$user->hasRole('Admin#' . $business_id)) {
             if ($permitted_locations != 'all') {
                 $query->where(function ($q) use ($permitted_locations, $account_ids) {
-                    $q->whereIn('accounts.location_id', $permitted_locations)
-                      ->orWhereNull('accounts.location_id');
+                    $q->whereNull('accounts.location_id')
+                      ->orWhereIn('accounts.location_id', $permitted_locations);
+                    foreach ((array)$permitted_locations as $loc_id) {
+                        $q->orWhereJsonContains('accounts.location_id', (string)$loc_id)
+                          ->orWhereJsonContains('accounts.location_id', (int)$loc_id);
+                    }
                     if (!empty($account_ids)) {
                         $q->orWhereIn('accounts.id', $account_ids);
                     }

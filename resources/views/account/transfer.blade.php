@@ -12,12 +12,12 @@
 
             <div class="form-group">
                 {!! Form::label('from_account', __( 'lang_v1.transfer_from' ) .":*") !!}
-                {!! Form::select('from_account', $to_accounts, $from_account->id, ['class' => 'form-control', 'required' ]); !!}
+                {!! Form::select('from_account', $all_accounts_dropdown, $from_account->id, ['class' => 'form-control select2', 'required', 'id' => 'from_account', 'style' => 'width:100%' ]); !!}
             </div>
 
             <div class="form-group">
                 {!! Form::label('to_account', __( 'account.transfer_to' ) .":*") !!}
-                {!! Form::select('to_account', $to_accounts, null, ['class' => 'form-control', 'required' ]); !!}
+                {!! Form::select('to_account', $to_accounts, null, ['class' => 'form-control select2', 'required', 'id' => 'to_account', 'style' => 'width:100%', 'placeholder' => __('messages.please_select') ]); !!}
             </div>
 
             <div class="form-group">
@@ -64,6 +64,54 @@
   $(document).ready( function(){
     $('#od_datetimepicker').datetimepicker({
       format: moment_date_format + ' ' + moment_time_format
+    });
+
+    var accountsData = @json($accounts_data);
+
+    function filterToAccounts() {
+      var fromId = $('#from_account').val();
+      var fromLocs = (accountsData[fromId] && accountsData[fromId].location_ids) ? accountsData[fromId].location_ids : null;
+
+      var selectedTo = $('#to_account').val();
+      $('#to_account').empty();
+      $('#to_account').append(new Option("@lang('messages.please_select')", "", false, false));
+
+      $.each(accountsData, function(id, acc) {
+        var accLocs = acc.location_ids;
+        var isCompatible = false;
+
+        if (!fromLocs || !accLocs) {
+          isCompatible = true;
+        } else {
+          $.each(fromLocs, function(i, fLoc) {
+            if (accLocs.indexOf(fLoc) !== -1 || accLocs.indexOf(parseInt(fLoc)) !== -1 || accLocs.indexOf(String(fLoc)) !== -1) {
+              isCompatible = true;
+              return false;
+            }
+          });
+        }
+
+        if (isCompatible) {
+          var isSelected = (id == selectedTo);
+          $('#to_account').append(new Option(acc.name, id, false, isSelected));
+        }
+      });
+
+      if ($('#to_account').hasClass('select2-hidden-accessible')) {
+        $('#to_account').select2('destroy');
+      }
+      $('#to_account').select2({ width: '100%' });
+    }
+
+    if ($('#from_account').hasClass('select2-hidden-accessible')) {
+      $('#from_account').select2('destroy');
+    }
+    $('#from_account').select2({ width: '100%' });
+
+    filterToAccounts();
+
+    $(document).on('change', '#from_account', function(){
+      filterToAccounts();
     });
   });
 </script>

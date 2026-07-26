@@ -925,7 +925,7 @@
 	        });
 
 	        $('#status').change(function(){
-    			if ($(this).val() == 'final') {
+    			if ($(this).val() == 'final' || !$(this).val() || $(this).val() == 'completed') {
     				$('#payment_rows_div').removeClass('hide');
     			} else {
     				$('#payment_rows_div').addClass('hide');

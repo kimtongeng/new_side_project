@@ -359,7 +359,8 @@ class ExpenseController extends Controller
         //Accounts
         $accounts = [];
         if ($this->moduleUtil->isModuleEnabled('account')) {
-            $accounts = Account::forDropdown($business_id, true, false, true);
+            $default_location_id = !empty(array_keys($business_locations)[0]) ? array_keys($business_locations)[0] : null;
+            $accounts = Account::forDropdown($business_id, true, false, true, $default_location_id);
         }
 
         if (request()->ajax()) {

@@ -130,7 +130,7 @@ class BusinessLocationController extends Controller
         //Accounts
         $accounts = [];
         if ($this->commonUtil->isModuleEnabled('account')) {
-            $accounts = Account::forDropdown($business_id, true, false);
+            $accounts = Account::forDropdown($business_id, true, false, false, 'all_locations_only');
         }
 
         return view('business_location.create')
@@ -238,7 +238,18 @@ class BusinessLocationController extends Controller
         //Accounts
         $accounts = [];
         if ($this->commonUtil->isModuleEnabled('account')) {
-            $accounts = Account::forDropdown($business_id, true, false);
+            $selected_account_ids = [];
+            if (! empty($location->default_payment_accounts)) {
+                $def_accs = json_decode($location->default_payment_accounts, true);
+                if (is_array($def_accs)) {
+                    foreach ($def_accs as $item) {
+                        if (! empty($item['account'])) {
+                            $selected_account_ids[] = $item['account'];
+                        }
+                    }
+                }
+            }
+            $accounts = Account::forDropdown($business_id, true, false, false, $id, $selected_account_ids);
         }
         $featured_products = $location->getFeaturedProducts(true, false);
 

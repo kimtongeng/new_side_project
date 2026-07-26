@@ -248,7 +248,7 @@ class TransactionPaymentController extends Controller
             $payment_types = $this->transactionUtil->payment_types($transaction->location);
 
             //Accounts
-            $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, true);
+            $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, true, $transaction->location_id, !empty($payment_line->account_id) ? [$payment_line->account_id] : []);
 
             return view('transaction_payment.edit_payment_row')
                 ->with(compact('transaction', 'payment_types', 'payment_line', 'accounts'));
@@ -460,7 +460,7 @@ class TransactionPaymentController extends Controller
                 $payment_line->paid_on = \Carbon::now()->toDateTimeString();
 
                 //Accounts
-                $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, true);
+                $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, true, $transaction->location_id);
 
                 $view = view('transaction_payment.payment_row')
                     ->with(compact('transaction', 'payment_types', 'payment_line', 'amount_formated', 'accounts'))->render();

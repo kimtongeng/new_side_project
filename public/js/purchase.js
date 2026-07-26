@@ -1324,6 +1324,19 @@ function get_purchase_requisitions() {
     }
 }
 
+$(document).on('change', 'select#location_id', function() {
+    get_purchase_requisitions();
+    var default_payment_accounts = $(this).find(':selected').data('default_payment_accounts');
+    if (typeof default_payment_accounts === 'string') {
+        try { default_payment_accounts = JSON.parse(default_payment_accounts); } catch(e) {}
+    }
+    var payment_type = $('.payment_types_dropdown').val();
+    if (payment_type && default_payment_accounts && default_payment_accounts[payment_type]) {
+        var default_account = default_payment_accounts[payment_type]['account'] ? default_payment_accounts[payment_type]['account'] : '';
+        $('.account-dropdown').val(default_account).change();
+    }
+});
+
 $("#purchase_requisition_ids").on("select2:select", function (e) {
     var purchase_requisition_id = e.params.data.id;
     var row_count = $('#row_count').val();

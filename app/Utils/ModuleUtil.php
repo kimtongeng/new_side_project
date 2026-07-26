@@ -403,12 +403,12 @@ class ModuleUtil extends Util
         }
     }
 
-    public function accountsDropdown($business_id, $prepend_none = false, $closed = false, $show_balance = false)
+    public function accountsDropdown($business_id, $prepend_none = false, $closed = false, $show_balance = false, $location_id = null, $include_account_ids = [])
     {
         $dropdown = [];
 
         if ($this->isModuleEnabled('account')) {
-            $dropdown = Account::forDropdown($business_id, $prepend_none, $closed, $show_balance);
+            $dropdown = Account::forDropdown($business_id, $prepend_none, $closed, $show_balance, $location_id, $include_account_ids);
         }
 
         return $dropdown;

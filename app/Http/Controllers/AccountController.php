@@ -78,6 +78,7 @@ class AccountController extends Controller
                     'pat.name as parent_account_type_name',
                     'accounts.account_details',
                     'is_closed',
+                    'accounts.location_id',
                     'bl.name as location_name',
                     'r.name as role_name',
                     DB::raw("SUM( IF(AT.type='credit', amount, -1*amount) ) as balance"),
@@ -109,8 +110,12 @@ class AccountController extends Controller
             if (! $this->moduleUtil->is_admin(auth()->user(), $business_id)) {
                 if ($permitted_locations != 'all') {
                     $accounts->where(function ($q) use ($permitted_locations, $account_ids) {
-                        $q->whereIn('accounts.location_id', $permitted_locations)
-                          ->orWhereNull('accounts.location_id');
+                        $q->whereNull('accounts.location_id')
+                          ->orWhereIn('accounts.location_id', $permitted_locations);
+                        foreach ((array)$permitted_locations as $loc_id) {
+                            $q->orWhereJsonContains('accounts.location_id', (string)$loc_id)
+                              ->orWhereJsonContains('accounts.location_id', (int)$loc_id);
+                        }
                         if (!empty($account_ids)) {
                             $q->orWhereIn('accounts.id', $account_ids);
                         }
@@ -152,6 +157,14 @@ class AccountController extends Controller
                     }
                 })
                 ->editColumn('location_name', function ($row) {
+                    if (empty($row->location_id)) {
+                        return __('report.all_locations');
+                    }
+                    $loc_ids = is_array($row->location_id) ? $row->location_id : json_decode($row->location_id, true);
+                    if (!empty($loc_ids) && is_array($loc_ids)) {
+                        $loc_names = BusinessLocation::whereIn('id', $loc_ids)->pluck('name')->toArray();
+                        return !empty($loc_names) ? implode(', ', $loc_names) : __('report.all_locations');
+                    }
                     return $row->location_name ?: __('report.all_locations');
                 })
                 ->editColumn('role_name', function ($row) use ($business_id) {
@@ -857,12 +870,50 @@ class AccountController extends Controller
                 ->NotClosed()
                 ->find($id);
 
-            $to_accounts = Account::where('business_id', $business_id)
+            $accounts = Account::where('business_id', $business_id)
                 ->NotClosed()
-                ->pluck('name', 'id');
+                ->get();
+
+            $accounts_data = [];
+            $all_accounts_dropdown = [];
+            foreach ($accounts as $acc) {
+                $all_accounts_dropdown[$acc->id] = $acc->name;
+                $locs = $acc->location_id;
+                if (!is_array($locs) && !empty($locs)) {
+                    $locs = json_decode($locs, true) ?: [$locs];
+                }
+                $accounts_data[$acc->id] = [
+                    'id'           => $acc->id,
+                    'name'         => $acc->name,
+                    'location_ids' => !empty($locs) ? array_map('strval', (array)$locs) : null,
+                ];
+            }
+
+            $from_locs = !empty($accounts_data[$from_account->id]['location_ids'])
+                ? $accounts_data[$from_account->id]['location_ids']
+                : null;
+
+            $to_accounts = [];
+            foreach ($accounts as $acc) {
+                $acc_locs = $accounts_data[$acc->id]['location_ids'];
+
+                $is_compatible = false;
+                if (empty($from_locs) || empty($acc_locs)) {
+                    $is_compatible = true;
+                } else {
+                    $intersection = array_intersect($from_locs, $acc_locs);
+                    if (!empty($intersection)) {
+                        $is_compatible = true;
+                    }
+                }
+
+                if ($is_compatible) {
+                    $to_accounts[$acc->id] = $acc->name;
+                }
+            }
 
             return view('account.transfer')
-                ->with(compact('from_account', 'to_accounts'));
+                ->with(compact('from_account', 'to_accounts', 'all_accounts_dropdown', 'accounts_data'));
         }
     }
 
@@ -883,6 +934,20 @@ class AccountController extends Controller
             $from_id     = $request->input('from_account');
             $to_id       = $request->input('to_account');
             $note        = $request->input('note');
+
+            $from_acc = Account::where('business_id', $business_id)->find($from_id);
+            $to_acc   = Account::where('business_id', $business_id)->find($to_id);
+
+            if (! empty($from_acc->location_id) && ! empty($to_acc->location_id)) {
+                $f_locs = (array)$from_acc->location_id;
+                $t_locs = (array)$to_acc->location_id;
+                if (empty(array_intersect($f_locs, $t_locs))) {
+                    return [
+                        'success' => false,
+                        'msg'     => __('messages.something_went_wrong'),
+                    ];
+                }
+            }
 
             if (! empty($amount)) {
                 $debit_data = [

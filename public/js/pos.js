@@ -24,6 +24,7 @@ $(document).ready(function () {
     }
 
     $('select#select_location_id').change(function () {
+        set_location();
         reset_pos_form();
 
         var default_price_group = $(this).find(':selected').data('default_price_group');
@@ -1505,6 +1506,9 @@ $(document).ready(function () {
 
 function set_payment_type_dropdown() {
     var payment_settings = $('#location_id').data('default_payment_accounts');
+    if (typeof payment_settings === 'string') {
+        try { payment_settings = JSON.parse(payment_settings); } catch(e) {}
+    }
     payment_settings = payment_settings ? payment_settings : [];
     enabled_payment_types = [];
     for (var key in payment_settings) {
@@ -1523,6 +1527,8 @@ function set_payment_type_dropdown() {
                 }
             }
         });
+    } else {
+        $('.payment_types_dropdown > option').removeClass('hide');
     }
 }
 
@@ -2113,7 +2119,7 @@ function reset_pos_form() {
     }
 
     //Status is hidden in sales order
-    if ($('#status').length > 0 && $('#status').is(':visible')) {
+    if ($('#status').length > 0 && $('#status').is(':visible') && $('form#add_pos_sell_form').length > 0) {
         $('#status').val('').trigger('change');
     }
     if ($('#transaction_date').length > 0) {
@@ -2191,19 +2197,21 @@ function set_default_customer() {
 //Set the location and initialize printer
 function set_location() {
     if ($('select#select_location_id').length == 1) {
+        var selected_opt = $('select#select_location_id').find(':selected');
         $('input#location_id').val($('select#select_location_id').val());
         $('input#location_id').data(
             'receipt_printer_type',
-            $('select#select_location_id').find(':selected').data('receipt_printer_type')
+            selected_opt.data('receipt_printer_type')
         );
-        $('input#location_id').data(
-            'default_payment_accounts',
-            $('select#select_location_id').find(':selected').data('default_payment_accounts')
-        );
+        var def_accs = selected_opt.data('default_payment_accounts');
+        if (typeof def_accs === 'string') {
+            try { def_accs = JSON.parse(def_accs); } catch(e) {}
+        }
+        $('input#location_id').data('default_payment_accounts', def_accs);
 
         $('input#location_id').attr(
             'data-default_price_group',
-            $('select#select_location_id').find(':selected').data('default_price_group')
+            selected_opt.data('default_price_group')
         );
     }
 
@@ -2608,11 +2616,14 @@ $(document).on('change', '.payment_types_dropdown', function (e) {
     var default_accounts = $('select#select_location_id').length
         ? $('select#select_location_id').find(':selected').data('default_payment_accounts')
         : $('#location_id').data('default_payment_accounts');
+    if (typeof default_accounts === 'string') {
+        try { default_accounts = JSON.parse(default_accounts); } catch(err) {}
+    }
     var payment_type = $(this).val();
     var payment_row = $(this).closest('.payment_row');
     if (payment_type && payment_type != 'advance') {
         var default_account =
-            default_accounts && default_accounts[payment_type]['account']
+            default_accounts && default_accounts[payment_type] && default_accounts[payment_type]['account']
                 ? default_accounts[payment_type]['account']
                 : '';
         var row_index = payment_row.find('.payment_row_index').val();

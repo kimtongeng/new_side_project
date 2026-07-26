@@ -800,7 +800,7 @@ class SellController extends Controller
         //Accounts
         $accounts = [];
         if ($this->moduleUtil->isModuleEnabled('account')) {
-            $accounts = Account::forDropdown($business_id, true, false);
+            $accounts = Account::forDropdown($business_id, true, false, false, !empty($default_location->id) ? $default_location->id : null);
         }
 
         $status = request()->get('status', '');
@@ -1217,7 +1217,7 @@ class SellController extends Controller
         //Accounts
         $accounts = [];
         if ($this->moduleUtil->isModuleEnabled('account')) {
-            $accounts = Account::forDropdown($business_id, true, false);
+            $accounts = Account::forDropdown($business_id, true, false, false, $transaction->location_id);
         }
 
         $shipping_statuses = $this->transactionUtil->shipping_statuses();

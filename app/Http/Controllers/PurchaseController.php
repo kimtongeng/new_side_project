@@ -299,7 +299,8 @@ class PurchaseController extends Controller
         $payment_types = $this->productUtil->payment_types(null, true, $business_id);
 
         //Accounts
-        $accounts = $this->moduleUtil->accountsDropdown($business_id, true);
+        $default_location_id = !empty(array_keys($business_locations)[0]) ? array_keys($business_locations)[0] : null;
+        $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, false, $default_location_id);
 
         $common_settings = ! empty(session('business.common_settings')) ? session('business.common_settings') : [];
 

@@ -201,7 +201,7 @@
             </div>
         @endcan
 
-        <div class="modal fade account_model" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
+        <div class="modal fade account_model" role="dialog" aria-labelledby="gridSystemModalLabel">
         </div>
 
         <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel"
@@ -233,8 +233,12 @@
                             success: function(result) {
                                 if (result.success == true) {
                                     toastr.success(result.msg);
-                                    capital_account_table.ajax.reload();
-                                    other_account_table.ajax.reload();
+                                    if (typeof capital_account_table !== 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
+                                        capital_account_table.ajax.reload();
+                                    }
+                                    if (typeof other_account_table !== 'undefined' && other_account_table.ajax) {
+                                        other_account_table.ajax.reload();
+                                    }
                                 } else {
                                     toastr.error(result.msg);
                                 }
@@ -247,42 +251,64 @@
 
             $(document).on('submit', 'form#edit_payment_account_form', function(e) {
                 e.preventDefault();
-                var data = $(this).serialize();
+                var form = $(this);
+                var data = form.serialize();
                 $.ajax({
                     method: "POST",
                     url: $(this).attr("action"),
                     dataType: "json",
                     data: data,
+                    beforeSend: function(xhr) {
+                        __disable_submit_button(form.find('button[type="submit"]'));
+                    },
                     success: function(result) {
                         if (result.success == true) {
                             $('div.account_model').modal('hide');
                             toastr.success(result.msg);
-                            capital_account_table.ajax.reload();
-                            other_account_table.ajax.reload();
+                            if (typeof capital_account_table !== 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
+                                capital_account_table.ajax.reload();
+                            }
+                            if (typeof other_account_table !== 'undefined' && other_account_table.ajax) {
+                                other_account_table.ajax.reload();
+                            }
                         } else {
                             toastr.error(result.msg);
                         }
+                    },
+                    complete: function() {
+                        __enable_submit_button(form.find('button[type="submit"]'));
                     }
                 });
             });
 
             $(document).on('submit', 'form#payment_account_form', function(e) {
                 e.preventDefault();
-                var data = $(this).serialize();
+                var form = $(this);
+                var data = form.serialize();
                 $.ajax({
                     method: "post",
                     url: $(this).attr("action"),
                     dataType: "json",
                     data: data,
+                    beforeSend: function(xhr) {
+                        __disable_submit_button(form.find('button[type="submit"]'));
+                    },
                     success: function(result) {
                         if (result.success == true) {
                             $('div.account_model').modal('hide');
                             toastr.success(result.msg);
-                            capital_account_table.ajax.reload();
-                            other_account_table.ajax.reload();
+                            if (typeof capital_account_table !== 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
+                                capital_account_table.ajax.reload();
+                            }
+                            if (typeof other_account_table !== 'undefined' && other_account_table.ajax) {
+                                other_account_table.ajax.reload();
+                            }
                         } else {
                             toastr.error(result.msg);
                         }
+                    },
+                    complete: function() {
+                        __enable_submit_button(form.find('button[type="submit"]'));
                     }
                 });
             });
@@ -419,8 +445,12 @@
                     if (result.success == true) {
                         $('div.view_modal').modal('hide');
                         toastr.success(result.msg);
-                        capital_account_table.ajax.reload();
-                        other_account_table.ajax.reload();
+                        if (typeof capital_account_table !== 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
+                            capital_account_table.ajax.reload();
+                        }
+                        if (typeof other_account_table !== 'undefined' && other_account_table.ajax) {
+                            other_account_table.ajax.reload();
+                        }
                     } else {
                         toastr.error(result.msg);
                     }
@@ -428,10 +458,15 @@
             });
         });
 
-        $('.account_model').on('shown.bs.modal', function(e) {
-            $('.account_model .select2').select2({
-                dropdownParent: $(this)
-            })
+        $(document).on('shown.bs.modal', '.account_model', function(e) {
+            $(this).find('.select2').each(function() {
+                if ($(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2('destroy');
+                }
+                $(this).select2({
+                    dropdownParent: $(this).closest('.modal-content')
+                });
+            });
         });
 
         $(document).on('click', 'button.delete_account_type', function() {
@@ -463,8 +498,12 @@
                         success: function(result) {
                             if (result.success == true) {
                                 toastr.success(result.msg);
-                                capital_account_table.ajax.reload();
-                                other_account_table.ajax.reload();
+                                if (typeof capital_account_table !== 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
+                                    capital_account_table.ajax.reload();
+                                }
+                                if (typeof other_account_table !== 'undefined' && other_account_table.ajax) {
+                                    other_account_table.ajax.reload();
+                                }
                             } else {
                                 toastr.error(result.msg);
                             }

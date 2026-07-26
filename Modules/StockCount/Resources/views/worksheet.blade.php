@@ -40,9 +40,9 @@
         }
 
         /* ── Barcode scanner input-group fix ─────────────────────────────
-                                       Forces the text input + buttons to render as one seamless
-                                       control regardless of which Bootstrap version is loaded
-                                       (fixes the "floating pill buttons with a gap" look). */
+                                           Forces the text input + buttons to render as one seamless
+                                           control regardless of which Bootstrap version is loaded
+                                           (fixes the "floating pill buttons with a gap" look). */
         #barcode_scanner_group {
             display: flex;
             align-items: stretch;
@@ -289,18 +289,27 @@
     <section class="content-header no-print">
         <div class="row">
             <div class="col-md-8 col-xs-12">
-                <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black" style="margin: 0; line-height: 1.3; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                <h1 class="tw-text-xl md:tw-text-3xl tw-font-bold tw-text-black"
+                    style="margin: 0; line-height: 1.3; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
                     <span>@lang('stockcount::lang.worksheet'):</span>
-                    <span id="session_name_display" title="Click to edit session name" style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
-                        <span id="session_name_text" style="border-bottom: 2px dashed #3c8dbc; padding-bottom: 2px;">{{ $session->name }}</span>
-                        <button type="button" class="btn btn-default btn-xs" style="color: #3c8dbc; border-color: #3c8dbc; border-radius: 4px; font-size: 13px; font-weight: bold; padding: 3px 8px; display: inline-flex; align-items: center; gap: 4px;" title="Click to edit session name">
+                    <span id="session_name_display" title="Click to edit session name"
+                        style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                        <span id="session_name_text"
+                            style="border-bottom: 2px dashed #3c8dbc; padding-bottom: 2px;">{{ $session->name }}</span>
+                        <button type="button" class="btn btn-default btn-xs"
+                            style="color: #3c8dbc; border-color: #3c8dbc; border-radius: 4px; font-size: 13px; font-weight: bold; padding: 3px 8px; display: inline-flex; align-items: center; gap: 4px;"
+                            title="Click to edit session name">
                             <i class="fa fa-edit" style="font-size: 14px;"></i> Edit
                         </button>
                     </span>
                     <span id="session_name_edit_box" style="display: none; align-items: center; gap: 6px;">
-                        <input type="text" id="session_name_input" class="form-control" value="{{ $session->name }}" style="display: inline-block; width: 280px; font-size: 18px; font-weight: bold; height: 38px; vertical-align: middle;">
-                        <button type="button" class="btn btn-success btn-sm btn-flat" id="btn_save_session_name" style="height: 38px; padding: 6px 12px; font-weight: bold;" title="Save"><i class="fa fa-check"></i> Save</button>
-                        <button type="button" class="btn btn-default btn-sm btn-flat" id="btn_cancel_session_name" style="height: 38px; padding: 6px 12px;" title="Cancel"><i class="fa fa-times"></i></button>
+                        <input type="text" id="session_name_input" class="form-control" value="{{ $session->name }}"
+                            style="display: inline-block; width: 280px; font-size: 18px; font-weight: bold; height: 38px; vertical-align: middle;">
+                        <button type="button" class="btn btn-success btn-sm btn-flat" id="btn_save_session_name"
+                            style="height: 38px; padding: 6px 12px; font-weight: bold;" title="Save"><i
+                                class="fa fa-check"></i> Save</button>
+                        <button type="button" class="btn btn-default btn-sm btn-flat" id="btn_cancel_session_name"
+                            style="height: 38px; padding: 6px 12px;" title="Cancel"><i class="fa fa-times"></i></button>
                     </span>
                     @if(!empty($session->reference_no))
                         <small class="text-muted" style="font-size: 14px; display: block; width: 100%; margin-top: 5px;">Ref No:

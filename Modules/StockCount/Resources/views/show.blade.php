@@ -382,14 +382,14 @@
                         {{ __('stockcount::lang.' . ($session->status == 'active' || $session->status == 'draft' || $session->status == 'pending' ? 'in_progress' : $session->status)) }}
                     </span>
 
-                    @if(auth()->user()->can('stock_count.create'))
+                    @if(auth()->user()->can('stock_count.create') && !in_array($session->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected']))
                         <div style="display: inline-block; vertical-align: middle;">
                             {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']), 'method' => 'post', 'id' => 'update_status_form', 'style' => 'display:inline;']) !!}
                             <input type="hidden" name="session_id" value="{{ $session->id }}">
                             <select name="status" class="form-control"
                                 style="width: 140px; display: inline-block; border-radius: 4px; height: 34px; font-weight: bold; cursor: pointer; border: 1px solid #ccc; background-color: #fff; padding: 6px 12px; box-shadow: inset 0 1px 1px rgba(0,0,0,.075);"
-                                onchange="this.form.submit()">
-                                @foreach(['in_progress', 'completed', 'reconciled', 'cancelled'] as $st)
+                                onchange="var form = this.form; var text = this.options[this.selectedIndex].text.trim(); swal({ title: (typeof LANG !== 'undefined' && LANG.sure ? LANG.sure : 'Are you sure?'), text: 'Are you sure you want to change status to ' + text + '?', icon: 'warning', buttons: true, dangerMode: true }).then(function(willProceed) { if (willProceed) { form.submit(); } else { location.reload(); } });">
+                                @foreach(['pending', 'in_progress', 'completed', 'reconciled', 'cancelled'] as $st)
                                     <option value="{{ $st }}" @if($session->status == $st || ($session->status == 'active' && $st == 'in_progress') || ($session->status == 'draft' && $st == 'in_progress') || ($session->status == 'pending' && $st == 'in_progress')) selected @endif>
                                         {{ __('stockcount::lang.' . $st) }}
                                     </option>

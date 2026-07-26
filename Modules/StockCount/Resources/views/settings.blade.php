@@ -229,6 +229,43 @@
             color: #95a5a6 !important;
             cursor: not-allowed !important;
         }
+
+        .setting-help-icon {
+            margin-left: 8px;
+            font-size: 15px;
+            color: #3498db;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+
+        .setting-help-icon:hover {
+            color: #1d6fa5;
+            transform: scale(1.2);
+        }
+
+        .popover {
+            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            max-width: 320px;
+        }
+
+        .popover-title {
+            font-weight: 700;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e293b;
+            font-size: 14px;
+            padding: 10px 14px;
+        }
+
+        .popover-content {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.5;
+            padding: 12px 14px;
+        }
     </style>
 @endsection
 
@@ -236,25 +273,28 @@
     @php
         $business_id = session()->get('user.business_id');
         $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+        $has_master_settings = $is_admin || auth()->user()->can('stock_count.settings');
 
-        $can_edit_auto_adjust = $is_admin || auth()->user()->can('stock_count.settings_auto_adjust');
-        $can_edit_approval = $is_admin || auth()->user()->can('stock_count.settings_approval');
-        $can_edit_counting = $is_admin || auth()->user()->can('stock_count.settings_counting');
-        $can_edit_notifications = $is_admin || auth()->user()->can('stock_count.settings_notifications');
+        $can_edit_auto_adjust = $has_master_settings || auth()->user()->can('stock_count.settings_auto_adjust');
+        $can_edit_approval = $has_master_settings || auth()->user()->can('stock_count.settings_approval');
+        $can_edit_counting = $has_master_settings || auth()->user()->can('stock_count.settings_counting');
+        $can_edit_notifications = $has_master_settings || auth()->user()->can('stock_count.settings_notifications');
 
         $can_save_settings = $can_edit_auto_adjust || $can_edit_approval || $can_edit_counting || $can_edit_notifications;
 
         $auto_adjust = isset($settings['stock_count_auto_adjust_stock']) ? $settings['stock_count_auto_adjust_stock'] : false;
         $require_approval = isset($settings['stock_count_require_approval']) ? $settings['stock_count_require_approval'] : true;
-        $lock_after = isset($settings['stock_count_lock_after_approval']) ? $settings['stock_count_lock_after_approval'] : true;
+        $allow_delete_completed = isset($settings['stock_count_allow_delete_completed']) ? $settings['stock_count_allow_delete_completed'] : false;
         $allow_recount = isset($settings['stock_count_allow_recount']) ? $settings['stock_count_allow_recount'] : true;
         $show_expected = isset($settings['stock_count_show_expected_qty']) ? $settings['stock_count_show_expected_qty'] : true;
         $default_blind_count = isset($settings['stock_count_default_blind_count']) ? $settings['stock_count_default_blind_count'] : false;
-        $default_type = isset($settings['stock_count_default_count_type']) ? $settings['stock_count_default_count_type'] : 'full_count';
+        $auto_complete_on_100 = isset($settings['stock_count_auto_complete_on_100']) ? $settings['stock_count_auto_complete_on_100'] : false;
         $skip_zero = isset($settings['stock_count_skip_zero_stock']) ? $settings['stock_count_skip_zero_stock'] : false;
-        $notify_completion = isset($settings['stock_count_notify_on_completion']) ? $settings['stock_count_notify_on_completion'] : false;
-        $notify_discrepancies = isset($settings['stock_count_notify_on_large_discrepancies']) ? $settings['stock_count_notify_on_large_discrepancies'] : false;
-        $threshold = isset($settings['stock_count_discrepancy_threshold']) ? $settings['stock_count_discrepancy_threshold'] : 0;
+
+        $notify_created = isset($settings['stock_count_telegram_notify_created']) ? $settings['stock_count_telegram_notify_created'] : true;
+        $notify_completed = isset($settings['stock_count_telegram_notify_completed']) ? $settings['stock_count_telegram_notify_completed'] : true;
+        $notify_reconciled = isset($settings['stock_count_telegram_notify_reconciled']) ? $settings['stock_count_telegram_notify_reconciled'] : true;
+        $notify_cancelled = isset($settings['stock_count_telegram_notify_cancelled']) ? $settings['stock_count_telegram_notify_cancelled'] : true;
     @endphp
 
     <section class="content-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -279,7 +319,10 @@
                         <!-- Auto Adjust Stock -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-magic text-primary"></i> Auto Adjust Stock</h4>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-magic text-primary"></i> Auto Adjust Stock
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Auto Adjust Stock" data-content="When enabled, system inventory levels will be automatically updated and stock adjustment transactions created immediately upon stocktake approval (or completion if approval is disabled)."></i>
+                                </h4>
                                 <p class="setting-desc">Automatically adjust stock quantities when a stocktake is approved based on detected discrepancies</p>
                             </div>
                             <div>
@@ -294,7 +337,10 @@
                         <!-- Require Approval -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-user-shield text-warning"></i> Require Approval</h4>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-user-shield text-warning"></i> Require Approval
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Require Approval" data-content="Requires a manager or supervisor to review and approve the count session before inventory quantities are adjusted in the system."></i>
+                                </h4>
                                 <p class="setting-desc">Manager approval required before stock adjustment</p>
                             </div>
                             <div>
@@ -306,15 +352,18 @@
                         </div>
                         <div class="setting-divider"></div>
 
-                        <!-- Lock After Approval -->
+                        <!-- Allow Deleting Completed Sessions -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-lock text-danger"></i> Lock After Approval</h4>
-                                <p class="setting-desc">Prevent any modifications to the stocktake after approval and stock adjustment</p>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-trash-alt text-danger"></i> Allow Deleting Completed Sessions
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Allow Deleting Completed Sessions" data-content="When enabled, authorized users can delete stock count sessions that are in Completed status. When disabled, Completed sessions are protected from deletion."></i>
+                                </h4>
+                                <p class="setting-desc">Allow stock count sessions with Completed status to be deleted</p>
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_lock_after_approval" value="1" @if($lock_after) checked @endif @if(!$can_edit_approval) disabled @endif>
+                                    <input type="checkbox" name="stock_count_allow_delete_completed" value="1" @if($allow_delete_completed) checked @endif @if(!$can_edit_approval) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
@@ -331,7 +380,10 @@
                         <!-- Allow Recount -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-sync text-info"></i> Allow Recount</h4>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-sync text-info"></i> Allow Recount
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Allow Recount" data-content="Permits counting staff to edit and recount previously entered item quantities on the worksheet while the session is active."></i>
+                                </h4>
                                 <p class="setting-desc">Allow users to recount previously counted items</p>
                             </div>
                             <div>
@@ -346,7 +398,10 @@
                         <!-- Show Expected Qty -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-eye text-muted"></i> Show Expected Qty</h4>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-eye text-muted"></i> Show Expected Qty
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Show Expected Qty" data-content="Displays the current system stock on hand (QOH) on the counting worksheet for counters to see expected quantities."></i>
+                                </h4>
                                 <p class="setting-desc">Show system quantity during counting</p>
                             </div>
                             <div>
@@ -358,10 +413,31 @@
                         </div>
                         <div class="setting-divider"></div>
 
+                        <!-- Auto Complete When 100% Counted -->
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <h4 class="setting-title">
+                                    <i class="fa fa-check-double text-success"></i> Auto Complete When 100% Counted
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Auto Complete When 100% Counted" data-content="Automatically transitions the session status from In Progress to Completed as soon as physical counts have been entered for all items."></i>
+                                </h4>
+                                <p class="setting-desc">Automatically set session status to Completed when all items have been counted</p>
+                            </div>
+                            <div>
+                                <label class="switch">
+                                    <input type="checkbox" name="stock_count_auto_complete_on_100" value="1" @if($auto_complete_on_100) checked @endif @if(!$can_edit_counting) disabled @endif>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="setting-divider"></div>
+
                         <!-- Blind Count Mode -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-eye-slash text-danger"></i> Blind Count Mode</h4>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-eye-slash text-danger"></i> Blind Count Mode
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Blind Count Mode" data-content="Enables blind counting by default, hiding system stock quantities from counting staff so they conduct unbiased physical counts without seeing expected numbers."></i>
+                                </h4>
                                 <p class="setting-desc">Enable Blind Count Mode by default for new stocktakes (hides system QOH from counting staff to ensure unbiased results)</p>
                             </div>
                             <div>
@@ -373,25 +449,13 @@
                         </div>
                         <div class="setting-divider"></div>
 
-                        <!-- Default Count Type -->
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-th-list text-primary"></i> Default Count Type</h4>
-                                <p class="setting-desc">Default stocktake type selected when creating a new stocktake</p>
-                            </div>
-                            <div>
-                                <select name="stock_count_default_count_type" class="settings-select" @if(!$can_edit_counting) disabled @endif>
-                                    <option value="full_count" @if($default_type == 'full_count') selected @endif>Full Count</option>
-                                    <option value="partial_count" @if($default_type == 'partial_count') selected @endif>Partial Count</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="setting-divider"></div>
-
                         <!-- Skip Zero Stock Products -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-filter text-warning"></i> Skip Zero Stock Products</h4>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-filter text-warning"></i> Skip Zero Stock Products
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Skip Zero Stock Products" data-content="Excludes products with zero stock on hand from automatically appearing in newly generated full count worksheets."></i>
+                                </h4>
                                 <p class="setting-desc">Exclude products with zero stock when creating a new stocktake</p>
                             </div>
                             <div>
@@ -404,53 +468,80 @@
                     </div>
                 </div>
 
-                <!-- 3. Notification Settings -->
+                <!-- 3. Telegram Notification Settings -->
                 <div class="settings-card">
                     <div class="settings-card-header header-red">
-                        <i class="fa fa-bell"></i> Notification Settings
+                        <i class="fa fa-paper-plane"></i> Telegram Notification Settings
                     </div>
                     <div class="settings-card-body">
-                        <!-- Notify on Completion -->
+                        <!-- Notify on Session Created -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-check-circle text-success"></i> Notify on Completion</h4>
-                                <p class="setting-desc">Send notification to manager when a stocktake is completed and ready for review</p>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-plus-circle text-primary"></i> Notify on Session Created
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Notify on Session Created" data-content="Sends a Telegram message alert whenever a new stock count session is created."></i>
+                                </h4>
+                                <p class="setting-desc">Send Telegram notification when a new stock count session is created</p>
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_notify_on_completion" value="1" @if($notify_completion) checked @endif @if(!$can_edit_notifications) disabled @endif>
+                                    <input type="checkbox" name="stock_count_telegram_notify_created" value="1" @if($notify_created) checked @endif @if(!$can_edit_notifications) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
                         </div>
                         <div class="setting-divider"></div>
 
-                        <!-- Notify on Large Discrepancies -->
+                        <!-- Notify on Session Completed -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-exclamation-triangle text-danger"></i> Notify on Large Discrepancies</h4>
-                                <p class="setting-desc">Send alert when item discrepancy percentage exceeds the threshold</p>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-check-circle text-success"></i> Notify on Session Completed
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Notify on Session Completed" data-content="Sends a Telegram message alert when a stock count session status changes to Completed."></i>
+                                </h4>
+                                <p class="setting-desc">Send Telegram notification when a stock count session is completed</p>
                             </div>
                             <div>
                                 <label class="switch">
-                                    <input type="checkbox" name="stock_count_notify_on_large_discrepancies" value="1" @if($notify_discrepancies) checked @endif @if(!$can_edit_notifications) disabled @endif>
+                                    <input type="checkbox" name="stock_count_telegram_notify_completed" value="1" @if($notify_completed) checked @endif @if(!$can_edit_notifications) disabled @endif>
                                     <span class="slider"></span>
                                 </label>
                             </div>
                         </div>
                         <div class="setting-divider"></div>
 
-                        <!-- Discrepancy Threshold -->
+                        <!-- Notify on Session Reconciled -->
                         <div class="setting-row">
                             <div class="setting-info">
-                                <h4 class="setting-title"><i class="fa fa-percent text-info"></i> Discrepancy Threshold</h4>
-                                <p class="setting-desc">Allowed discrepancy percentage before triggering an alert (0 = disabled)</p>
+                                <h4 class="setting-title">
+                                    <i class="fa fa-sync text-info"></i> Notify on Session Reconciled
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Notify on Session Reconciled" data-content="Sends a Telegram message alert when stock reconciliation is finalized and stock levels are updated."></i>
+                                </h4>
+                                <p class="setting-desc">Send Telegram notification when stock count adjustments are reconciled</p>
                             </div>
                             <div>
-                                <div class="settings-input-group">
-                                    <input type="number" name="stock_count_discrepancy_threshold" class="settings-input" value="{{ $threshold }}" min="0" max="100" @if(!$can_edit_notifications) disabled @endif>
-                                    <span class="settings-input-addon">%</span>
-                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" name="stock_count_telegram_notify_reconciled" value="1" @if($notify_reconciled) checked @endif @if(!$can_edit_notifications) disabled @endif>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="setting-divider"></div>
+
+                        <!-- Notify on Session Cancelled -->
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <h4 class="setting-title">
+                                    <i class="fa fa-times-circle text-danger"></i> Notify on Session Cancelled
+                                    <i class="fa fa-question-circle setting-help-icon" data-toggle="popover" data-trigger="click" data-placement="auto top" data-html="true" title="Notify on Session Cancelled" data-content="Sends a Telegram message alert when a stock count session is cancelled or rejected."></i>
+                                </h4>
+                                <p class="setting-desc">Send Telegram notification when a stock count session is cancelled</p>
+                            </div>
+                            <div>
+                                <label class="switch">
+                                    <input type="checkbox" name="stock_count_telegram_notify_cancelled" value="1" @if($notify_cancelled) checked @endif @if(!$can_edit_notifications) disabled @endif>
+                                    <span class="slider"></span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -471,4 +562,26 @@
 
         {!! Form::close() !!}
     </section>
+@endsection
+
+@section('javascript')
+<script>
+$(document).ready(function(){
+    $('[data-toggle="popover"]').popover({
+        trigger: 'click',
+        placement: 'auto top',
+        html: true,
+        container: 'body'
+    });
+
+    // Close popovers when clicking outside
+    $(document).on('click', function (e) {
+        $('[data-toggle="popover"]').each(function () {
+            if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {
+                $(this).popover('hide');
+            }
+        });
+    });
+});
+</script>
 @endsection

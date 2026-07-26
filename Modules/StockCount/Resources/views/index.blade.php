@@ -310,6 +310,11 @@
                     <i class="fa fa-balance-scale tab-icon"></i> @lang('stockcount::lang.reconciled')
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="stock-count-tab-link" data-status="cancelled">
+                    <i class="fa fa-times-circle tab-icon"></i> @lang('stockcount::lang.cancelled')
+                </a>
+            </li>
         </ul>
 
         <div class="table-responsive">
@@ -347,6 +352,7 @@
                         <div class="form-group">
                             {!! Form::label('modal_status', 'Status:') !!}
                             <select name="status" id="modal_status" class="form-control" style="width: 100%;">
+                                <option value="pending">@lang('stockcount::lang.pending')</option>
                                 <option value="in_progress">@lang('stockcount::lang.in_progress')</option>
                                 <option value="completed">@lang('stockcount::lang.completed')</option>
                                 <option value="reconciled">@lang('stockcount::lang.reconciled')</option>
@@ -567,9 +573,16 @@
             $(document).on('click', 'a.delete_stock_count', function (e) {
                 e.preventDefault();
                 var url = $(this).data('href');
+                var status = $(this).data('status');
+
+                var warningText = "You won't be able to revert this count session!";
+                if (status === 'completed' || status === 'approved') {
+                    warningText = "⚠️ WARNING: This stock count is COMPLETED. Deleting it will remove the session record, but live product stock levels will NOT be reverted!";
+                }
+
                 swal({
                     title: LANG.sure,
-                    text: "You won't be able to revert this count session!",
+                    text: warningText,
                     icon: "warning",
                     buttons: true,
                     dangerMode: true,
@@ -595,6 +608,15 @@
                 });
             });
 
+            $('#update_status_modal').on('show.bs.modal shown.bs.modal hidden.bs.modal', function () {
+                var $btn = $(this).find('button[type="submit"]');
+                if (typeof __enable_submit_button === 'function') {
+                    __enable_submit_button($btn);
+                } else {
+                    $btn.removeAttr('disabled').removeAttr('disable').prop('disabled', false);
+                }
+            });
+
             $(document).on('click', '.btn_update_status', function (e) {
                 e.preventDefault();
                 var session_id = $(this).data('session_id');
@@ -618,30 +640,87 @@
                 }
 
                 $('#update_status_modal_form').attr('action', action);
+                var $btn = $('#update_status_modal_form').find('button[type="submit"]');
+                if (typeof __enable_submit_button === 'function') {
+                    __enable_submit_button($btn);
+                } else {
+                    $btn.removeAttr('disabled').removeAttr('disable').prop('disabled', false);
+                }
                 
                 $('#update_status_modal').modal('show');
             });
             
             $(document).on('submit', '#update_status_modal_form', function(e) {
                 e.preventDefault();
-                var data = $(this).serialize();
-                var url = $(this).attr('action');
-                
-                $.ajax({
-                    method: 'POST',
-                    url: url,
-                    dataType: 'json',
-                    data: data,
-                    success: function(result) {
-                        if (result.success) {
-                            toastr.success(result.msg);
-                            $('#update_status_modal').modal('hide');
-                            stock_count_table.ajax.reload();
-                        } else {
-                            toastr.error(result.msg);
-                        }
+                var $form = $(this);
+                var data = $form.serialize();
+                var url = $form.attr('action');
+                var statusVal = $('#modal_status').val();
+                var statusText = $('#modal_status option:selected').text().trim();
+                var $btn = $form.find('button[type="submit"]');
+
+                function enableBtn() {
+                    if (typeof __enable_submit_button === 'function') {
+                        __enable_submit_button($btn);
+                    } else {
+                        $btn.removeAttr('disabled').removeAttr('disable').prop('disabled', false);
                     }
-                });
+                }
+
+                function disableBtn() {
+                    if (typeof __disable_submit_button === 'function') {
+                        __disable_submit_button($btn);
+                    } else {
+                        $btn.attr('disabled', 'disabled').prop('disabled', true);
+                    }
+                }
+
+                var needsConfirmation = ['completed', 'cancelled', 'reconciled', 'reconcile'].indexOf(statusVal) !== -1;
+
+                function executeSubmit() {
+                    disableBtn();
+                    $.ajax({
+                        method: 'POST',
+                        url: url,
+                        dataType: 'json',
+                        data: data,
+                        success: function(result) {
+                            enableBtn();
+                            if (result.success) {
+                                toastr.success(result.msg);
+                                $('#update_status_modal').modal('hide');
+                                if (typeof stock_count_table !== 'undefined') {
+                                    stock_count_table.ajax.reload();
+                                }
+                            } else {
+                                toastr.error(result.msg);
+                            }
+                        },
+                        error: function(jqXHR) {
+                            enableBtn();
+                            var msg = (jqXHR.responseJSON && jqXHR.responseJSON.msg) ? jqXHR.responseJSON.msg : 'Something went wrong';
+                            toastr.error(msg);
+                        }
+                    });
+                }
+
+                if (needsConfirmation) {
+                    swal({
+                        title: typeof LANG !== 'undefined' && LANG.sure ? LANG.sure : "Are you sure?",
+                        text: "Are you sure you want to change status to " + statusText + "?",
+                        icon: "warning",
+                        buttons: true,
+                        dangerMode: true,
+                    }).then((willProceed) => {
+                        if (willProceed) {
+                            executeSubmit();
+                        } else {
+                            enableBtn();
+                        }
+                    });
+                } else {
+                    executeSubmit();
+                }
             });
 
             $(document).on('click', '.btn_compare_worksheet', function (e) {

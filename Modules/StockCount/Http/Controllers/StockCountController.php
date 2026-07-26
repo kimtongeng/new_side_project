@@ -69,6 +69,8 @@ class StockCountController extends Controller
                     $sessions->whereIn('stock_count_sessions.status', ['reconciled', 'reconcile']);
                 } elseif ($status_filter === 'completed') {
                     $sessions->whereIn('stock_count_sessions.status', ['completed', 'approved']);
+                } elseif ($status_filter === 'cancelled' || $status_filter === 'cancel' || $status_filter === 'rejected') {
+                    $sessions->whereIn('stock_count_sessions.status', ['cancelled', 'cancel', 'rejected']);
                 } else {
                     $sessions->where('stock_count_sessions.status', $status_filter);
                 }
@@ -107,7 +109,7 @@ class StockCountController extends Controller
                     $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
                     $can_update_status = $is_admin || auth()->user()->can('stock_count.update_status') || auth()->user()->can('stock_count.edit') || auth()->user()->can('stock_count.create');
 
-                    if ($can_update_status) {
+                    if ($can_update_status && !in_array($row->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected'])) {
                         $html .= '<li>
                                     <a data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '" class="btn_update_status cursor-pointer">
                                         <i class="fa fa-sync"></i> Update Status
@@ -123,9 +125,16 @@ class StockCountController extends Controller
                                  </li>';
                     }
 
-                    if (!in_array($row->status, ['completed', 'approved', 'reconciled', 'reconcile']) && auth()->user()->can('stock_count.delete')) {
+                    $allow_delete_completed = isset(session('business.common_settings')['stock_count_allow_delete_completed']) ? session('business.common_settings')['stock_count_allow_delete_completed'] : false;
+                    $cannot_delete_statuses = ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected'];
+                    if (!$allow_delete_completed) {
+                        $cannot_delete_statuses[] = 'completed';
+                        $cannot_delete_statuses[] = 'approved';
+                    }
+
+                    if (!in_array($row->status, $cannot_delete_statuses) && auth()->user()->can('stock_count.delete')) {
                         $html .= '<li>
-                                    <a data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'destroy'], [$row->id]) . '" class="delete_stock_count text-danger cursor-pointer">
+                                    <a data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'destroy'], [$row->id]) . '" data-status="' . $row->status . '" class="delete_stock_count text-danger cursor-pointer">
                                         <i class="fa fa-trash"></i> ' . __('messages.delete') . '
                                     </a>
                                  </li>';
@@ -155,7 +164,10 @@ class StockCountController extends Controller
                         $status_name = ucfirst(str_replace('_', ' ', $row->status));
                     }
 
-                    return '<span class="label ' . $color . ' btn_update_status" style="cursor: pointer;" data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '">' . $status_name . '</span>';
+                    $is_locked = in_array($row->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected']);
+                    $btn_class = $is_locked ? '' : ' btn_update_status';
+                    $cursor_style = $is_locked ? 'cursor: default;' : 'cursor: pointer;';
+                    return '<span class="label ' . $color . $btn_class . '" style="' . $cursor_style . '" data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '">' . $status_name . '</span>';
                 })
                 ->addColumn('total_items', function ($row) {
                     return $row->lines()->count();
@@ -354,18 +366,24 @@ class StockCountController extends Controller
 
             // ── Telegram Notification ──────────────────────────────
             try {
-                $session->load('location');
-                $loc_code = $session->location->location_id ?? 'PT1001';
-                $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
-                $msg = "📋 <b>New Stock Count Session Started</b>\n\n"
-                    . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
-                    . "<b>🏷️ Name:</b> {$session->name}\n"
-                    . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
-                    . "<b>🙈 Blind Count Mode:</b> " . ($session->blind_count ? 'Yes' : 'No') . "\n"
-                    . "<b>👤 Created By:</b> {$user_name}\n"
-                    . "<b>🕒 Date:</b> " . date('d/m/Y H:i');
+                $business = \App\Business::where('id', $business_id)->first();
+                $b_settings = $business->common_settings ?? [];
+                $notify_created = isset($b_settings['stock_count_telegram_notify_created']) ? $b_settings['stock_count_telegram_notify_created'] : true;
 
-                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
+                if ($notify_created) {
+                    $session->load('location');
+                    $loc_code = $session->location->location_id ?? 'PT1001';
+                    $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
+                    $msg = "📋 <b>New Stock Count Session Started</b>\n\n"
+                        . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
+                        . "<b>🏷️ Name:</b> {$session->name}\n"
+                        . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
+                        . "<b>🙈 Blind Count Mode:</b> " . ($session->blind_count ? 'Yes' : 'No') . "\n"
+                        . "<b>👤 Created By:</b> {$user_name}\n"
+                        . "<b>🕒 Date:</b> " . date('d/m/Y H:i');
+
+                    \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
+                }
             } catch (\Exception $te) {
                 \Log::warning('Telegram stock count store notification failed: ' . $te->getMessage());
             }
@@ -559,6 +577,8 @@ class StockCountController extends Controller
                 $line->save();
             }
 
+            $this->checkAndAutoCompleteSession($id, $business_id);
+
             DB::commit();
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
@@ -636,6 +656,8 @@ class StockCountController extends Controller
                 $line->counted_at = Carbon::now();
                 $line->save();
 
+                $this->checkAndAutoCompleteSession($id, $business_id);
+
                 return response()->json([
                     'success' => true,
                     'line_id' => $line->id,
@@ -659,6 +681,8 @@ class StockCountController extends Controller
                     'counted_by' => auth()->user()->id,
                     'counted_at' => Carbon::now()
                 ]);
+
+                $this->checkAndAutoCompleteSession($id, $business_id);
 
                 // Render single line row to append to HTML table
                 $row_html = view('stockcount::partials.worksheet_row', [
@@ -781,39 +805,45 @@ class StockCountController extends Controller
 
             // ── Telegram Notification ──────────────────────────────
             try {
-                $session->load(['location', 'lines']);
-                $loc_code = $session->location->location_id ?? 'PT1001';
-                $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
+                $business = \App\Business::where('id', $business_id)->first();
+                $b_settings = $business->common_settings ?? [];
+                $notify_reconciled = isset($b_settings['stock_count_telegram_notify_reconciled']) ? $b_settings['stock_count_telegram_notify_reconciled'] : true;
 
-                $shortage_qty = 0;
-                $shortage_val = 0;
-                $surplus_qty = 0;
-                $surplus_val = 0;
+                if ($notify_reconciled) {
+                    $session->load(['location', 'lines']);
+                    $loc_code = $session->location->location_id ?? 'PT1001';
+                    $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
 
-                foreach ($session->lines as $line) {
-                    $diff = (float)$line->counted_quantity - (float)$line->book_quantity;
-                    if ($diff < 0) {
-                        $shortage_qty += abs($diff);
-                        $shortage_val += abs($diff) * (float)$line->unit_price;
-                    } elseif ($diff > 0) {
-                        $surplus_qty += $diff;
-                        $surplus_val += $diff * (float)$line->unit_price;
+                    $shortage_qty = 0;
+                    $shortage_val = 0;
+                    $surplus_qty = 0;
+                    $surplus_val = 0;
+
+                    foreach ($session->lines as $line) {
+                        $diff = (float)$line->counted_quantity - (float)$line->book_quantity;
+                        if ($diff < 0) {
+                            $shortage_qty += abs($diff);
+                            $shortage_val += abs($diff) * (float)$line->unit_price;
+                        } elseif ($diff > 0) {
+                            $surplus_qty += $diff;
+                            $surplus_val += $diff * (float)$line->unit_price;
+                        }
                     }
+                    $net_impact = $surplus_val - $shortage_val;
+                    $impact_text = $net_impact >= 0 ? 'Surplus/Gain' : 'Shortage/Loss';
+
+                    $msg = "⚖️ <b>Stock Count Reconciled & Applied</b>\n\n"
+                        . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
+                        . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
+                        . "<b>📦 Total Items Counted:</b> " . count($session->lines) . "\n"
+                        . "🔻 <b>Shortage Loss:</b> " . number_format($shortage_qty, 2) . " Pcs (-\$" . number_format($shortage_val, 2) . ")\n"
+                        . "🔺 <b>Surplus Gain:</b> " . number_format($surplus_qty, 2) . " Pcs (+\$" . number_format($surplus_val, 2) . ")\n"
+                        . "💵 <b>Net Financial Impact:</b> \$" . number_format(abs($net_impact), 2) . " ({$impact_text})\n\n"
+                        . "<b>👤 Reconciled By:</b> {$user_name}\n"
+                        . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
+
+                    \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
                 }
-                $net_impact = $surplus_val - $shortage_val;
-                $impact_text = $net_impact >= 0 ? 'Surplus/Gain' : 'Shortage/Loss';
-
-                $msg = "⚖️ <b>Stock Count Reconciled & Applied</b>\n\n"
-                    . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
-                    . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
-                    . "<b>📦 Total Items Counted:</b> " . count($session->lines) . "\n"
-                    . "🔻 <b>Shortage Loss:</b> " . number_format($shortage_qty, 2) . " Pcs (-\$" . number_format($shortage_val, 2) . ")\n"
-                    . "🔺 <b>Surplus Gain:</b> " . number_format($surplus_qty, 2) . " Pcs (+\$" . number_format($surplus_val, 2) . ")\n"
-                    . "💵 <b>Net Financial Impact:</b> \$" . number_format(abs($net_impact), 2) . " ({$impact_text})\n\n"
-                    . "<b>👤 Reconciled By:</b> {$user_name}\n"
-                    . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
-
-                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
             } catch (\Exception $te) {
                 \Log::warning('Telegram stock count reconcile notification failed: ' . $te->getMessage());
             }
@@ -857,22 +887,35 @@ class StockCountController extends Controller
         }
 
         try {
+            $business = \App\Business::where('id', $business_id)->first();
+            $b_settings = $business->common_settings ?? [];
+            $allow_delete_completed = isset($b_settings['stock_count_allow_delete_completed']) ? $b_settings['stock_count_allow_delete_completed'] : false;
+            $cannot_delete_statuses = ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected'];
+            if (!$allow_delete_completed) {
+                $cannot_delete_statuses[] = 'completed';
+                $cannot_delete_statuses[] = 'approved';
+            }
+
             $session = StockCountSession::where('business_id', $business_id)
-                ->whereNotIn('status', ['completed', 'reconciled', 'reconcile'])
+                ->whereNotIn('status', $cannot_delete_statuses)
                 ->findOrFail($id);
 
             // ── Telegram Notification ──────────────────────────────
             try {
-                $loc_code = $session->location->location_id ?? 'PT1001';
-                $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
-                $msg = "🗑️ <b>Stock Count Session Deleted</b>\n\n"
-                    . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
-                    . "<b>🏷️ Name:</b> {$session->name}\n"
-                    . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
-                    . "<b>👤 Deleted By:</b> {$user_name}\n"
-                    . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
+                $notify_cancelled = isset($b_settings['stock_count_telegram_notify_cancelled']) ? $b_settings['stock_count_telegram_notify_cancelled'] : true;
 
-                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
+                if ($notify_cancelled) {
+                    $loc_code = $session->location->location_id ?? 'PT1001';
+                    $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
+                    $msg = "🗑️ <b>Stock Count Session Deleted</b>\n\n"
+                        . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
+                        . "<b>🏷️ Name:</b> {$session->name}\n"
+                        . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
+                        . "<b>👤 Deleted By:</b> {$user_name}\n"
+                        . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
+
+                    \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
+                }
             } catch (\Exception $te) {
                 \Log::warning('Telegram stock count delete notification failed: ' . $te->getMessage());
             }
@@ -1071,6 +1114,8 @@ class StockCountController extends Controller
                 $success_count++;
             }
 
+            $this->checkAndAutoCompleteSession($id, $business_id);
+
             \DB::commit();
 
 
@@ -1162,6 +1207,8 @@ class StockCountController extends Controller
                 $sessions_query->whereIn('stock_count_sessions.status', ['reconciled', 'reconcile']);
             } elseif ($status_filter === 'completed') {
                 $sessions_query->whereIn('stock_count_sessions.status', ['completed', 'approved']);
+            } elseif ($status_filter === 'cancelled' || $status_filter === 'cancel' || $status_filter === 'rejected') {
+                $sessions_query->whereIn('stock_count_sessions.status', ['cancelled', 'cancel', 'rejected']);
             } else {
                 $sessions_query->where('stock_count_sessions.status', $status_filter);
             }
@@ -1292,19 +1339,20 @@ class StockCountController extends Controller
             $session = StockCountSession::where('business_id', $business_id)
                 ->findOrFail($session_id);
 
+            // Once reconciled or cancelled, lock status permanently
+            if (in_array($session->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected'])) {
+                $output = [
+                    'success' => false,
+                    'msg' => 'Status cannot be updated because this session is ' . $session->status . '.'
+                ];
+                if ($request->ajax()) {
+                    return response()->json($output);
+                }
+                return redirect()->back()->with('status', $output);
+            }
+
             // If user selected 'reconciled' / 'reconcile', trigger full reconciliation logic
             if ($status === 'reconciled' || $status === 'reconcile') {
-                if ($session->status === 'reconciled' || $session->status === 'reconcile') {
-                    $output = [
-                        'success' => true,
-                        'msg' => 'Session is already reconciled.'
-                    ];
-                    if ($request->ajax()) {
-                        return response()->json($output);
-                    }
-                    return redirect()->back()->with('status', $output);
-                }
-
                 return $this->reconcile($request, $session_id);
             }
 
@@ -1318,12 +1366,15 @@ class StockCountController extends Controller
             $should_reconcile = false;
             $should_lock = false;
 
+            $filters = $session->filters ?? [];
+            $is_stock_adjusted = !empty($filters['stock_adjusted']);
+
             if ($status === 'reconciled' || $status === 'reconcile') {
                 if ($session->status !== 'reconciled' && $session->status !== 'reconcile') {
                     $should_lock = true;
-                    $should_reconcile = true;
+                    $should_reconcile = !$is_stock_adjusted;
                 }
-            } elseif (empty($session->completed_at)) {
+            } elseif (!$is_stock_adjusted) {
                 if ($require_approval) {
                     if ($status === 'approved') {
                         $should_lock = true;
@@ -1407,6 +1458,9 @@ class StockCountController extends Controller
 
                         $this->transactionUtil->activityLog($stock_adjustment, 'added', null, [], false);
                     }
+
+                    $filters['stock_adjusted'] = true;
+                    $session->filters = $filters;
                 }
 
                 DB::commit();
@@ -1427,8 +1481,10 @@ class StockCountController extends Controller
                     $session->completed_at = Carbon::now();
                 }
             } elseif (in_array($status, ['pending', 'in_progress', 'draft'])) {
-                $session->completed_by = null;
-                $session->completed_at = null;
+                if (!$is_stock_adjusted) {
+                    $session->completed_by = null;
+                    $session->completed_at = null;
+                }
             }
 
             $session->status = $status;
@@ -1436,18 +1492,33 @@ class StockCountController extends Controller
 
             // ── Telegram Notification ──────────────────────────────
             try {
-                $session->load('location');
-                $loc_code = $session->location->location_id ?? 'PT1001';
-                $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
-                $status_formatted = ucfirst(str_replace('_', ' ', $status));
-                $msg = "🔄 <b>Stock Count Status Updated</b>\n\n"
-                    . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
-                    . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
-                    . "<b>📌 New Status:</b> {$status_formatted}\n"
-                    . "<b>👤 Updated By:</b> {$user_name}\n"
-                    . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
+                $notify_completed = isset($settings['stock_count_telegram_notify_completed']) ? $settings['stock_count_telegram_notify_completed'] : true;
+                $notify_cancelled = isset($settings['stock_count_telegram_notify_cancelled']) ? $settings['stock_count_telegram_notify_cancelled'] : true;
+                $notify_reconciled = isset($settings['stock_count_telegram_notify_reconciled']) ? $settings['stock_count_telegram_notify_reconciled'] : true;
 
-                \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
+                $should_send = true;
+                if (in_array($status, ['completed', 'approved']) && !$notify_completed) {
+                    $should_send = false;
+                } elseif (in_array($status, ['cancelled', 'cancel', 'rejected']) && !$notify_cancelled) {
+                    $should_send = false;
+                } elseif (in_array($status, ['reconciled', 'reconcile']) && !$notify_reconciled) {
+                    $should_send = false;
+                }
+
+                if ($should_send) {
+                    $session->load('location');
+                    $loc_code = $session->location->location_id ?? 'PT1001';
+                    $user_name = auth()->user()->user_full_name ?? auth()->user()->username;
+                    $status_formatted = ucfirst(str_replace('_', ' ', $status));
+                    $msg = "🔄 <b>Stock Count Status Updated</b>\n\n"
+                        . "<b>🔖 Ref No:</b> {$session->reference_no}\n"
+                        . "<b>📍 Location:</b> " . ($session->location->name ?? 'N/A') . "\n"
+                        . "<b>📌 New Status:</b> {$status_formatted}\n"
+                        . "<b>👤 Updated By:</b> {$user_name}\n"
+                        . "<b>🕒 Time:</b> " . date('d/m/Y H:i');
+
+                    \App\Notifications\TelegramNotification::sendMessage($msg, 'stock_count', $loc_code);
+                }
             } catch (\Exception $te) {
                 \Log::warning('Telegram stock count status update notification failed: ' . $te->getMessage());
             }
@@ -1499,8 +1570,9 @@ class StockCountController extends Controller
     {
         $business_id = request()->session()->get('user.business_id');
         $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+        $has_master_settings = $is_admin || auth()->user()->can('stock_count.settings');
 
-        $can_save = $is_admin
+        $can_save = $has_master_settings
             || auth()->user()->can('stock_count.settings_auto_adjust')
             || auth()->user()->can('stock_count.settings_approval')
             || auth()->user()->can('stock_count.settings_counting')
@@ -1515,27 +1587,28 @@ class StockCountController extends Controller
 
             $common_settings = $business->common_settings ?? [];
 
-            if ($is_admin || auth()->user()->can('stock_count.settings_auto_adjust')) {
+            if ($has_master_settings || auth()->user()->can('stock_count.settings_auto_adjust')) {
                 $common_settings['stock_count_auto_adjust_stock'] = $request->has('stock_count_auto_adjust_stock');
             }
 
-            if ($is_admin || auth()->user()->can('stock_count.settings_approval')) {
+            if ($has_master_settings || auth()->user()->can('stock_count.settings_approval')) {
                 $common_settings['stock_count_require_approval'] = $request->has('stock_count_require_approval');
-                $common_settings['stock_count_lock_after_approval'] = $request->has('stock_count_lock_after_approval');
+                $common_settings['stock_count_allow_delete_completed'] = $request->has('stock_count_allow_delete_completed');
             }
 
-            if ($is_admin || auth()->user()->can('stock_count.settings_counting')) {
+            if ($has_master_settings || auth()->user()->can('stock_count.settings_counting')) {
                 $common_settings['stock_count_allow_recount'] = $request->has('stock_count_allow_recount');
                 $common_settings['stock_count_show_expected_qty'] = $request->has('stock_count_show_expected_qty');
                 $common_settings['stock_count_default_blind_count'] = $request->has('stock_count_default_blind_count');
-                $common_settings['stock_count_default_count_type'] = $request->input('stock_count_default_count_type', 'full_count');
+                $common_settings['stock_count_auto_complete_on_100'] = $request->has('stock_count_auto_complete_on_100');
                 $common_settings['stock_count_skip_zero_stock'] = $request->has('stock_count_skip_zero_stock');
             }
 
-            if ($is_admin || auth()->user()->can('stock_count.settings_notifications')) {
-                $common_settings['stock_count_notify_on_completion'] = $request->has('stock_count_notify_on_completion');
-                $common_settings['stock_count_notify_on_large_discrepancies'] = $request->has('stock_count_notify_on_large_discrepancies');
-                $common_settings['stock_count_discrepancy_threshold'] = (float)$request->input('stock_count_discrepancy_threshold', 0);
+            if ($has_master_settings || auth()->user()->can('stock_count.settings_notifications')) {
+                $common_settings['stock_count_telegram_notify_created'] = $request->has('stock_count_telegram_notify_created');
+                $common_settings['stock_count_telegram_notify_completed'] = $request->has('stock_count_telegram_notify_completed');
+                $common_settings['stock_count_telegram_notify_reconciled'] = $request->has('stock_count_telegram_notify_reconciled');
+                $common_settings['stock_count_telegram_notify_cancelled'] = $request->has('stock_count_telegram_notify_cancelled');
             }
 
             $business->common_settings = $common_settings;
@@ -1822,5 +1895,56 @@ class StockCountController extends Controller
 
             return redirect()->back()->with('status', $output);
         }
+    }
+
+    private function checkAndAutoCompleteSession($session_id, $business_id = null)
+    {
+        try {
+            if (!$business_id) {
+                $business_id = request()->session()->get('user.business_id');
+            }
+            $business = \App\Business::where('id', $business_id)->first();
+            $settings = $business->common_settings ?? [];
+            $auto_complete = isset($settings['stock_count_auto_complete_on_100']) ? $settings['stock_count_auto_complete_on_100'] : false;
+
+            if (!$auto_complete) {
+                return false;
+            }
+
+            $session = StockCountSession::where('business_id', $business_id)->find($session_id);
+            if (!$session || in_array($session->status, ['completed', 'approved', 'reconciled', 'reconcile', 'cancelled', 'rejected'])) {
+                return false;
+            }
+
+            $total_lines = StockCountLine::where('stock_count_session_id', $session->id)->count();
+            if ($total_lines === 0) {
+                return false;
+            }
+
+            $uncounted_lines = StockCountLine::where('stock_count_session_id', $session->id)
+                ->whereNull('counted_at')
+                ->count();
+
+            if ($uncounted_lines === 0) {
+                $session->status = 'completed';
+                if (empty($session->completed_at)) {
+                    $session->completed_at = Carbon::now();
+                }
+                $session->save();
+
+                $require_approval = isset($settings['stock_count_require_approval']) ? $settings['stock_count_require_approval'] : true;
+                $auto_adjust = isset($settings['stock_count_auto_adjust_stock']) ? $settings['stock_count_auto_adjust_stock'] : false;
+
+                if (!$require_approval && $auto_adjust) {
+                    $req = new Request();
+                    $req->merge(['session_id' => $session->id, 'status' => 'completed']);
+                    $this->updateStatus($req);
+                }
+                return true;
+            }
+        } catch (\Exception $e) {
+            \Log::error('Auto complete stock count session error: ' . $e->getMessage());
+        }
+        return false;
     }
 }

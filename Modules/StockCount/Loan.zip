@@ -1,0 +1,116 @@
+# 📦 UltimatePOS Stock Count Module - User & Manager Guide
+
+Welcome to the **Stock Count Module** user guide. This guide explains how to perform stocktakes, manage status lifecycles, configure module settings, and automate inventory reconciliation in UltimatePOS.
+
+---
+
+## 🌟 Overview & Key Features
+
+The Stock Count module allows retail and wholesale businesses to perform physical inventory counts (stocktakes) with maximum accuracy, fraud protection, and automated reconciliation.
+
+### Key Capabilities:
+- 🙈 **Blind Count Mode:** Option to hide expected system quantities from store counters for unbiased physical counts.
+- ⚡ **Automated Stock Reconciliation:** Automatically update system inventory levels and log shortage losses upon manager approval.
+- 📲 **Telegram Notifications:** Instant Telegram alerts for new counts, completions, reconciliations, and cancellations.
+- 📄 **Export Options:** PDF generation and print views for single sessions or bulk filtered lists.
+- 🔒 **Status Locking & Protection:** Fraud protection ensuring reconciled and cancelled count sessions cannot be altered or deleted.
+
+---
+
+## ⚙️ Module Settings Setup
+
+To access Module Settings, navigate to:  
+👉 **Stock Count ➔ Settings** *(Requires Admin or Settings Permission)*
+
+| Setting | Description | Recommended Setting |
+| :--- | :--- | :---: |
+| **Auto Adjust Stock** | Automatically updates system product quantities in the database when a stocktake is approved or completed. | 🟢 **ON** |
+| **Require Approval** | Holds stock adjustments until a Manager or Supervisor reviews and approves the count. | 🟢 **ON** |
+| **Allow Recount** | Permits counting staff to edit and recount previously entered item quantities while in progress. | 🟢 **ON** |
+| **Show Expected Qty** | Displays system Stock-on-Hand (QOH) on the counting worksheet. | 🟢 **ON** *(or OFF if using Blind Count)* |
+| **Auto Complete at 100%** | Automatically transitions session status from *In Progress* to *Completed* when all line items have been counted. | 🟢 **ON** |
+| **Blind Count Mode** | Hides expected system stock numbers by default for new count sessions. | 🟢 **ON** *(for anti-theft audits)* |
+| **Skip Zero Stock** | Excludes zero-stock products when creating a new full stock count session. | 🟢 **ON** |
+| **Allow Deleting Completed** | Permits authorized users to delete completed count sessions. *(System warns user that live product stock is not reverted).* | 🔴 **OFF** *(for strict auditing)* |
+| **Telegram Notifications** | Independent toggles to receive instant Telegram alerts for Session Created, Completed, Reconciled, or Cancelled. | 🟢 **ON** |
+
+---
+
+## 🚀 Step-by-Step Counting Workflow
+
+### Step 1: Start a New Stock Count Session
+1. Navigate to **Stock Count ➔ Create Stock Count**.
+2. Fill in the session details:
+   - **Count Name / Reference No:** Give the stocktake a descriptive name (e.g. *"End of Month Audit - July"*).
+   - **Location:** Select the warehouse or store location being audited.
+   - **Count Type:** 
+     - **Full Count:** Includes all products assigned to the selected location.
+     - **Partial Count:** Filter by specific **Categories**, **Brands**, or **Sub-categories**.
+   - **Blind Count Mode:** Check this box if you want counters to perform unbiased counts without seeing expected quantities.
+3. Click **Save & Start Counting**.
+
+---
+
+### Step 2: Conduct Physical Counts on the Worksheet
+1. Open the counting worksheet by clicking **Worksheet** or **View**.
+2. **Entering Quantities:**
+   - **Barcode Scanning:** Scan product barcodes to increment counts automatically.
+   - **Manual Input:** Type the physical count directly into the **Counted Qty** field for each item.
+3. **Saving Progress:**
+   - Counts save in real time. You can pause the count and resume at any time.
+
+---
+
+### Step 3: Status Transition & Manager Approval
+
+As the stock count progresses, the session transitions through distinct statuses:
+
+```mermaid
+flowchart LR
+    A[🟡 Pending / Active] --> B[🟢 Completed]
+    B --> C[🟣 Reconciled]
+    A --> D[🔴 Cancelled]
+    B --> D
+```
+
+| Status Tab | Who Updates It? | What Happens? |
+| :--- | :--- | :--- |
+| 🟡 **Pending / Active** | System / Counter | Session is open. Staff enter physical counts on the worksheet. |
+| 🟢 **Completed** | Staff / Auto-100% | All items have been counted. Worksheet is locked from editing. **If Auto Adjust is enabled and Require Approval is OFF**, stock updates immediately. |
+| 🟣 **Reconciled** | Manager / Admin | Manager approves count discrepancy. Live system stock updates and shortage transactions are logged in P&L reports. **Session is permanently locked.** |
+| 🔴 **Cancelled** | Manager / Admin | Session is voided. No stock changes take place. **Session is permanently locked.** |
+
+---
+
+## 📊 Viewing Reports & Exporting PDFs
+
+### 1. View Discrepancies & Compare Worksheet
+Click **Actions ➔ Compare Worksheet** or view session details to inspect:
+- **Expected Quantity** vs **Physical Counted Quantity**
+- **Shortage (Loss)** in units and monetary value
+- **Surplus (Gain)** in units and monetary value
+- **Net Financial Impact**
+
+### 2. Print or Export PDFs
+- **Single Count PDF:** Click **Print PDF** inside any session detail view.
+- **Bulk PDF Export:** Select status filters on the main list page and click **Print PDF All** to generate a combined summary document.
+
+---
+
+## ❓ Frequently Asked Questions (FAQ)
+
+#### Q1: What happens to product stock when I reconcile a stock count?
+> **Answer:** The system automatically updates the live product stock database to match your physical count. If shortages were detected (e.g. 5 items missing), a **Stock Adjustment** transaction is automatically generated and recorded in your **Stock Adjustment Report** and **Profit & Loss Report**.
+
+#### Q2: Can I delete a Completed count session?
+> **Answer:** Yes, if *Allow Deleting Completed Sessions* is enabled in Settings. When you click Delete, a warning popup will inform you that deleting the session removes the history record, but **live product stock levels will remain at their updated counts**.
+
+#### Q3: Can I change a session status back from Completed to In Progress?
+> **Answer:** Yes! If you need staff to recount items, change the status back to **In Progress**. The worksheet re-opens for staff. **Stock will NOT be double-adjusted** if you complete it a second time.
+
+#### Q4: Why can't I edit or delete a Reconciled session?
+> **Answer:** For financial integrity and anti-fraud security, once a stock count is **Reconciled** or **Cancelled**, it is permanently locked to prevent tampering with historical stock audit trails.
+
+---
+
+*Documentation compiled for UltimatePOS Stock Count Module V6.7.*

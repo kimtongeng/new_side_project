@@ -42,14 +42,14 @@
                 <th style="width: 30px;"></th>
                 <th>@lang('product.sku') @show_tooltip(__('tooltip.sub_sku'))</th>
                 <th>@lang('product.value')</th>
-                <th class="{{$class}}">@lang('product.default_purchase_price') 
+                <th>@lang('product.default_purchase_price') 
                     <br/>
                     <span class="pull-left"><small><i>@lang('product.exc_of_tax')</i></small></span>
 
                     <span class="pull-right"><small><i>@lang('product.inc_of_tax')</i></small></span>
                 </th>
-                <th class="{{$class}}">@lang('product.profit_percent')</th>
-                <th class="{{$class}}">@lang('product.default_selling_price') 
+                <th>@lang('product.profit_percent')</th>
+                <th>@lang('product.default_selling_price') 
                 <br/>
                 <small><i><span class="dsp_label"></span></i></small>
                 </th>
@@ -84,7 +84,7 @@
 
                         {!! Form::hidden($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][variation_value_id]', $variation->variation_value_id); !!}
                     </td>
-                    <td class="{{$class}}">
+                    <td>
                         <div class="col-sm-6">
                             {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][default_purchase_price]', @num_format($variation->default_purchase_price), ['class' => 'form-control input-sm variable_dpp input_number', 'placeholder' => __('product.exc_of_tax'), 'required']); !!}
                         </div>
@@ -93,10 +93,10 @@
                             {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][dpp_inc_tax]', @num_format($variation->dpp_inc_tax), ['class' => 'form-control input-sm variable_dpp_inc_tax input_number', 'placeholder' => __('product.inc_of_tax'), 'required']); !!}
                         </div>
                     </td>
-                    <td class="{{$class}}">
+                    <td>
                         {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][profit_percent]', @num_format($variation->profit_percent), ['class' => 'form-control input-sm variable_profit_percent input_number', 'required']); !!}
                     </td>
-                    <td class="{{$class}}">
+                    <td>
                         {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][default_sell_price]', @num_format($variation->default_sell_price), ['class' => 'form-control input-sm variable_dsp input_number', 'placeholder' => __('product.exc_of_tax'), 'required']); !!}
 
                         {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][sell_price_inc_tax]', @num_format($variation->sell_price_inc_tax), ['class' => 'form-control input-sm variable_dsp_inc_tax input_number', 'placeholder' => __('product.inc_of_tax'), 'required']); !!}

@@ -40,7 +40,7 @@
     <td>
         {!! Form::text($name . '[' . $variation_index . '][variations][' . $value_index . '][value]', $variation_name, ['class' => 'form-control input-sm variation_value_name', 'required', $readonly]); !!}
     </td>
-    <td class="{{$class}}">
+    <td>
         <div class="width-50 f-left">
             {!! Form::text($name . '[' . $variation_index . '][variations][' . $value_index . '][default_purchase_price]', $default, ['class' => 'form-control input-sm variable_dpp input_number', 'placeholder' => __('product.exc_of_tax'), 'required']); !!}
         </div>
@@ -56,7 +56,7 @@
             </div>
         </div>
     </td>
-    <td class="{{$class}}">
+    <td>
         <div class="input-group">
             {!! Form::text($name . '[' . $variation_index . '][variations][' . $value_index . '][profit_percent]', $profit_percent, ['class' => 'form-control input-sm variable_profit_percent input_number', 'required']); !!}
             @if($value_index == 0)
@@ -66,7 +66,7 @@
             @endif
         </div>
     </td>
-    <td class="{{$class}}">
+    <td>
         {!! Form::text($name . '[' . $variation_index . '][variations][' . $value_index . '][default_sell_price]', $default, ['class' => 'form-control input-sm variable_dsp input_number', 'placeholder' => __('product.exc_of_tax'), 'required']); !!}
 
         {!! Form::text($name . '[' . $variation_index . '][variations][' . $value_index . '][sell_price_inc_tax]', $default, ['class' => 'form-control input-sm variable_dsp_inc_tax input_number', 'placeholder' => __('product.inc_of_tax'), 'required']); !!}

@@ -498,11 +498,11 @@
                 <button type="button" id="btn_export_worksheet_excel"
                     class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-excel"></i> Export
                     Excel</button>
-                <button type="button" id="btn_print_worksheet_table"
+                <a href="#" id="btn_print_worksheet_table"
                     class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1 print-invoice"
                     data-href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}"><i
-                        class="fa fa-print"></i> Print</button>
-                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'export'], [$session->id]) }}"
+                        class="fa fa-print"></i> Print</a>
+                <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'], [$session->id]) }}?download=1"
                     class="tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1"><i class="fa fa-file-pdf"></i> Export PDF</a>
             </div>
             <div class="col-sm-3 col-xs-12 text-right">

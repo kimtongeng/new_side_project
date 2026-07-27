@@ -444,7 +444,7 @@
                                     <i class="fa fa-download"></i> Export Excel
                                 </a>
                                 <button type="button" id="pdf_variance_report" class="btn btn-export-custom">
-                                    <i class="fa fa-file-pdf"></i> Export PDF
+                                    <i class="fa fa-file-pdf"></i> Print PDF
                                 </button>
 
                             @endif
@@ -777,7 +777,7 @@
                         extend: 'pdf',
                         text: '<i class="fa fa-file-pdf" aria-hidden="true"></i> ' + LANG.export_to_pdf,
                         className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1 buttons-pdf',
-                        orientation: 'landscape',
+                        orientation: 'portrait',
                         pageSize: 'A4',
                         exportOptions: {
                             columns: ':visible'

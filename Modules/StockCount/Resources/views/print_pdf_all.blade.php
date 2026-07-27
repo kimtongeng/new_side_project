@@ -9,144 +9,114 @@
             font-family: Arial, Helvetica, sans-serif !important;
             color: #000;
             background: #fff;
-            font-size: 12px;
+            font-size: 11px;
             line-height: 1.4;
-            max-width: 1100px;
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
         }
 
-        #stock_count_print_template .print-header {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        #stock_count_print_template .company-details {
+        .company-details {
             text-align: center;
-            flex-grow: 1;
+            margin-bottom: 15px;
         }
 
-        #stock_count_print_template .company-details h1 {
+        .company-details h1 {
             margin: 0;
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 800;
             color: #000;
             letter-spacing: 0.5px;
         }
 
-        #stock_count_print_template .company-details p {
-            margin: 5px 0 2px 0;
+        .company-details p {
+            margin: 3px 0 1px 0;
             font-size: 10px;
             font-weight: bold;
             color: #000;
         }
 
-        #stock_count_print_template .print-metadata-block {
-            margin: 15px 0 20px 0;
-            font-family: Arial, Helvetica, sans-serif !important;
-        }
-
-        #stock_count_print_template .metadata-table {
+        .metadata-table {
             width: 100%;
             border-collapse: collapse;
-            border: none !important;
+            margin-bottom: 15px;
+            font-size: 11px;
         }
 
-        #stock_count_print_template .metadata-table td {
-            padding: 5px 0;
-            border: none !important;
+        .metadata-table td {
+            padding: 4px 0;
             font-size: 11px;
             color: #000;
+            border: none !important;
         }
 
-        #stock_count_print_template .metadata-table td.meta-label {
+        .divider-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .divider-line {
+            border-bottom: 3px double #2b82c9;
+            height: 1px;
+        }
+
+        .divider-text {
+            font-size: 15px;
             font-weight: bold;
-            width: 18%;
-        }
-
-        #stock_count_print_template .metadata-table td.meta-value {
-            width: 32%;
-            text-align: right;
-            padding-right: 20px;
-        }
-
-        #stock_count_print_template .print-divider {
-            display: flex;
-            align-items: center;
+            color: #000;
             text-align: center;
-            margin: 15px 0 25px 0;
-        }
-
-        #stock_count_print_template .print-divider::before,
-        #stock_count_print_template .print-divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 5px double #2b82c9;
-        }
-
-        #stock_count_print_template .print-divider::before {
-            margin-right: 15px;
-        }
-
-        #stock_count_print_template .print-divider::after {
-            margin-left: 15px;
-        }
-
-        #stock_count_print_template .divider-text {
-            font-size: 16px;
-            font-weight: bold;
-            color: #000;
             white-space: nowrap;
+            padding: 0 15px;
         }
 
-        #stock_count_print_template .print-table {
+        .print-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 10px;
             font-size: 11px;
         }
 
-        #stock_count_print_template .print-table th {
+        .print-table th {
             background-color: #2b82c9 !important;
             color: #ffffff !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
             font-weight: bold;
-            padding: 10px 8px;
+            padding: 8px 6px;
             border: 1px solid #1a202c;
             text-align: center;
         }
 
-        #stock_count_print_template .print-table td {
-            padding: 8px 6px;
+        .print-table td {
+            padding: 7px 6px;
             border: 1px solid #1a202c;
             color: #000;
         }
 
-        #stock_count_print_template .signature-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 80px;
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 50px;
             font-size: 11px;
             font-weight: bold;
-            text-align: center;
             page-break-inside: avoid;
         }
 
-        #stock_count_print_template .signature-block {
-            width: 28%;
+        .signature-table td {
+            text-align: center;
+            vertical-align: bottom;
+            border: none !important;
         }
 
-        #stock_count_print_template .signature-line {
+        .signature-line {
             border-top: 1.5px solid #000;
-            margin-top: 50px;
+            width: 80%;
+            margin: 40px auto 0 auto;
         }
 
+        @if(empty($for_pdf))
         @media print {
             @page {
-                size: A4 landscape;
+                size: portrait;
                 margin: 6mm;
             }
             body * {
@@ -166,81 +136,78 @@
                 display: block !important;
                 background: #fff !important;
             }
-            #stock_count_print_template {
-                max-width: 100% !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
             .no-print {
                 display: none !important;
             }
-            #stock_count_print_template .print-table th {
+            .print-table th {
                 background-color: #2b82c9 !important;
                 color: #ffffff !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
         }
+        @endif
     </style>
 </head>
 <body>
     <div id="stock_count_print_template">
+        @if(empty($for_pdf))
         <!-- Floating print button for screen view -->
-        <div style="text-align: right; margin-bottom: 20px;" class="no-print">
+        <div style="text-align: right; margin-bottom: 15px;" class="no-print">
             <button onclick="window.print();" style="padding: 8px 18px; font-weight: bold; cursor: pointer; background: #2b82c9; color: #fff; border: none; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
                 Print Report
             </button>
         </div>
+        @endif
 
         <!-- Company Header -->
-        <div class="print-header" style="justify-content: center;">
-            <div class="company-details" style="text-align: center;">
-                <h1>{{ $business->name ?? 'Ultimate POS' }}</h1>
-                <p>#101(2nd floor), St.598, Phnom Penh Tmey, Sensok Phnom Penh</p>
-                <p>Tel : +855 69 64 00 00 / +855 99 46 72 72</p>
-                <p style="margin-top: 10px; font-size: 13px; font-weight: bold; font-family: Arial, Helvetica, sans-serif; color: #000;">
-                    Reference No: All Sessions Report
-                </p>
-            </div>
+        <div class="company-details">
+            <h1>{{ $business->name ?? 'Ultimate POS' }}</h1>
+            <p>#101(2nd floor), St.598, Phnom Penh Tmey, Sensok Phnom Penh</p>
+            <p>Tel : +855 69 64 00 00 / +855 99 46 72 72</p>
+            <p style="margin-top: 8px; font-size: 12px; font-weight: bold; color: #000;">
+                Reference No: All Sessions Report
+            </p>
         </div>
 
         <!-- Session Info Metadata -->
-        <div class="print-metadata-block">
-            <table class="metadata-table">
-                <tr>
-                    <td class="meta-label">Location:</td>
-                    <td class="meta-value">{{ $location_name }}</td>
-                    <td class="meta-label">Printed By:</td>
-                    <td class="meta-value">{{ auth()->user()->user_full_name ?? auth()->user()->username }}</td>
-                </tr>
-                <tr>
-                    <td class="meta-label">Total Sessions:</td>
-                    <td class="meta-value">{{ count($sessions) }}</td>
-                    <td class="meta-label">Created At:</td>
-                    <td class="meta-value">{{ date('m/d/Y H:i') }}</td>
-                </tr>
-            </table>
-        </div>
+        <table class="metadata-table">
+            <tr>
+                <td style="font-weight: bold; width: 15%;">Location:</td>
+                <td style="width: 35%; text-align: right; padding-right: 20px;">{{ $location_name }}</td>
+                <td style="font-weight: bold; width: 15%;">Printed By:</td>
+                <td style="width: 35%; text-align: right;">{{ auth()->user()->user_full_name ?? auth()->user()->username }}</td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold; width: 15%;">Total Sessions:</td>
+                <td style="width: 35%; text-align: right; padding-right: 20px;">{{ count($sessions) }}</td>
+                <td style="font-weight: bold; width: 15%;">Created At:</td>
+                <td style="width: 35%; text-align: right;">{{ date('m/d/Y H:i') }}</td>
+            </tr>
+        </table>
 
         <!-- Double Blue Line Divider -->
-        <div class="print-divider">
-            <span class="divider-text">Stock Count (All Sessions Report)</span>
-        </div>
+        <table class="divider-table">
+            <tr>
+                <td class="divider-line" style="width: 25%;"></td>
+                <td class="divider-text" style="width: 50%;">Stock Count (All Sessions Report)</td>
+                <td class="divider-line" style="width: 25%;"></td>
+            </tr>
+        </table>
 
         <!-- Main Data Table -->
         <table class="print-table">
             <thead>
                 <tr>
-                    <th style="width: 4%; text-align: center;">No</th>
-                    <th style="width: 12%; text-align: center;">Reference No</th>
+                    <th style="width: 5%; text-align: center;">No</th>
+                    <th style="width: 15%; text-align: center;">Reference No</th>
                     <th style="width: 22%; text-align: left;">Session Name</th>
-                    <th style="width: 14%; text-align: left;">Location</th>
-                    <th style="width: 10%; text-align: center;">Status</th>
+                    <th style="width: 15%; text-align: left;">Location</th>
+                    <th style="width: 11%; text-align: center;">Status</th>
                     <th style="width: 10%; text-align: center;">Completion</th>
-                    <th style="width: 8%; text-align: right;">Total Items</th>
-                    <th style="width: 8%; text-align: right;">Counted</th>
-                    <th style="width: 12%; text-align: left;">Added By</th>
+                    <th style="width: 7%; text-align: right;">Total Items</th>
+                    <th style="width: 7%; text-align: right;">Counted</th>
+                    <th style="width: 8%; text-align: left;">Added By</th>
                 </tr>
             </thead>
             <tbody>
@@ -297,23 +264,30 @@
         </table>
 
         <!-- Signatures Footer -->
-        <div class="signature-container">
-            <div class="signature-block">
-                <p>Stock Keeper Signature</p>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-block">
-                <p>Counter Signature</p>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-block">
-                <p>Preparer Signature</p>
-                <div class="signature-line"></div>
-            </div>
-        </div>
+        <table style="width: 100%; margin-top: 50px; border-collapse: collapse; page-break-inside: avoid;">
+            <tr>
+                <td style="width: 30%; text-align: center; vertical-align: top;">
+                    <div style="font-weight: bold; font-size: 11px;">Stock Keeper Signature</div>
+                    <div style="height: 55px; line-height: 55px;">&nbsp;</div>
+                    <hr style="border: none; border-top: 1.5px solid #000; width: 85%; margin: 0 auto;" />
+                </td>
+                <td style="width: 5%;"></td>
+                <td style="width: 30%; text-align: center; vertical-align: top;">
+                    <div style="font-weight: bold; font-size: 11px;">Counter Signature</div>
+                    <div style="height: 55px; line-height: 55px;">&nbsp;</div>
+                    <hr style="border: none; border-top: 1.5px solid #000; width: 85%; margin: 0 auto;" />
+                </td>
+                <td style="width: 5%;"></td>
+                <td style="width: 30%; text-align: center; vertical-align: top;">
+                    <div style="font-weight: bold; font-size: 11px;">Preparer Signature</div>
+                    <div style="height: 55px; line-height: 55px;">&nbsp;</div>
+                    <hr style="border: none; border-top: 1.5px solid #000; width: 85%; margin: 0 auto;" />
+                </td>
+            </tr>
+        </table>
     </div>
 
-    @if(!request()->ajax())
+    @if(empty($for_pdf) && !request()->ajax())
     <script>
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {

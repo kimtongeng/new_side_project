@@ -62,29 +62,22 @@
             text-align: right;
             padding-right: 20px;
         }
-        #stock_count_print_template .print-divider {
-            display: flex;
-            align-items: center;
-            text-align: center;
+        #stock_count_print_template .divider-table {
+            width: 100%;
+            border-collapse: collapse;
             margin: 15px 0 25px 0;
         }
-        #stock_count_print_template .print-divider::before,
-        #stock_count_print_template .print-divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 5px double #2b82c9;
-        }
-        #stock_count_print_template .print-divider::before {
-            margin-right: 15px;
-        }
-        #stock_count_print_template .print-divider::after {
-            margin-left: 15px;
+        #stock_count_print_template .divider-line {
+            border-bottom: 4px double #2b82c9;
+            height: 1px;
         }
         #stock_count_print_template .divider-text {
             font-size: 16px;
             font-weight: bold;
             color: #000;
+            text-align: center;
             white-space: nowrap;
+            padding: 0 15px;
         }
         #stock_count_print_template .print-table {
             width: 100%;
@@ -110,25 +103,28 @@
         #stock_count_print_template .print-table tfoot {
             display: table-row-group !important;
         }
-        #stock_count_print_template .signature-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 80px;
+        #stock_count_print_template .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 60px;
             font-size: 11px;
             font-weight: bold;
-            text-align: center;
             page-break-inside: avoid;
         }
-        #stock_count_print_template .signature-block {
-            width: 28%;
+        #stock_count_print_template .signature-table td {
+            text-align: center;
+            vertical-align: bottom;
+            border: none !important;
         }
         #stock_count_print_template .signature-line {
             border-top: 1.5px solid #000;
-            margin-top: 50px;
+            width: 80%;
+            margin: 40px auto 0 auto;
         }
+        @if(empty($for_pdf))
         @media print {
             @page {
-                size: auto;
+                size: portrait;
                 margin: 5mm;
             }
             body * {
@@ -167,16 +163,19 @@
                 display: table-row-group !important;
             }
         }
+        @endif
     </style>
 </head>
 <body>
     <div id="stock_count_print_template">
+        @if(empty($for_pdf))
         <!-- Floating print button for screen view -->
         <div style="text-align: right; margin-bottom: 20px;" class="no-print">
             <button onclick="window.print();" style="padding: 8px 18px; font-weight: bold; cursor: pointer; background: #2b82c9; color: #fff; border: none; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
                 Print Worksheet
             </button>
         </div>
+        @endif
 
         <!-- Company Header -->
         <div class="print-header" style="justify-content: center;">
@@ -217,9 +216,14 @@
             </table>
         </div>
 
-        <div class="print-divider">
-            <span class="divider-text">Stock Count {{ $is_blind ? '(Blind Worksheet)' : '(Full Worksheet)' }}</span>
-        </div>
+        <!-- Double Blue Line Divider -->
+        <table class="divider-table">
+            <tr>
+                <td class="divider-line" style="width: 25%;"></td>
+                <td class="divider-text" style="width: 50%;">Stock Count {{ $is_blind ? '(Blind Worksheet)' : '(Full Worksheet)' }}</td>
+                <td class="divider-line" style="width: 25%;"></td>
+            </tr>
+        </table>
 
         <!-- Print Table -->
         <table class="print-table">
@@ -330,24 +334,31 @@
             </tfoot>
         </table>
 
-        <!-- Signatures -->
-        <div class="signature-container">
-            <div class="signature-block">
-                <p>Stock Keeper Signature</p>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-block">
-                <p>Counter Signature</p>
-                <div class="signature-line"></div>
-            </div>
-            <div class="signature-block">
-                <p>Preparer Signature</p>
-                <div class="signature-line"></div>
-            </div>
-        </div>
+        <!-- Signatures Footer -->
+        <table style="width: 100%; margin-top: 50px; border-collapse: collapse; page-break-inside: avoid;">
+            <tr>
+                <td style="width: 30%; text-align: center; vertical-align: top;">
+                    <div style="font-weight: bold; font-size: 11px;">Stock Keeper Signature</div>
+                    <div style="height: 55px; line-height: 55px;">&nbsp;</div>
+                    <hr style="border: none; border-top: 1.5px solid #000; width: 85%; margin: 0 auto;" />
+                </td>
+                <td style="width: 5%;"></td>
+                <td style="width: 30%; text-align: center; vertical-align: top;">
+                    <div style="font-weight: bold; font-size: 11px;">Counter Signature</div>
+                    <div style="height: 55px; line-height: 55px;">&nbsp;</div>
+                    <hr style="border: none; border-top: 1.5px solid #000; width: 85%; margin: 0 auto;" />
+                </td>
+                <td style="width: 5%;"></td>
+                <td style="width: 30%; text-align: center; vertical-align: top;">
+                    <div style="font-weight: bold; font-size: 11px;">Preparer Signature</div>
+                    <div style="height: 55px; line-height: 55px;">&nbsp;</div>
+                    <hr style="border: none; border-top: 1.5px solid #000; width: 85%; margin: 0 auto;" />
+                </td>
+            </tr>
+        </table>
     </div>
 
-    @if(!request()->ajax())
+    @if(empty($for_pdf) && !request()->ajax())
     <!-- Auto-trigger print dialog for direct page loads -->
     <script>
         window.addEventListener('DOMContentLoaded', () => {

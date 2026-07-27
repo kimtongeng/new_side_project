@@ -264,10 +264,6 @@
         @component('components.widget', ['class' => 'box-primary', 'title' => __('stockcount::lang.all_stock_counts')])
         @slot('tool')
         <div class="box-tools" style="display: flex; gap: 5px; align-items: center;">
-
-            <button type="button" class="btn btn-danger btn-sm" id="btn_print_pdf_all" style="font-weight: bold;" title="Print PDF for all stock count sessions">
-                <i class="fa fa-file-pdf"></i> Print PDF All Data
-            </button>
             @if(auth()->user()->hasRole('Admin#' . session()->get('user.business_id')) || auth()->user()->can('superadmin') || auth()->user()->can('stock_count.settings'))
                 <a class="btn btn-default btn-sm"
                     href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'getSettings']) }}">
@@ -422,9 +418,11 @@
                         className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
                     },
                     {
-                        extend: 'print',
                         text: '<i class="fa fa-print"></i> Print',
-                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1',
+                        action: function (e, dt, node, config) {
+                            triggerPrintPdfAll();
+                        }
                     },
                     {
                         extend: 'colvis',
@@ -432,15 +430,10 @@
                         className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
                     },
                     {
-                        extend: 'pdf',
                         text: '<i class="fa fa-file-pdf"></i> Export PDF',
-                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1'
-                    },
-                    {
-                        text: '<i class="fa fa-print"></i> Print PDF All Data',
-                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1 text-danger',
+                        className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-mx-1',
                         action: function (e, dt, node, config) {
-                            triggerPrintPdfAll();
+                            triggerDownloadPdfAll();
                         }
                     }
                 ],
@@ -554,15 +547,27 @@
 
                             setTimeout(function () {
                                 document.title = title;
-                            }, 1200);
+                            }, 1500);
                         } else {
                             toastr.error('Failed to load print template');
                         }
                     },
-                    error: function () {
-                        toastr.error('Failed to load print template');
-                    }
                 });
+            }
+
+            function triggerDownloadPdfAll() {
+                var params = {
+                    location_id: $('#filter_location_id').val() || '',
+                    status: $('#filter_status').val() || '',
+                    created_by: $('#filter_created_by').val() || '',
+                    download: 1
+                };
+                if ($('#filter_date_range').val()) {
+                    params.start_date = $('#filter_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
+                    params.end_date = $('#filter_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
+                }
+                var url = "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printPdfAll']) }}?" + $.param(params);
+                window.location.href = url;
             }
 
             $(document).on('click', '#btn_print_pdf_all', function (e) {

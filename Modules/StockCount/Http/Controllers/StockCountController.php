@@ -1163,8 +1163,27 @@ class StockCountController extends Controller
             ->where('stock_count_session_id', $id)
             ->get();
 
+        if (request()->get('download') == 1) {
+            $for_pdf = true;
+            $html_content = view('stockcount::print_worksheet', compact('session', 'lines', 'for_pdf'))->render();
+
+            $mpdf = new \Mpdf\Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4-P',
+                'margin_left' => 6,
+                'margin_right' => 6,
+                'margin_top' => 6,
+                'margin_bottom' => 6,
+            ]);
+            $mpdf->SetTitle('Stock Count Worksheet - ' . $session->name);
+            $mpdf->WriteHTML($html_content);
+            return response($mpdf->Output('Stock_Count_Worksheet_' . $session->reference_no . '.pdf', 'D'))
+                ->header('Content-Type', 'application/pdf');
+        }
+
+        $for_pdf = false;
         if (request()->ajax()) {
-            $html_content = view('stockcount::print_worksheet', compact('session', 'lines'))->render();
+            $html_content = view('stockcount::print_worksheet', compact('session', 'lines', 'for_pdf'))->render();
             return [
                 'success' => 1,
                 'receipt' => [
@@ -1174,7 +1193,7 @@ class StockCountController extends Controller
             ];
         }
 
-        return view('stockcount::print_worksheet', compact('session', 'lines'));
+        return view('stockcount::print_worksheet', compact('session', 'lines', 'for_pdf'));
     }
 
     public function printPdfAll(Request $request)
@@ -1234,7 +1253,26 @@ class StockCountController extends Controller
             }
         }
 
-        $html_content = view('stockcount::print_pdf_all', compact('sessions', 'business', 'location_name'))->render();
+        if ($request->get('download') == 1) {
+            $for_pdf = true;
+            $html_content = view('stockcount::print_pdf_all', compact('sessions', 'business', 'location_name', 'for_pdf'))->render();
+
+            $mpdf = new \Mpdf\Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4-P',
+                'margin_left' => 8,
+                'margin_right' => 8,
+                'margin_top' => 8,
+                'margin_bottom' => 8,
+            ]);
+            $mpdf->SetTitle('All Stock Count Sessions Report');
+            $mpdf->WriteHTML($html_content);
+            return response($mpdf->Output('Stock_Count_Report.pdf', 'D'))
+                ->header('Content-Type', 'application/pdf');
+        }
+
+        $for_pdf = false;
+        $html_content = view('stockcount::print_pdf_all', compact('sessions', 'business', 'location_name', 'for_pdf'))->render();
 
         if ($request->ajax()) {
             return response()->json([

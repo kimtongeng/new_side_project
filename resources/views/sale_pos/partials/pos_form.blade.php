@@ -29,8 +29,39 @@
 	<div class="col-md-8">
 		<div class="form-group">
 			<div id="barcode-reader-container"
-				style="display: none; margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
-				<div id="barcode-reader" style="width: 100%;"></div>
+				style="display: none; margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; border-radius: 5px; position: relative;">
+				<style>
+					.scan-laser-line {
+						position: absolute;
+						top: 20%;
+						left: 5%;
+						width: 90%;
+						height: 2px;
+						background: #ff0000;
+						box-shadow: 0 0 8px 2px rgba(255, 0, 0, 0.8);
+						z-index: 99;
+						pointer-events: none;
+						animation: scanLaser 3.5s infinite ease-in-out;
+					}
+					@keyframes scanLaser {
+						0% {
+							top: 25%;
+							opacity: 0.8;
+						}
+						50% {
+							top: 75%;
+							opacity: 1;
+						}
+						100% {
+							top: 25%;
+							opacity: 0.8;
+						}
+					}
+				</style>
+				<div id="barcode-reader-wrapper" style="position: relative; overflow: hidden; border-radius: 4px;">
+					<div id="barcode-reader" style="width: 100%;"></div>
+					<div class="scan-laser-line"></div>
+				</div>
 				<input type="file" id="barcode-image-input" accept="image/*" style="display: none;">
 				<button type="button" class="btn btn-warning btn-block" id="btn-stop-scan"
 					style="margin-top: 10px;">Cancel Scan</button>

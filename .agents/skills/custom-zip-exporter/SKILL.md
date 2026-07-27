@@ -58,7 +58,9 @@ sell/
 ## Workflow & Implementation
 
 1. **Identify Modified Files**:
-   Gather changed/added files using `git status` or `git diff-tree --no-commit-id --name-only -r HEAD`.
+   - **If a git commit hash is provided**: Gather updated files from that specific commit using:
+     `git diff-tree --no-commit-id --name-only -r <commit-hash>` or `git show --name-only --format="" <commit-hash>`
+   - **If no commit hash is provided**: Gather current modified/added files using `git status --short` or `git diff --name-only`.
 
 2. **Generate Descriptive ZIP Filename**:
    Create a descriptive filename based on the task (e.g. `Feature_Or_Fix_Description.zip`).

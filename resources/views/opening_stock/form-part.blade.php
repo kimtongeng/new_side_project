@@ -63,7 +63,7 @@
 
 <tr>
 	<td>
-		{{ $product->name }} @if( $product->type == 'variable' ) (<b>{{ $variation->product_variation->name }}</b> : {{ $variation->name }}) @endif
+		{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} @if( $product->type == 'variable' ) (<b>{{ $variation->product_variation->name }}</b> : {{ $variation->name }}) @endif
 
 		@if(!empty($purchase_line_id))
 			{!! Form::hidden('stocks[' . $key . '][' . $variation->id . '][' . $sub_key . '][purchase_line_id]', $purchase_line_id); !!}
@@ -114,7 +114,7 @@
 			<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-primary add_stock_row" data-sub-key="{{ count($purchases[$key][$variation->id])}}" 
 				data-row-html='<tr>
 					<td>
-						{{ $product->name }} @if( $product->type == "variable" ) (<b>{{ $variation->product_variation->name }}</b> : {{ $variation->name }}) @endif
+						{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} @if( $product->type == "variable" ) (<b>{{ $variation->product_variation->name }}</b> : {{ $variation->name }}) @endif
 					</td>
 					<td>
 					<div class="input-group">

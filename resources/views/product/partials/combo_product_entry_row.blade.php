@@ -8,9 +8,9 @@
 	<tr>
 		<td class="text-center">
 			@if($product->type == 'variable')
-				{{ $product->name }} ({{ $variation->name }}) - {{ $variation->sub_sku }}
+				{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} ({{ $variation->name }}) - {{ $variation->sub_sku }}
 				@else
-					{{ $product->name }} - {{ $variation->sub_sku }}
+					{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} - {{ $variation->sub_sku }}
 				@endif
 
 				<input type="hidden" name="composition_variation_id[]" value="{{ $variation->id }}">

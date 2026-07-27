@@ -96,7 +96,7 @@
                                             @endphp
                                             <tr>
                                                 <td>
-                                                    {{ $line->product->name }}
+                                                    {!! \App\Utils\ProductUtil::getFormattedProductName($line->product->name, $line->product->secondary_name, true) !!}
                                                     @if($line->product->type == 'variable')
                                                         - {{ $line->variations->name }}
                                                     @endif
@@ -136,7 +136,7 @@
                                     <tr>
                                         <td>{{ @format_datetime($receipt->received_date) }}</td>
                                         <td>
-                                            {{ $line->product->name }}
+                                            {!! \App\Utils\ProductUtil::getFormattedProductName($line->product->name, $line->product->secondary_name, true) !!}
                                             @if($line->product->type == 'variable')
                                                 - {{ $line->variations->name }}
                                             @endif

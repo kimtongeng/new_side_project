@@ -84,7 +84,7 @@
 				          <tr>
 				            <td>{{ $loop->iteration }}</td>
 				            <td>
-				              {{ $sell_lines->product->name }}
+				              {!! \App\Utils\ProductUtil::getFormattedProductName($sell_lines->product->name, $sell_lines->product->secondary_name, true) !!}
 				               @if( $sell_lines->product->type == 'variable')
 				                - {{ $sell_lines->variations->product_variation->name}}
 				                - {{ $sell_lines->variations->name}}

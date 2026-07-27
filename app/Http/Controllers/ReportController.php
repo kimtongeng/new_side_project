@@ -1884,6 +1884,7 @@ class ReportController extends Controller
                 ->whereNull('parent_sell_line_id')
                 ->select(
                     'p.name as product_name',
+                    'p.secondary_name as secondary_name',
                     'p.type as product_type',
                     'p.product_custom_field1 as product_custom_field1',
                     'p.product_custom_field2 as product_custom_field2',
@@ -1953,7 +1954,8 @@ class ReportController extends Controller
 
             return Datatables::of($query)
                 ->editColumn('product_name', function ($row) {
-                    $product_name = $row->product_name;
+                    $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($row->secondary_name ?? null) : null;
+                    $product_name = \App\Utils\ProductUtil::getFormattedProductName($row->product_name, $secondary_name, true);
                     if ($row->product_type == 'variable') {
                         $product_name .= ' - '.$row->product_variation.' - '.$row->variation_name;
                     }
@@ -2015,7 +2017,7 @@ class ReportController extends Controller
                     return $html;
                 })
                 ->editColumn('customer', '@if(!empty($supplier_business_name)) {{$supplier_business_name}},<br>@endif {{$customer}}')
-                ->rawColumns(['invoice_no', 'unit_sale_price', 'subtotal', 'sell_qty', 'discount_amount', 'unit_price', 'tax', 'customer', 'payment_methods'])
+                ->rawColumns(['product_name', 'invoice_no', 'unit_sale_price', 'subtotal', 'sell_qty', 'discount_amount', 'unit_price', 'tax', 'customer', 'payment_methods'])
                 ->make(true);
         }
 
@@ -3146,7 +3148,15 @@ class ReportController extends Controller
         if ($by == 'product') {
             $query->join('variations as V', 'transaction_sell_lines.variation_id', '=', 'V.id')
                 ->leftJoin('product_variations as PV', 'PV.id', '=', 'V.product_variation_id')
-                ->addSelect(DB::raw("IF(P.type='variable', CONCAT(P.name, ' - ', PV.name, ' - ', V.name, ' (', V.sub_sku, ')'), CONCAT(P.name, ' (', P.sku, ')')) as product"))
+                ->addSelect(
+                    'P.name as p_name',
+                    'P.secondary_name as p_sec_name',
+                    'P.type as p_type',
+                    'P.sku as p_sku',
+                    'PV.name as pv_name',
+                    'V.name as v_name',
+                    'V.sub_sku as sub_sku'
+                )
                 ->groupBy('V.id');
         }
 
@@ -3221,6 +3231,30 @@ class ReportController extends Controller
 
         $datatable = Datatables::of($query);
 
+        $raw_columns = ['gross_profit'];
+
+        if ($by == 'product') {
+            $datatable->addColumn('product', function ($row) {
+                $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($row->p_sec_name ?? null) : null;
+                $p_name = \App\Utils\ProductUtil::getFormattedProductName($row->p_name, $secondary_name, true);
+                if ($row->p_type == 'variable') {
+                    $p_name .= ' - ' . $row->pv_name . ' - ' . $row->v_name . ' (' . $row->sub_sku . ')';
+                } else {
+                    $p_name .= ' (' . $row->p_sku . ')';
+                }
+                return $p_name;
+            });
+            $datatable->filterColumn('product', function ($query, $keyword) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('P.name', 'like', "%{$keyword}%")
+                      ->orWhere('P.secondary_name', 'like', "%{$keyword}%")
+                      ->orWhere('P.sku', 'like', "%{$keyword}%")
+                      ->orWhere('V.sub_sku', 'like', "%{$keyword}%");
+                });
+            });
+            $raw_columns[] = 'product';
+        }
+
         if (in_array($by, ['invoice'])) {
             $datatable->editColumn('gross_profit', function ($row) {
                 $discount = $row->discount_amount;
@@ -3257,15 +3291,6 @@ class ReportController extends Controller
         if ($by == 'date') {
             $datatable->editColumn('transaction_date', '{{@format_date($transaction_date)}}');
         }
-
-        if ($by == 'product') {
-            $datatable->filterColumn(
-                 'product',
-                 function ($query, $keyword) {
-                     $query->whereRaw("IF(P.type='variable', CONCAT(P.name, ' - ', PV.name, ' - ', V.name, ' (', V.sub_sku, ')'), CONCAT(P.name, ' (', P.sku, ')')) LIKE '%{$keyword}%'");
-                 });
-        }
-        $raw_columns = ['gross_profit'];
 
         if ($by == 'customer') {
             $datatable->editColumn('customer', '@if(!empty($supplier_business_name)) {{$supplier_business_name}}, <br> @endif {{$customer}}');

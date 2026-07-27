@@ -552,6 +552,7 @@ class ProductUtil extends Util
             'p.enable_sr_no',
             'p.type as product_type',
             'p.name as product_actual_name',
+            'p.secondary_name',
             'p.warranty_id',
             'p.image as product_image',
             'p.product_custom_field1',
@@ -595,6 +596,13 @@ class ProductUtil extends Util
         ->firstOrFail();
 
         $product->media = $variation->media;
+
+        if (!empty($product->secondary_name)) {
+            $formatted_pname = self::getFormattedProductName($product->product_actual_name, $product->secondary_name, true);
+            $product->product_name = ($product->is_dummy == 0)
+                ? $formatted_pname . ' (' . $product->product_variation_name . ':' . $product->variation_name . ')'
+                : $formatted_pname;
+        }
 
         if ($product->product_type == 'combo') {
             if ($check_qty) {
@@ -1751,8 +1759,9 @@ class ProductUtil extends Util
             //Search with like condition
             if ($search_type == 'like') {
                 $query->where(function ($query) use ($search_term, $search_fields) {
-                    if (in_array('name', $search_fields)) {
+                    if (in_array('name', $search_fields) || in_array('secondary_name', $search_fields)) {
                         $query->where('products.name', 'like', '%'.$search_term.'%');
+                        $query->orWhere('products.secondary_name', 'like', '%'.$search_term.'%');
                     }
 
                     if (in_array('sku', $search_fields)) {
@@ -1785,8 +1794,9 @@ class ProductUtil extends Util
             //Search with exact condition
             if ($search_type == 'exact') {
                 $query->where(function ($query) use ($search_term, $search_fields) {
-                    if (in_array('name', $search_fields)) {
+                    if (in_array('name', $search_fields) || in_array('secondary_name', $search_fields)) {
                         $query->where('products.name', $search_term);
+                        $query->orWhere('products.secondary_name', $search_term);
                     }
 
                     if (in_array('sku', $search_fields)) {
@@ -1816,6 +1826,7 @@ class ProductUtil extends Util
         $query->select(
                 'products.id as product_id',
                 'products.name',
+                'products.secondary_name',
                 'products.type',
                 'products.enable_stock',
                 'variations.id as variation_id',

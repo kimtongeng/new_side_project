@@ -18,7 +18,7 @@
 		</div>
 
 		<div class="text_div">
-			<small class="text text-muted">{{$variation->product->name}} 
+			<small class="text text-muted">{!! \App\Utils\ProductUtil::getFormattedProductName($variation->product->name, $variation->product->secondary_name, true) !!} 
 			@if($variation->product->type == 'variable')
 				- {{$variation->name}}
 			@endif

@@ -1,6 +1,6 @@
 <tr class="product_row">
 	<td>
-		{{$product->product_name}}
+		{!! $product->product_name !!}
 		<br/>
 		{{$product->sub_sku}}@if(!empty($product->brand)), {{$product->brand}} @endif
 		&nbsp;

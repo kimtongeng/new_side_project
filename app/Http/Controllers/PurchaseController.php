@@ -299,7 +299,12 @@ class PurchaseController extends Controller
         $payment_types = $this->productUtil->payment_types(null, true, $business_id);
 
         //Accounts
-        $default_location_id = !empty(array_keys($business_locations)[0]) ? array_keys($business_locations)[0] : null;
+        $default_location_id = null;
+        if (is_object($business_locations) && method_exists($business_locations, 'keys')) {
+            $default_location_id = $business_locations->keys()->first();
+        } elseif (is_array($business_locations) && !empty($business_locations)) {
+            $default_location_id = array_key_first($business_locations);
+        }
         $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, false, $default_location_id);
 
         $common_settings = ! empty(session('business.common_settings')) ? session('business.common_settings') : [];
@@ -1227,6 +1232,7 @@ class PurchaseController extends Controller
             )
                 ->where(function ($query) use ($term) {
                     $query->where('products.name', 'like', '%' . $term . '%');
+                    $query->orWhere('products.secondary_name', 'like', '%' . $term . '%');
                     $query->orWhere('sku', 'like', '%' . $term . '%');
                     $query->orWhere('sub_sku', 'like', '%' . $term . '%');
                 })
@@ -1236,6 +1242,7 @@ class PurchaseController extends Controller
                 ->select(
                     'products.id as product_id',
                     'products.name',
+                    'products.secondary_name',
                     'products.type',
                     // 'products.sku as sku',
                     'variations.id as variation_id',

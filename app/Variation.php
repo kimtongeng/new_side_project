@@ -66,7 +66,8 @@ class Variation extends Model
 
     public function getFullNameAttribute()
     {
-        $name = $this->product->name;
+        $product_name = \App\Utils\ProductUtil::getFormattedProductName($this->product->name, $this->product->secondary_name, true);
+        $name = $product_name;
         if ($this->product->type == 'variable') {
             $name .= ' - '.$this->product_variation->name.' - '.$this->name;
         }

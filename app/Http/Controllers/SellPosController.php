@@ -2192,6 +2192,7 @@ class SellPosController extends Controller
             if (!empty($term)) {
                 $products->where(function ($query) use ($term) {
                     $query->where('p.name', 'like', '%' . $term . '%');
+                    $query->orWhere('p.secondary_name', 'like', '%' . $term . '%');
                     $query->orWhere('sku', 'like', '%' . $term . '%');
                     $query->orWhere('sub_sku', 'like', '%' . $term . '%');
                 });
@@ -2228,6 +2229,7 @@ class SellPosController extends Controller
             $products = $products->select(
                 'p.id as product_id',
                 'p.name',
+                'p.secondary_name',
                 'p.type',
                 'p.enable_stock',
                 'p.image as product_image',

@@ -46,7 +46,7 @@
         <tr @if(!empty($purchase_line->purchase_order_line) && !empty($common_settings['enable_purchase_order'])) data-purchase_order_id="{{$purchase_line->purchase_order_line->transaction_id}}" @endif  @if(!empty($purchase_line->purchase_requisition_line) && !empty($common_settings['enable_purchase_requisition'])) data-purchase_requisition_id="{{$purchase_line->purchase_requisition_line->transaction_id}}" @endif>
             <td><span class="sr_number"></span></td>
             <td>
-                {{ $purchase_line->product->name }} ({{$purchase_line->variations->sub_sku}})
+                {!! \App\Utils\ProductUtil::getFormattedProductName($purchase_line->product->name, $purchase_line->product->secondary_name, true) !!} ({{$purchase_line->variations->sub_sku}})
                 @if( $purchase_line->product->type == 'variable') 
                     <br/>(<b>{{ $purchase_line->variations->product_variation->name}}</b> : {{ $purchase_line->variations->name}})
                 @endif

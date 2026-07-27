@@ -6,7 +6,7 @@
         $allow_decimal = true;
     @endphp
     <td>
-        {{$product->product_name}}
+        {!! $product->product_name !!}
         <br/>
         {{$product->sub_sku}}
 

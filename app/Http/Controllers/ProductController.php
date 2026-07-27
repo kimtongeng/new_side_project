@@ -2188,6 +2188,7 @@ class ProductController extends Controller
             if (! empty($term)) {
                 $products->where(function ($query) use ($term) {
                     $query->where('products.name', 'like', '%' . $term . '%');
+                    $query->orWhere('products.secondary_name', 'like', '%' . $term . '%');
                     $query->orWhere('sku', 'like', '%' . $term . '%');
                     $query->orWhere('sub_sku', 'like', '%' . $term . '%');
                 });

@@ -23,7 +23,7 @@
             {{$detail->sku}}
           </td>
           <td>
-            {{$detail->product_name}}
+            {!! $detail->product_name !!}
             @if($detail->type == 'variable')
              {{$detail->product_variation_name}} - {{$detail->variation_name}}
             @endif

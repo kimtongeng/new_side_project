@@ -53,7 +53,7 @@
                 @lang('sale.product')
           </th>
           <td>
-                {{$order->product_name}}
+                {!! $order->product_name !!}
                 @if($order->product_type == 'variable')
                        - {{$order->product_variation_name}} - {{$order->variation_name}} 
                 @endif

@@ -4,7 +4,7 @@
     @endphp
     <tr>
         <td>
-            {{$product->product_name}}
+            {!! $product->product_name !!}
 
             @if($product->variation_name != "DUMMY")
                 <b>{{$product->variation_name}}</b>

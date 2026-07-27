@@ -431,6 +431,16 @@ class ProductController extends Controller
                           });
                     });
                 })
+                ->filterColumn('products.name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('products.name', 'like', "%{$keyword}%")
+                          ->orWhere('products.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhereHas('variations', function ($vq) use ($keyword) {
+                              $vq->where('variations.name', 'like', "%{$keyword}%")
+                                ->orWhere('variations.sub_sku', 'like', "%{$keyword}%");
+                          });
+                    });
+                })
                 ->filterColumn('products.sku', function ($query, $keyword) {
                     $query->whereHas('variations', function ($q) use ($keyword) {
                         $q->where('sub_sku', 'like', "%{$keyword}%")

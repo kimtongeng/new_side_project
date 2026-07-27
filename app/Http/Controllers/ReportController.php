@@ -465,6 +465,13 @@ class ReportController extends Controller
                           ->orWhere('p.sku', 'like', "%{$keyword}%");
                     });
                 })
+                ->filterColumn('p.name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('p.name', 'like', "%{$keyword}%")
+                          ->orWhere('p.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('p.sku', 'like', "%{$keyword}%");
+                    });
+                })
                 ->filterColumn('variation', function ($query, $keyword) {
                     $query->whereRaw("CONCAT(COALESCE(pv.name, ''), '-', COALESCE(variations.name, '')) like ?", ["%{$keyword}%"]);
                 })

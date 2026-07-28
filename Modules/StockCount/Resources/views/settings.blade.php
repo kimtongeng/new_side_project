@@ -547,6 +547,34 @@
                     </div>
                 </div>
 
+                @php
+                    $is_admin_user = !empty($is_admin) || auth()->user()->hasRole('Admin#' . session()->get('user.business_id')) || auth()->user()->can('superadmin');
+                @endphp
+
+                @if($is_admin_user)
+                <!-- Database Maintenance Card (Admin Only) -->
+                <div class="settings-card" style="border: 1px solid #ffcdd2;">
+                    <div class="settings-card-header header-red">
+                        <i class="fa fa-database"></i> Database Maintenance & Data Reset
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <h4 class="setting-title text-danger">
+                                    <i class="fa fa-trash text-danger"></i> Clear Products & Stock Count Data
+                                </h4>
+                                <p class="setting-desc">Permanently wipe all product catalog items, stock transactions, and stock count session records from the database. Warning: This operation cannot be undone!</p>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-danger btn-flat" id="btn_clear_db_data" style="font-weight: bold; border-radius: 6px; padding: 8px 18px;">
+                                    <i class="fa fa-trash"></i> Clear Data Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <!-- Submit & Back Buttons -->
                 <div class="text-center" style="margin-top: 10px; margin-bottom: 50px; display: flex; justify-content: center; align-items: center; gap: 15px;">
                     <a href="{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'index']) }}" class="btn btn-default" style="padding: 10px 24px; font-size: 15px; font-weight: 600; border-radius: 6px;">
@@ -579,6 +607,58 @@ $(document).ready(function(){
         $('[data-toggle="popover"]').each(function () {
             if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {
                 $(this).popover('hide');
+            }
+        });
+    });
+
+    $('#btn_clear_db_data').on('click', function () {
+        swal({
+            title: "⚠️ Clear Products & Stock Counts?",
+            text: "Are you sure you want to permanently clear all product items and stock count data from the database?",
+            icon: "warning",
+            buttons: {
+                cancel: "Cancel",
+                current: { text: "Clear Current Business Data", value: "business" },
+                all: { text: "Clear ALL Database Data", value: "all" }
+            },
+            dangerMode: true,
+        }).then((actionScope) => {
+            if (actionScope === "business" || actionScope === "all") {
+                swal({
+                    title: "FINAL CONFIRMATION",
+                    text: "Type 'delete' to confirm database deletion:",
+                    content: "input",
+                    icon: "warning",
+                    buttons: true,
+                    dangerMode: true,
+                }).then((inputValue) => {
+                    if (inputValue && inputValue.trim().toLowerCase() === "delete") {
+                        $.ajax({
+                            method: "POST",
+                            url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'clearDatabaseData']) }}",
+                            dataType: "json",
+                            data: {
+                                scope: actionScope,
+                                _token: "{{ csrf_token() }}"
+                            },
+                            success: function (res) {
+                                if (res.success) {
+                                    swal("Deleted!", res.msg, "success").then(() => {
+                                        window.location.reload();
+                                    });
+                                } else {
+                                    swal("Error", res.msg, "error");
+                                }
+                            },
+                            error: function (jqXHR) {
+                                var msg = (jqXHR.responseJSON && jqXHR.responseJSON.msg) ? jqXHR.responseJSON.msg : "Failed to clear database data.";
+                                swal("Error", msg, "error");
+                            }
+                        });
+                    } else if (inputValue !== null) {
+                        swal("Cancelled", "Confirmation text did not match 'delete'. No data was deleted.", "info");
+                    }
+                });
             }
         });
     });

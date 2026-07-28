@@ -528,7 +528,7 @@ class StockCountController extends Controller
 
             if ($is_pending && !empty($line_id)) {
                 $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
-                    $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress']);
+                    $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress', 'pending', 'draft']);
                 })->find($line_id);
 
                 if (!empty($line)) {
@@ -545,7 +545,7 @@ class StockCountController extends Controller
             if (!empty($lines) && is_array($lines)) {
                 foreach ($lines as $line_data) {
                     $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
-                        $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress']);
+                        $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress', 'pending', 'draft']);
                     })->find($line_data['line_id']);
 
                     if (!empty($line)) {
@@ -567,7 +567,7 @@ class StockCountController extends Controller
                 $note = $request->input('note', '');
 
                 $line = StockCountLine::whereHas('session', function ($query) use ($business_id, $id) {
-                    $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress']);
+                    $query->where('id', $id)->where('business_id', $business_id)->whereIn('status', ['active', 'in_progress', 'pending', 'draft']);
                 })->findOrFail($line_id);
 
                 $line->counted_quantity = $quantity;
@@ -577,10 +577,92 @@ class StockCountController extends Controller
                 $line->save();
             }
 
-            $this->checkAndAutoCompleteSession($id, $business_id);
+            $submit_session = $request->input('submit_session', false);
+            $auto_completed = false;
+
+            if ($submit_session) {
+                $session = StockCountSession::where('business_id', $business_id)->find($id);
+                if ($session && !in_array($session->status, ['completed', 'approved', 'reconciled', 'reconcile', 'cancelled', 'rejected'])) {
+                    $session->status = 'completed';
+                    if (empty($session->completed_at)) {
+                        $session->completed_at = Carbon::now();
+                    }
+                    $session->save();
+
+                    $business = \App\Business::where('id', $business_id)->first();
+                    $b_settings = $business->common_settings ?? [];
+                    $require_approval = isset($b_settings['stock_count_require_approval']) ? $b_settings['stock_count_require_approval'] : true;
+                    $auto_adjust = isset($b_settings['stock_count_auto_adjust_stock']) ? $b_settings['stock_count_auto_adjust_stock'] : false;
+
+                    if (!$require_approval && $auto_adjust) {
+                        $req = request();
+                        $req->merge(['session_id' => $session->id, 'status' => 'completed']);
+                        $this->updateStatus($req);
+                    }
+                    $auto_completed = true;
+                }
+            } else {
+                $auto_completed = $this->checkAndAutoCompleteSession($id, $business_id);
+            }
 
             DB::commit();
-            return response()->json(['success' => true]);
+
+            $show_url = action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$id]);
+
+            return response()->json([
+                'success' => true,
+                'auto_completed' => $auto_completed,
+                'redirect_url' => $auto_completed ? $show_url : null
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function resetCount(Request $request, $id)
+    {
+        $business_id = $request->session()->get('user.business_id');
+
+        if (!auth()->user()->can('stock_count.count')) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $session = StockCountSession::where('business_id', $business_id)
+                ->whereIn('status', ['active', 'in_progress', 'pending', 'draft', 'completed', 'approved'])
+                ->findOrFail($id);
+
+            if (in_array($session->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot reset a ' . $session->status . ' count session.'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            StockCountLine::where('stock_count_session_id', $session->id)
+                ->update([
+                    'counted_quantity' => 0.0000,
+                    'counted_by' => null,
+                    'counted_at' => null,
+                    'note' => null,
+                ]);
+
+            $session->completed_by = null;
+            $session->completed_at = null;
+            if (in_array($session->status, ['completed', 'approved'])) {
+                $session->status = 'in_progress';
+            }
+            $session->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'All counted quantities reset to 0 and marked as pending.'
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -656,12 +738,15 @@ class StockCountController extends Controller
                 $line->counted_at = Carbon::now();
                 $line->save();
 
-                $this->checkAndAutoCompleteSession($id, $business_id);
+                $auto_completed = $this->checkAndAutoCompleteSession($id, $business_id);
+                $show_url = action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$id]);
 
                 return response()->json([
                     'success' => true,
                     'line_id' => $line->id,
-                    'new_qty' => (float)$line->counted_quantity
+                    'new_qty' => (float)$line->counted_quantity,
+                    'auto_completed' => $auto_completed,
+                    'redirect_url' => $auto_completed ? $show_url : null
                 ]);
             } else {
                 // If the variation is not in the worksheet, let's append it
@@ -682,7 +767,8 @@ class StockCountController extends Controller
                     'counted_at' => Carbon::now()
                 ]);
 
-                $this->checkAndAutoCompleteSession($id, $business_id);
+                $auto_completed = $this->checkAndAutoCompleteSession($id, $business_id);
+                $show_url = action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$id]);
 
                 // Render single line row to append to HTML table
                 $row_html = view('stockcount::partials.worksheet_row', [
@@ -695,7 +781,9 @@ class StockCountController extends Controller
                     'appended' => true,
                     'row_html' => $row_html,
                     'line_id' => $line->id,
-                    'new_qty' => 1
+                    'new_qty' => 1,
+                    'auto_completed' => $auto_completed,
+                    'redirect_url' => $auto_completed ? $show_url : null
                 ]);
             }
         } catch (\Exception $e) {
@@ -1362,9 +1450,16 @@ class StockCountController extends Controller
 
     public function updateStatus(Request $request)
     {
-        $business_id = $request->session()->get('user.business_id');
-        $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
-        $can_update_status = $is_admin || auth()->user()->can('stock_count.update_status') || auth()->user()->can('stock_count.edit') || auth()->user()->can('stock_count.create');
+        $business_id = $request->hasSession() ? $request->session()->get('user.business_id') : session()->get('user.business_id');
+        if (empty($business_id)) {
+            $session_id = $request->input('session_id');
+            $session_obj = StockCountSession::find($session_id);
+            $business_id = $session_obj->business_id ?? null;
+        }
+
+        $user = auth()->user();
+        $is_admin = $user ? ($user->hasRole('Admin#' . $business_id) || $user->can('superadmin')) : true;
+        $can_update_status = $is_admin || ($user && ($user->can('stock_count.update_status') || $user->can('stock_count.edit') || $user->can('stock_count.create') || $user->can('stock_count.count')));
 
         if (!$can_update_status) {
             abort(403, 'Unauthorized action.');
@@ -1601,7 +1696,7 @@ class StockCountController extends Controller
 
         $settings = $business->common_settings ?? [];
 
-        return view('stockcount::settings', compact('settings'));
+        return view('stockcount::settings', compact('settings', 'is_admin'));
     }
 
     public function postSettings(\Illuminate\Http\Request $request)
@@ -1974,7 +2069,7 @@ class StockCountController extends Controller
                 $auto_adjust = isset($settings['stock_count_auto_adjust_stock']) ? $settings['stock_count_auto_adjust_stock'] : false;
 
                 if (!$require_approval && $auto_adjust) {
-                    $req = new Request();
+                    $req = request();
                     $req->merge(['session_id' => $session->id, 'status' => 'completed']);
                     $this->updateStatus($req);
                 }
@@ -1984,5 +2079,121 @@ class StockCountController extends Controller
             \Log::error('Auto complete stock count session error: ' . $e->getMessage());
         }
         return false;
+    }
+
+    public function clearDatabaseData(Request $request)
+    {
+        $business_id = $request->session()->get('user.business_id');
+        $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+
+        if (!$is_admin) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'msg' => __('messages.unauthorized')], 403);
+            }
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $clear_all = $request->input('scope') === 'all';
+
+            DB::beginTransaction();
+            DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
+
+            if ($clear_all) {
+                DB::table('stock_count_lines')->delete();
+                DB::table('stock_count_sessions')->delete();
+                DB::table('transaction_sell_lines_purchase_lines')->delete();
+                DB::table('purchase_lines')->delete();
+                DB::table('transaction_sell_lines')->delete();
+                DB::table('stock_adjustment_lines')->delete();
+                DB::table('variation_location_details')->delete();
+                DB::table('variation_group_prices')->delete();
+                DB::table('product_locations')->delete();
+                DB::table('product_racks')->delete();
+                DB::table('variations')->delete();
+                DB::table('transactions')->whereIn('type', ['stock_adjustment', 'opening_stock', 'sell_transfer', 'purchase_transfer', 'purchase', 'sell', 'purchase_return', 'sell_return'])->delete();
+                DB::table('media')->where('model_type', 'App\\Product')->delete();
+                DB::table('products')->delete();
+                $msg = 'All products, stock records, and stock count data across all businesses cleared successfully.';
+            } else {
+                $session_ids = DB::table('stock_count_sessions')
+                    ->where('business_id', $business_id)
+                    ->pluck('id')
+                    ->toArray();
+
+                if (!empty($session_ids)) {
+                    DB::table('stock_count_lines')->whereIn('stock_count_session_id', $session_ids)->delete();
+                    DB::table('stock_count_sessions')->whereIn('id', $session_ids)->delete();
+                }
+
+                $product_ids = DB::table('products')
+                    ->where('business_id', $business_id)
+                    ->pluck('id')
+                    ->toArray();
+
+                $transaction_ids = DB::table('transactions')
+                    ->where('business_id', $business_id)
+                    ->whereIn('type', ['stock_adjustment', 'opening_stock', 'sell_transfer', 'purchase_transfer', 'purchase', 'sell', 'purchase_return', 'sell_return'])
+                    ->pluck('id')
+                    ->toArray();
+
+                if (!empty($transaction_ids)) {
+                    DB::table('transaction_sell_lines_purchase_lines')
+                        ->whereIn('transaction_line_id', function ($q) use ($transaction_ids) {
+                            $q->select('id')->from('transaction_sell_lines')->whereIn('transaction_id', $transaction_ids);
+                        })
+                        ->orWhereIn('purchase_line_id', function ($q) use ($transaction_ids) {
+                            $q->select('id')->from('purchase_lines')->whereIn('transaction_id', $transaction_ids);
+                        })
+                        ->delete();
+
+                    DB::table('purchase_lines')->whereIn('transaction_id', $transaction_ids)->delete();
+                    DB::table('transaction_sell_lines')->whereIn('transaction_id', $transaction_ids)->delete();
+                    DB::table('stock_adjustment_lines')->whereIn('transaction_id', $transaction_ids)->delete();
+                    DB::table('transactions')->whereIn('id', $transaction_ids)->delete();
+                }
+
+                if (!empty($product_ids)) {
+                    $variation_ids = DB::table('variations')
+                        ->whereIn('product_id', $product_ids)
+                        ->pluck('id')
+                        ->toArray();
+
+                    if (!empty($variation_ids)) {
+                        DB::table('stock_adjustment_lines')->whereIn('variation_id', $variation_ids)->delete();
+                        DB::table('purchase_lines')->whereIn('variation_id', $variation_ids)->delete();
+                        DB::table('transaction_sell_lines')->whereIn('variation_id', $variation_ids)->delete();
+                        DB::table('variation_group_prices')->whereIn('variation_id', $variation_ids)->delete();
+                    }
+
+                    DB::table('stock_adjustment_lines')->whereIn('product_id', $product_ids)->delete();
+                    DB::table('purchase_lines')->whereIn('product_id', $product_ids)->delete();
+                    DB::table('transaction_sell_lines')->whereIn('product_id', $product_ids)->delete();
+                    DB::table('variation_location_details')->whereIn('product_id', $product_ids)->delete();
+                    DB::table('product_locations')->whereIn('product_id', $product_ids)->delete();
+                    DB::table('product_racks')->whereIn('product_id', $product_ids)->delete();
+                    DB::table('media')->where('model_type', 'App\\Product')->whereIn('model_id', $product_ids)->delete();
+                    DB::table('variations')->whereIn('product_id', $product_ids)->delete();
+                    DB::table('products')->where('business_id', $business_id)->delete();
+                }
+
+                $msg = 'Product catalog, stock transactions, and stock count data for current business cleared successfully.';
+            }
+
+            DB::statement('SET FOREIGN_KEY_CHECKS = 1;');
+            DB::commit();
+
+            $output = ['success' => true, 'msg' => $msg];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            DB::statement('SET FOREIGN_KEY_CHECKS = 1;');
+            $output = ['success' => false, 'msg' => 'Error: ' . $e->getMessage()];
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json($output, $output['success'] ? 200 : 500);
+        }
+
+        return redirect()->back()->with('status', $output);
     }
 }

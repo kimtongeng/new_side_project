@@ -1,5 +1,9 @@
 @php
-    $allow_recount = isset(session('business.common_settings')['stock_count_allow_recount']) ? session('business.common_settings')['stock_count_allow_recount'] : true;
+    $common_settings = session('business.common_settings', []);
+    $setting_show_expected = isset($common_settings['stock_count_show_expected_qty']) ? (bool)$common_settings['stock_count_show_expected_qty'] : true;
+    $hide_expected_qty = $session->blind_count || !$setting_show_expected;
+
+    $allow_recount = isset($common_settings['stock_count_allow_recount']) ? $common_settings['stock_count_allow_recount'] : true;
     $is_recount_disabled = !$allow_recount && $line->counted_by !== null;
 @endphp
 <tr id="line_{{ $line->id }}" class="worksheet-row @if($line->counted_by !== null) is-counted @endif">
@@ -10,7 +14,7 @@
             <br><span class="text-muted">{{ $line->variation->name }}</span>
         @endif
     </td>
-    @if(!$session->blind_count)
+    @if(!$hide_expected_qty)
         <td id="book_qty_{{ $line->id }}">{{ (float) $line->book_quantity }}</td>
         <td>
             @php
@@ -56,7 +60,7 @@
     @endif
     <td>
         <input type="number" class="form-control text-center input-new-qoh" id="new_qoh_{{ $line->id }}"
-            value="{{ (float) $new_qoh }}" @if(!$session->blind_count || $is_recount_disabled) readonly @endif
+            value="{{ (float) $new_qoh }}" step="any" @if($is_recount_disabled) readonly @endif
             data-book-qty="{{ (float) $line->book_quantity }}" data-id="{{ $line->id }}">
     </td>
     <td>{{ $line->product->unit->short_name ?? '' }}</td>

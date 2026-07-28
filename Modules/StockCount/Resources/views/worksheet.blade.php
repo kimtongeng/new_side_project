@@ -319,7 +319,7 @@
             </div>
             <div class="col-md-4 col-xs-12 text-right">
                 <div style="margin-top: 8px;">
-                    <span
+                    <span id="session_status_pill"
                         class="label @if($session->status == 'completed') bg-green @elseif($session->status == 'reconciled' || $session->status == 'reconcile') bg-purple @elseif($session->status == 'active' || $session->status == 'in_progress') bg-blue @elseif($session->status == 'reviewed') bg-purple @elseif($session->status == 'approved') bg-navy @elseif($session->status == 'rejected' || $session->status == 'cancelled') bg-red @else bg-gray @endif"
                         style="font-size: 14px; padding: 6px 12px; border-radius: 4px; display: inline-block; font-weight: bold;">
                         Status: {{ __('stockcount::lang.' . $session->status) }}
@@ -439,10 +439,15 @@
             </div>
         </div>
         @endcomponent
+        @php
+            $common_settings = session('business.common_settings', []);
+            $setting_show_expected = isset($common_settings['stock_count_show_expected_qty']) ? (bool)$common_settings['stock_count_show_expected_qty'] : true;
+            $hide_expected_qty = $session->blind_count || !$setting_show_expected;
+        @endphp
         <!-- Worksheet Filters -->
         @component('components.filters', ['title' => __('report.filters')])
         <div class="row">
-            <div class="{{ !$session->blind_count ? 'col-md-4' : 'col-md-8' }}">
+            <div class="{{ !$hide_expected_qty ? 'col-md-4' : 'col-md-8' }}">
                 <div class="form-group">
                     <label for="filter_worksheet_status">Count Status:</label>
                     <select id="filter_worksheet_status" class="form-control select2" style="width:100%;">
@@ -452,7 +457,7 @@
                     </select>
                 </div>
             </div>
-            @if(!$session->blind_count)
+            @if(!$hide_expected_qty)
                 <div class="col-md-4">
                     <div class="form-group">
                         <label for="filter_worksheet_variance">Variance Filter:</label>
@@ -466,10 +471,13 @@
                     </div>
                 </div>
             @endif
-            <div class="col-md-4" style="padding-top: 25px;">
-                <button type="button" id="btn_reset_worksheet_filters" class="btn btn-default btn-block">
-                    <i class="fa fa-refresh"></i> Reset Filters
-                </button>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="button" id="btn_reset_worksheet_filters" class="btn btn-default btn-block">
+                        <i class="fa fa-refresh"></i> Reset Filters
+                    </button>
+                </div>
             </div>
         </div>
         @endcomponent
@@ -514,13 +522,13 @@
                 <thead>
                     <tr>
                         <th>Product Name (Product Code)</th>
-                        @if(!$session->blind_count)
+                        @if(!$hide_expected_qty)
                             <th>QOH</th>
                             <th style="min-width: 80px;">Type</th>
                             <th style="min-width: 150px;">Quantity</th>
                             <th>Unit</th>
                         @endif
-                        <th style="min-width: 100px;">{{ $session->blind_count ? 'Counted Qty' : 'New QOH' }}</th>
+                        <th style="min-width: 100px;">{{ $hide_expected_qty ? 'Counted Qty' : 'New QOH' }}</th>
                         <th>Unit</th>
                         <th style="min-width: 180px;">Note</th>
                         <th style="min-width: 90px; text-align: center;">Status</th>
@@ -1213,6 +1221,24 @@
 
             // ── Auto-save on qty / note change ────────────────────────────────────────────
             var saveTimeouts = {};
+            function handleAutoComplete(result) {
+                if (result && result.auto_completed) {
+                    $('#session_status_pill')
+                        .removeClass('bg-blue bg-yellow bg-gray bg-red bg-purple bg-navy')
+                        .addClass('bg-green')
+                        .html('Status: Completed');
+                    
+                    showSaveStatus('100% Completed ✔', 'check');
+                    toastr.success('🎉 100% Counted! Stock count completed & stock auto-adjusted.');
+
+                    if (result.redirect_url) {
+                        setTimeout(function () {
+                            window.location.href = result.redirect_url;
+                        }, 700);
+                    }
+                }
+            }
+
             function saveProgress(line_id) {
                 var qty = $('#new_qoh_' + line_id).val();
                 var note = $('#note_' + line_id).val();
@@ -1226,7 +1252,11 @@
                         data: { line_id: line_id, quantity: qty, note: note, _token: "{{ csrf_token() }}" },
                         success: function (result) {
                             showSaveStatus(result.success ? 'Saved ✔' : 'Error ✖', result.success ? 'check' : 'times');
-                            if (!result.success) toastr.error('Failed to save progress.');
+                            if (!result.success) {
+                                toastr.error('Failed to save progress.');
+                            } else {
+                                handleAutoComplete(result);
+                            }
                         },
                         error: function () {
                             showSaveStatus('Error ✖', 'times');
@@ -1264,6 +1294,20 @@
             $(document).on('change keyup', '.input-new-qoh', function () {
                 if ($(this).attr('readonly')) return;
                 var id = $(this).data('id');
+                var newQoh = parseFloat($(this).val()) || 0;
+                var bookQty = parseFloat($(this).data('book-qty')) || 0;
+                var diff = newQoh - bookQty;
+
+                if ($('#type_' + id).length) {
+                    if (diff >= 0) {
+                        $('#type_' + id).val('+');
+                        $('#qty_' + id).val(diff.toFixed(4));
+                    } else {
+                        $('#type_' + id).val('-');
+                        $('#qty_' + id).val(Math.abs(diff).toFixed(4));
+                    }
+                }
+
                 $('#line_' + id).addClass('is-counted');
                 recalculateStats();
                 saveProgress(id);
@@ -1593,21 +1637,23 @@
                     dataType: "json",
                     data: {
                         lines: lines,
+                        submit_session: true,
                         _token: "{{ csrf_token() }}"
                     },
                     success: function (result) {
                         if (result.success) {
                             showSaveStatus('Saved ✔', 'check');
-                            toastr.success('Worksheet saved successfully.');
-                            window.location.href = "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}";
+                            toastr.success('Worksheet submitted successfully.');
+                            var redirectUrl = result.redirect_url || "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}";
+                            window.location.href = redirectUrl;
                         } else {
-                            btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save & Submit');
+                            btn.prop('disabled', false).html('<i class="fa fa-check-circle"></i> Count All & Submit');
                             showSaveStatus('Error ✖', 'times');
                             toastr.error(result.message || 'Failed to save worksheet.');
                         }
                     },
                     error: function () {
-                        btn.prop('disabled', false).html('<i class="fa fa-save"></i> Save & Submit');
+                        btn.prop('disabled', false).html('<i class="fa fa-check-circle"></i> Count All & Submit');
                         showSaveStatus('Error ✖', 'times');
                         toastr.error('Network error while saving worksheet.');
                     }
@@ -1625,7 +1671,7 @@
             $('#btn_reset_worksheet').on('click', function () {
                 swal({
                     title: "Are you sure you want to reset all counted quantities?",
-                    text: "This will set all your counted quantities on this worksheet back to 0.",
+                    text: "This will set all counted quantities on this worksheet back to 0 and mark all items as pending.",
                     icon: "warning",
                     buttons: true,
                     dangerMode: true,
@@ -1633,62 +1679,47 @@
                     if (willReset) {
                         showSaveStatus('Resetting...', 'spinner');
 
-                        var rows = $('#worksheet_body tr');
-                        var totalRows = rows.length;
-                        var processed = 0;
+                        $.ajax({
+                            method: "POST",
+                            url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'resetCount'], [$session->id]) }}",
+                            dataType: "json",
+                            data: {
+                                _token: "{{ csrf_token() }}"
+                            },
+                            success: function (result) {
+                                if (result.success) {
+                                    showSaveStatus('Reset Completed ✔', 'check');
+                                    toastr.success(result.message || 'All counted quantities reset to 0.');
 
-                        if (totalRows === 0) {
-                            showSaveStatus('Reset ✔', 'check');
-                            return;
-                        }
+                                    var isBlindCount = {{ $session->blind_count ? 'true' : 'false' }};
+                                    $('#worksheet_body tr').each(function () {
+                                        var row = $(this);
+                                        var line_id = row.attr('id').replace('line_', '');
+                                        row.removeClass('is-counted');
 
-                        rows.each(function () {
-                            var row = $(this);
-                            var line_id = row.attr('id').replace('line_', '');
+                                        var bookQty = parseFloat($('#new_qoh_' + line_id).data('book-qty')) || 0;
+                                        $('#type_' + line_id).val('+');
+                                        $('#qty_' + line_id).val('0');
+                                        if (isBlindCount) {
+                                            $('#new_qoh_' + line_id).val('0.0000');
+                                        } else {
+                                            $('#new_qoh_' + line_id).val(bookQty.toFixed(4));
+                                        }
+                                        $('#note_' + line_id).val('');
+                                    });
 
-                            // Reset inputs in DOM
-                            row.removeClass('is-counted');
-                            var isBlindCount = {{ $session->blind_count ? 'true' : 'false' }};
-                            if (isBlindCount) {
-                                $('#new_qoh_' + line_id).val('0.0000');
-                            } else {
-                                var bookQty = parseFloat($('#new_qoh_' + line_id).data('book-qty')) || 0;
-                                $('#type_' + line_id).val('+');
-                                $('#qty_' + line_id).val('0');
-                                $('#new_qoh_' + line_id).val(bookQty.toFixed(4));
-                            }
-                            $('#note_' + line_id).val('');
-
-                            // Call AJAX to save progress
-                            $.ajax({
-                                method: "POST",
-                                url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'], [$session->id]) }}",
-                                dataType: "json",
-                                data: {
-                                    line_id: line_id,
-                                    quantity: 0,
-                                    note: '',
-                                    _token: "{{ csrf_token() }}"
-                                },
-                                success: function () {
-                                    processed++;
-                                    if (processed === totalRows) {
-                                        showSaveStatus('Reset Completed ✔', 'check');
-                                        toastr.success('All counted quantities reset to 0.');
-                                        recalculateStats();
-                                        updatePagination();
-                                    }
-                                },
-                                error: function () {
-                                    processed++;
-                                    if (processed === totalRows) {
-                                        showSaveStatus('Reset Error ✖', 'times');
-                                        toastr.error('Some lines failed to reset.');
-                                        recalculateStats();
-                                        updatePagination();
-                                    }
+                                    recalculateStats();
+                                    applyWorksheetFilters();
+                                } else {
+                                    showSaveStatus('Reset Error ✖', 'times');
+                                    toastr.error(result.message || 'Failed to reset count.');
                                 }
-                            });
+                            },
+                            error: function (jqXHR) {
+                                showSaveStatus('Reset Error ✖', 'times');
+                                var msg = (jqXHR.responseJSON && jqXHR.responseJSON.message) ? jqXHR.responseJSON.message : 'Server error while resetting count.';
+                                toastr.error(msg);
+                            }
                         });
                     }
                 });

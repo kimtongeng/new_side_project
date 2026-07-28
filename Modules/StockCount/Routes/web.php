@@ -12,6 +12,7 @@ Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezon
     Route::get('/compare', [Modules\StockCount\Http\Controllers\StockCountController::class, 'compare'])->name('stock-counts.compare');
     Route::get('/reset-permissions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'resetPermissions'])->name('stock-counts.reset-permissions');
     Route::post('/reset-permissions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'resetPermissions'])->name('stock-counts.post-reset-permissions');
+    Route::post('/clear-database-data', [Modules\StockCount\Http\Controllers\StockCountController::class, 'clearDatabaseData'])->name('stock-counts.clear-database-data');
     Route::get('/all-sessions', [Modules\StockCount\Http\Controllers\StockCountController::class, 'getAllSessionsJson'])->name('stock-counts.all-sessions');
     Route::get('/print-pdf-all', [Modules\StockCount\Http\Controllers\StockCountController::class, 'printPdfAll'])->name('stock-counts.print-pdf-all');
     Route::get('/{id}', [Modules\StockCount\Http\Controllers\StockCountController::class, 'show'])->name('stock-counts.show');
@@ -20,6 +21,7 @@ Route::middleware('web', 'authh', 'auth', 'SetSessionData', 'language', 'timezon
     Route::get('/{id}/print-worksheet', [Modules\StockCount\Http\Controllers\StockCountController::class, 'printWorksheet'])->name('stock-counts.print-worksheet');
     Route::get('/{id}/duplicate', [Modules\StockCount\Http\Controllers\StockCountController::class, 'duplicate'])->name('stock-counts.duplicate');
     Route::post('/{id}/save-progress', [Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'])->name('stock-counts.save-progress');
+    Route::post('/{id}/reset-count', [Modules\StockCount\Http\Controllers\StockCountController::class, 'resetCount'])->name('stock-counts.reset-count');
     Route::post('/{id}/update-name', [Modules\StockCount\Http\Controllers\StockCountController::class, 'updateName'])->name('stock-counts.update-name');
     Route::post('/{id}/scan-barcode', [Modules\StockCount\Http\Controllers\StockCountController::class, 'scanBarcode'])->name('stock-counts.scan-barcode');
     Route::post('/{id}/reconcile', [Modules\StockCount\Http\Controllers\StockCountController::class, 'reconcile'])->name('stock-counts.reconcile');

@@ -449,7 +449,16 @@
 
                             @endif
 
-                            @if(in_array($session->status, ['active', 'in_progress', 'completed']) && auth()->user()->can('stock_count.reconcile'))
+                            @php
+                                $filters = $session->filters ?? [];
+                                $is_stock_adjusted = !empty($filters['stock_adjusted']);
+                                $common_settings = session('business.common_settings', []);
+                                $auto_adjust = isset($common_settings['stock_count_auto_adjust_stock']) ? $common_settings['stock_count_auto_adjust_stock'] : false;
+                                $require_approval = isset($common_settings['stock_count_require_approval']) ? $common_settings['stock_count_require_approval'] : true;
+                                $show_reconcile_btn = !$is_stock_adjusted && ($require_approval || !$auto_adjust) && auth()->user()->can('stock_count.reconcile');
+                            @endphp
+
+                            @if(in_array($session->status, ['active', 'in_progress', 'completed']) && $show_reconcile_btn)
                                 {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'reconcile'], [$session->id]), 'method' => 'post', 'class' => 'inline-form', 'id' => 'reconcile_form']) !!}
                                 <button type="submit" class="btn btn-reconcile-custom btn-reconcile">
                                     <i class="fa fa-check-circle"></i> @lang('stockcount::lang.reconcile')

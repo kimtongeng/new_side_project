@@ -382,7 +382,12 @@
                         {{ __('stockcount::lang.' . ($session->status == 'active' || $session->status == 'draft' || $session->status == 'pending' ? 'in_progress' : $session->status)) }}
                     </span>
 
-                    @if(auth()->user()->can('stock_count.create') && !in_array($session->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected']))
+                    @php
+                        $is_admin = auth()->user()->hasRole('Admin#' . session()->get('user.business_id')) || auth()->user()->can('superadmin');
+                        $can_update_status = $is_admin || auth()->user()->can('stock_count.update_status') || auth()->user()->can('stock_count.update');
+                    @endphp
+
+                    @if($can_update_status && !in_array($session->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected']))
                         <div style="display: inline-block; vertical-align: middle;">
                             {!! Form::open(['url' => action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']), 'method' => 'post', 'id' => 'update_status_form', 'style' => 'display:inline;']) !!}
                             <input type="hidden" name="session_id" value="{{ $session->id }}">

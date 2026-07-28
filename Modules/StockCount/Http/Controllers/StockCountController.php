@@ -107,7 +107,7 @@ class StockCountController extends Controller
                     }
 
                     $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
-                    $can_update_status = $is_admin || auth()->user()->can('stock_count.update_status') || auth()->user()->can('stock_count.edit') || auth()->user()->can('stock_count.create');
+                    $can_update_status = $is_admin || auth()->user()->can('stock_count.update_status') || auth()->user()->can('stock_count.update');
 
                     if ($can_update_status && !in_array($row->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected'])) {
                         $html .= '<li>
@@ -143,7 +143,7 @@ class StockCountController extends Controller
                     $html .= '</ul></div>';
                     return $html;
                 })
-                ->editColumn('status', function ($row) {
+                ->editColumn('status', function ($row) use ($business_id) {
                     $color = 'bg-yellow';
                     $status_name = 'Pending';
 
@@ -164,9 +164,13 @@ class StockCountController extends Controller
                         $status_name = ucfirst(str_replace('_', ' ', $row->status));
                     }
 
+                    $is_admin = auth()->user()->hasRole('Admin#' . $business_id) || auth()->user()->can('superadmin');
+                    $can_update_status = $is_admin || auth()->user()->can('stock_count.update_status') || auth()->user()->can('stock_count.update');
+
                     $is_locked = in_array($row->status, ['reconciled', 'reconcile', 'cancelled', 'cancel', 'rejected']);
-                    $btn_class = $is_locked ? '' : ' btn_update_status';
-                    $cursor_style = $is_locked ? 'cursor: default;' : 'cursor: pointer;';
+                    $can_click_status = $can_update_status && !$is_locked;
+                    $btn_class = $can_click_status ? ' btn_update_status' : '';
+                    $cursor_style = $can_click_status ? 'cursor: pointer;' : 'cursor: default;';
                     return '<span class="label ' . $color . $btn_class . '" style="' . $cursor_style . '" data-href="' . action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'updateStatus']) . '" data-session_id="' . $row->id . '" data-status="' . $row->status . '">' . $status_name . '</span>';
                 })
                 ->addColumn('total_items', function ($row) {
@@ -1459,7 +1463,7 @@ class StockCountController extends Controller
 
         $user = auth()->user();
         $is_admin = $user ? ($user->hasRole('Admin#' . $business_id) || $user->can('superadmin')) : true;
-        $can_update_status = $is_admin || ($user && ($user->can('stock_count.update_status') || $user->can('stock_count.edit') || $user->can('stock_count.create') || $user->can('stock_count.count')));
+        $can_update_status = $is_admin || ($user && ($user->can('stock_count.update_status') || $user->can('stock_count.update')));
 
         if (!$can_update_status) {
             abort(403, 'Unauthorized action.');

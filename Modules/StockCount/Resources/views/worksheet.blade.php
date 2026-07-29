@@ -1614,48 +1614,59 @@
             // Handle Save & Submit bulk post
             $('#btn_save_submit').on('click', function () {
                 var btn = $(this);
-                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
-                showSaveStatus('Saving worksheet...', 'spinner');
 
-                var lines = [];
-                $('#worksheet_body tr').each(function () {
-                    var row = $(this);
-                    var line_id = row.attr('id').replace('line_', '');
-                    var qty = $('#new_qoh_' + line_id).val();
-                    var note = $('#note_' + line_id).val();
+                swal({
+                    title: typeof LANG !== 'undefined' && LANG.sure ? LANG.sure : "Are you sure?",
+                    text: "Are you sure you want to submit all counted quantities and finalize this stock count session?",
+                    icon: "warning",
+                    buttons: true,
+                    dangerMode: true,
+                }).then((willSubmit) => {
+                    if (willSubmit) {
+                        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+                        showSaveStatus('Saving worksheet...', 'spinner');
 
-                    lines.push({
-                        line_id: line_id,
-                        quantity: qty,
-                        note: note
-                    });
-                });
+                        var lines = [];
+                        $('#worksheet_body tr').each(function () {
+                            var row = $(this);
+                            var line_id = row.attr('id').replace('line_', '');
+                            var qty = $('#new_qoh_' + line_id).val();
+                            var note = $('#note_' + line_id).val();
 
-                $.ajax({
-                    method: "POST",
-                    url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'], [$session->id]) }}",
-                    dataType: "json",
-                    data: {
-                        lines: lines,
-                        submit_session: true,
-                        _token: "{{ csrf_token() }}"
-                    },
-                    success: function (result) {
-                        if (result.success) {
-                            showSaveStatus('Saved ✔', 'check');
-                            toastr.success('Worksheet submitted successfully.');
-                            var redirectUrl = result.redirect_url || "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}";
-                            window.location.href = redirectUrl;
-                        } else {
-                            btn.prop('disabled', false).html('<i class="fa fa-check-circle"></i> Count All & Submit');
-                            showSaveStatus('Error ✖', 'times');
-                            toastr.error(result.message || 'Failed to save worksheet.');
-                        }
-                    },
-                    error: function () {
-                        btn.prop('disabled', false).html('<i class="fa fa-check-circle"></i> Count All & Submit');
-                        showSaveStatus('Error ✖', 'times');
-                        toastr.error('Network error while saving worksheet.');
+                            lines.push({
+                                line_id: line_id,
+                                quantity: qty,
+                                note: note
+                            });
+                        });
+
+                        $.ajax({
+                            method: "POST",
+                            url: "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'saveWorksheetProgress'], [$session->id]) }}",
+                            dataType: "json",
+                            data: {
+                                lines: lines,
+                                submit_session: true,
+                                _token: "{{ csrf_token() }}"
+                            },
+                            success: function (result) {
+                                if (result.success) {
+                                    showSaveStatus('Saved ✔', 'check');
+                                    toastr.success('Worksheet submitted successfully.');
+                                    var redirectUrl = result.redirect_url || "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'show'], [$session->id]) }}";
+                                    window.location.href = redirectUrl;
+                                } else {
+                                    btn.prop('disabled', false).html('<i class="fa fa-save"></i> Count All & Submit');
+                                    showSaveStatus('Error ✖', 'times');
+                                    toastr.error(result.message || 'Failed to save worksheet.');
+                                }
+                            },
+                            error: function () {
+                                btn.prop('disabled', false).html('<i class="fa fa-save"></i> Count All & Submit');
+                                showSaveStatus('Error ✖', 'times');
+                                toastr.error('Network error while saving worksheet.');
+                            }
+                        });
                     }
                 });
             });
@@ -1670,8 +1681,8 @@
             // Handle Reset All Counts
             $('#btn_reset_worksheet').on('click', function () {
                 swal({
-                    title: "Are you sure you want to reset all counted quantities?",
-                    text: "This will set all counted quantities on this worksheet back to 0 and mark all items as pending.",
+                    title: typeof LANG !== 'undefined' && LANG.sure ? LANG.sure : "Are you sure?",
+                    text: "Are you sure you want to reset all counted quantities? This will set all counted quantities on this worksheet back to 0 and mark all items as pending.",
                     icon: "warning",
                     buttons: true,
                     dangerMode: true,

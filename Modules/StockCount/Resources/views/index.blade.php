@@ -90,13 +90,34 @@
             justify-content: center;
         }
 
-        /* Prevent dropdowns from being clipped by responsive table container on desktop */
+        /* Prevent dropdowns from being clipped by responsive table container */
+        .table-responsive {
+            min-height: 320px;
+        }
+
         @media (min-width: 768px) {
             .table-responsive {
                 overflow: visible !important;
             }
         }
-        
+
+        /* Dynamic dropup position for action menu in table rows */
+        .table-responsive .btn-group.dropup .dropdown-menu,
+        #stock_count_table .btn-group.dropup .dropdown-menu {
+            top: auto !important;
+            bottom: 100% !important;
+            margin-bottom: 2px !important;
+            box-shadow: 0 -6px 12px rgba(0, 0, 0, 0.175) !important;
+        }
+
+        .body-detached-menu {
+            z-index: 999999 !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25) !important;
+            border-radius: 6px !important;
+            background: #ffffff !important;
+            border: 1px solid rgba(0, 0, 0, 0.15) !important;
+        }
+
         /* Ensure first action column is not squished */
         #stock_count_table th:first-child,
         #stock_count_table td:first-child {
@@ -220,7 +241,8 @@
                 {!! Form::text('filter_date_range', null, [
         'placeholder' => __('lang_v1.select_a_date_range'),
         'class' => 'form-control',
-        'readonly'
+        'readonly',
+        'autocomplete' => 'off'
     ]) !!}
             </div>
         </div>
@@ -401,6 +423,25 @@
 @section('javascript')
     <script>
         $(document).ready(function () {
+            // Initialize DateRangePicker first before DataTable AJAX calls
+            if (typeof dateRangeSettings !== 'undefined') {
+                $('#filter_date_range').daterangepicker(
+                    dateRangeSettings,
+                    function (start, end) {
+                        $('#filter_date_range').val(start.format(moment_date_format) + ' ~ ' + end.format(moment_date_format));
+                        if (typeof stock_count_table !== 'undefined') {
+                            stock_count_table.ajax.reload();
+                        }
+                    }
+                );
+            }
+            $('#filter_date_range').on('cancel.daterangepicker', function (ev, picker) {
+                $(this).val('');
+                if (typeof stock_count_table !== 'undefined') {
+                    stock_count_table.ajax.reload();
+                }
+            });
+
             var stock_count_table = $('#stock_count_table').DataTable({
                 processing: true,
                 serverSide: true,
@@ -443,11 +484,10 @@
                         d.location_id = $('#filter_location_id').val();
                         d.status = $('#filter_status').val();
                         d.created_by = $('#filter_created_by').val();
-                        if ($('#filter_date_range').val()) {
-                            var start = $('#filter_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
-                            var end = $('#filter_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
-                            d.start_date = start;
-                            d.end_date = end;
+                        var drp = $('#filter_date_range').data('daterangepicker');
+                        if ($('#filter_date_range').val() && drp && drp.startDate && drp.endDate) {
+                            d.start_date = drp.startDate.format('YYYY-MM-DD');
+                            d.end_date = drp.endDate.format('YYYY-MM-DD');
                         }
                     }
                 },
@@ -477,18 +517,6 @@
                 }
             });
 
-            $('#filter_date_range').daterangepicker(
-                dateRangeSettings,
-                function (start, end) {
-                    $('#filter_date_range').val(start.format(moment_date_format) + ' ~ ' + end.format(moment_date_format));
-                    stock_count_table.ajax.reload();
-                }
-            );
-            $('#filter_date_range').on('cancel.daterangepicker', function (ev, picker) {
-                $(this).val('');
-                stock_count_table.ajax.reload();
-            });
-
             $(document).on('change', '#filter_location_id, #filter_created_by', function () {
                 stock_count_table.ajax.reload();
             });
@@ -508,15 +536,117 @@
                 $('#filter_status').val(status).trigger('change');
             });
 
+            // Body detachment & smart positioning for action dropdowns to fix mobile/table clipping
+            $(document).on('show.bs.dropdown', '#stock_count_table .btn-group, .table-responsive .btn-group', function () {
+                var $btnGroup = $(this);
+                var $toggle = $btnGroup.find('.dropdown-toggle');
+                var $menu = $btnGroup.find('.dropdown-menu');
+
+                if (!$menu.length) return;
+
+                $menu.data('parent-btn-group', $btnGroup);
+                $btnGroup.data('detached-menu', $menu);
+
+                $('body').append($menu);
+
+                var offset = $toggle.offset();
+                var btnHeight = $toggle.outerHeight();
+                var itemsCount = $menu.find('li').length || 6;
+                var estimatedMenuHeight = itemsCount * 36 + 12;
+
+                $menu.css({ display: 'block', visibility: 'hidden', position: 'absolute', top: 0, left: 0 });
+                var menuHeight = $menu.outerHeight() > 50 ? $menu.outerHeight() : estimatedMenuHeight;
+                var menuWidth = $menu.outerWidth() || 180;
+
+                var winScrollTop = $(window).scrollTop();
+                var winHeight = $(window).height();
+                var spaceBelow = winHeight - (offset.top - winScrollTop) - btnHeight;
+                var spaceAbove = (offset.top - winScrollTop);
+
+                var topPos;
+                if (spaceBelow < (menuHeight + 15) && spaceAbove > 140) {
+                    // Dropup (position above button)
+                    topPos = offset.top - menuHeight - 2;
+                } else {
+                    // Dropdown (position below button)
+                    topPos = offset.top + btnHeight + 2;
+                }
+
+                var leftPos = offset.left;
+                var winWidth = $(window).width();
+                if (leftPos + menuWidth > winWidth - 10) {
+                    leftPos = winWidth - menuWidth - 10;
+                }
+                if (leftPos < 10) {
+                    leftPos = 10;
+                }
+
+                $menu.css({
+                    display: 'block',
+                    visibility: 'visible',
+                    position: 'absolute',
+                    top: topPos + 'px',
+                    left: leftPos + 'px',
+                    zIndex: 999999
+                }).addClass('body-detached-menu');
+            });
+
+            $(document).on('hidden.bs.dropdown hide.bs.dropdown', '#stock_count_table .btn-group, .table-responsive .btn-group', function () {
+                var $btnGroup = $(this);
+                var $menu = $btnGroup.data('detached-menu');
+                if (!$menu || !$menu.length) {
+                    $menu = $('.body-detached-menu').filter(function () {
+                        return $(this).data('parent-btn-group') && $(this).data('parent-btn-group')[0] === $btnGroup[0];
+                    });
+                }
+
+                if ($menu && $menu.length) {
+                    $menu.removeClass('body-detached-menu').css({
+                        display: '',
+                        visibility: '',
+                        position: '',
+                        top: '',
+                        left: '',
+                        zIndex: ''
+                    });
+                    $btnGroup.append($menu);
+                    $btnGroup.removeData('detached-menu');
+                }
+            });
+
+            // Clean up detached menus on scroll or DataTables redraw
+            $(window).add('#scrollable-container, .table-responsive').on('scroll touchmove', function () {
+                $('.body-detached-menu').each(function () {
+                    var $menu = $(this);
+                    var $btnGroup = $menu.data('parent-btn-group');
+                    if ($btnGroup) {
+                        $btnGroup.removeClass('open');
+                    }
+                    $menu.removeClass('body-detached-menu').css({
+                        display: '',
+                        visibility: '',
+                        position: '',
+                        top: '',
+                        left: '',
+                        zIndex: ''
+                    });
+                    if ($btnGroup) {
+                        $btnGroup.append($menu);
+                        $btnGroup.removeData('detached-menu');
+                    }
+                });
+            });
+
             function triggerPrintPdfAll() {
                 var params = {
                     location_id: $('#filter_location_id').val() || '',
                     status: $('#filter_status').val() || '',
                     created_by: $('#filter_created_by').val() || ''
                 };
-                if ($('#filter_date_range').val()) {
-                    params.start_date = $('#filter_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
-                    params.end_date = $('#filter_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
+                var drp = $('#filter_date_range').data('daterangepicker');
+                if ($('#filter_date_range').val() && drp && drp.startDate && drp.endDate) {
+                    params.start_date = drp.startDate.format('YYYY-MM-DD');
+                    params.end_date = drp.endDate.format('YYYY-MM-DD');
                 }
                 var url = "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printPdfAll']) }}?" + $.param(params);
 
@@ -562,9 +692,10 @@
                     created_by: $('#filter_created_by').val() || '',
                     download: 1
                 };
-                if ($('#filter_date_range').val()) {
-                    params.start_date = $('#filter_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
-                    params.end_date = $('#filter_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
+                var drp = $('#filter_date_range').data('daterangepicker');
+                if ($('#filter_date_range').val() && drp && drp.startDate && drp.endDate) {
+                    params.start_date = drp.startDate.format('YYYY-MM-DD');
+                    params.end_date = drp.endDate.format('YYYY-MM-DD');
                 }
                 var url = "{{ action([\Modules\StockCount\Http\Controllers\StockCountController::class, 'printPdfAll']) }}?" + $.param(params);
                 window.location.href = url;

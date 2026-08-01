@@ -30,7 +30,7 @@
                             @foreach($purchase->purchase_lines as $purchase_line)
                                 <tr>
                                 <td>
-                                    {{$purchase_line->product->name}}
+                                    {!! \App\Utils\ProductUtil::getFormattedProductName($purchase_line->product->name, $purchase_line->product->secondary_name, true) !!}
                                     @if($purchase_line->product->type == 'single')
                                      ({{$purchase_line->product->sku}})
                                     @else

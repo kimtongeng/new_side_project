@@ -243,7 +243,7 @@
 					{{$loop->iteration}}
 				</td>
 				<td style="width: 40% !important;">
-					{{ $purchase_line->product->name }} 
+					{!! \App\Utils\ProductUtil::getFormattedProductName($purchase_line->product->name, $purchase_line->product->secondary_name, true) !!} 
 	                @if( $purchase_line->product->type == 'variable')
 	                  - {{ $purchase_line->variations->product_variation->name}}
 	                  - {{ $purchase_line->variations->name}}

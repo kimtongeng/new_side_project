@@ -2058,7 +2058,7 @@ class TransactionUtil extends Util
             $line_array = [
                 //Field for 1st column
                 "remain_stock" => $stock,
-                'name' => ProductUtil::getFormattedProductName($product->name, $product->secondary_name, false),
+                'name' => ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true),
                 'secondary_name' => $product->secondary_name,
                 'product_description' => ! empty($show_product_description) ? $product->product_description : null,
                 'variation' => (empty($variation->name) || $variation->name == 'DUMMY') ? '' : $variation->name,
@@ -2206,7 +2206,7 @@ class TransactionUtil extends Util
 
                     $modifier_line_array = [
                         //Field for 1st column
-                        'name' => ProductUtil::getFormattedProductName($product->name, $product->secondary_name, false),
+                        'name' => ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true),
                         'secondary_name' => $product->secondary_name,
                         'variation' => (empty($variation->name) || $variation->name == 'DUMMY') ? '' : $variation->name,
                         //Field for 2nd column
@@ -2289,7 +2289,7 @@ class TransactionUtil extends Util
             $line_array = [
                 //Field for 1st column
                 "remain_stock" => $stock,
-                'name' => ProductUtil::getFormattedProductName($product->name, $product->secondary_name, false),
+                'name' => ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true),
                 'secondary_name' => $product->secondary_name,
                 'variation' => (empty($variation->name) || $variation->name == 'DUMMY') ? '' : $variation->name,
                 //Field for 2nd column

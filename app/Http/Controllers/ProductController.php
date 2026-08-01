@@ -260,7 +260,7 @@ class ProductController extends Controller
                     }
                 )
                 ->editColumn('category', function ($row) {
-                    $category_text = $row->category;
+                    $category_text = !empty($row->category) ? $row->category : '--';
                     if (!empty($row->sub_category)) {
                         $category_text .= '<br/> -- ' . $row->sub_category;
                     }
@@ -2213,14 +2213,19 @@ class ProductController extends Controller
                 ->select(
                     'products.id as product_id',
                     'products.name',
+                    'products.secondary_name',
                     'products.type',
                     'products.enable_stock',
                     'products.sku',
-                    'products.id as id',
-                    DB::raw('CONCAT(products.name, " - ", products.sku) as text')
+                    'products.id as id'
                 )
                 ->orderBy('products.name')
                 ->get();
+
+            $products->transform(function ($item) {
+                $item->text = \App\Utils\ProductUtil::getFormattedProductName($item->name, $item->secondary_name, false) . ' - ' . $item->sku;
+                return $item;
+            });
 
             return json_encode($products);
         }
@@ -2524,6 +2529,13 @@ class ProductController extends Controller
             $product = Product::where('business_id', $business_id)
                 ->with(['brand', 'unit', 'category', 'sub_category', 'product_tax', 'variations', 'variations.product_variation', 'variations.group_prices', 'variations.media', 'product_locations', 'warranty', 'media'])
                 ->findOrFail($id);
+
+            $permitted_locations = auth()->user()->permitted_locations();
+            if ($permitted_locations != 'all') {
+                $product->setRelation('product_locations', $product->product_locations->filter(function ($location) use ($permitted_locations) {
+                    return in_array($location->id, $permitted_locations);
+                }));
+            }
 
             $price_groups = SellingPriceGroup::where('business_id', $business_id)->active()->pluck('name', 'id');
 

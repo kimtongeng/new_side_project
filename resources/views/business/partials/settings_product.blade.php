@@ -206,7 +206,7 @@
                 {!! Form::select('common_settings[secondary_font_family]', ['Koh Santepheap' => 'Koh Santepheap', 'Kantumruy Pro' => 'Kantumruy Pro', 'Siemreap' => 'Siemreap', 'Battambang' => 'Battambang', 'Hanuman' => 'Hanuman', 'Moul' => 'Moul', 'Noto Sans Khmer' => 'Noto Sans Khmer'], !empty($common_settings['secondary_font_family']) ? $common_settings['secondary_font_family'] : 'Koh Santepheap', ['class' => 'form-control select2', 'style' => 'width:100%;']); !!}
             </div>
         </div>
-
+ 
         <div class="col-sm-4">
             <div class="form-group">
                 {!! Form::label('secondary_name_format', 'Second Language Format / Separator:') !!}
@@ -217,7 +217,8 @@
                     'hyphen' => 'Hyphen \'-\' e.g. Primary - Secondary',
                     'pipe' => 'Pipe \'|\' e.g. Primary | Secondary',
                     'backslash' => 'Backslash \'\\\' e.g. Primary \\ Secondary',
-                    'slash' => 'Slash \'/\' e.g. Primary / Secondary'
+                    'slash' => 'Slash \'/\' e.g. Primary / Secondary',
+                    'newline' => 'New Line / Stacked (Top & Under)'
                 ], !empty($common_settings['secondary_name_format']) ? $common_settings['secondary_name_format'] : 'parentheses', ['class' => 'form-control select2', 'style' => 'width:100%;']); !!}
             </div>
         </div>

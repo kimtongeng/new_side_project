@@ -58,6 +58,8 @@ class ProductUtil extends Util
             $delimiter = ' \\ ';
         } elseif ($secondary_name_format == 'slash') {
             $delimiter = ' / ';
+        } elseif ($secondary_name_format == 'newline') {
+            $delimiter = $html ? '<br/>' : "\n";
         }
 
         if ($secondary_name_position == 'left') {
@@ -1055,7 +1057,18 @@ class ProductUtil extends Util
     public function getRackDetails($business_id, $product_id, $get_location = false)
     {
         $query = ProductRack::where('product_racks.business_id', $business_id)
-                    ->where('product_id', $product_id);
+                    ->where('product_racks.product_id', $product_id)
+                    ->join('product_locations as PLOC', function ($join) {
+                        $join->on('product_racks.product_id', '=', 'PLOC.product_id')
+                            ->on('product_racks.location_id', '=', 'PLOC.location_id');
+                    });
+
+        if (auth()->check()) {
+            $permitted_locations = auth()->user()->permitted_locations();
+            if ($permitted_locations != 'all') {
+                $query->whereIn('product_racks.location_id', $permitted_locations);
+            }
+        }
 
         if ($get_location) {
             $racks = $query->join('business_locations AS BL', 'product_racks.location_id', '=', 'BL.id')
@@ -1065,7 +1078,7 @@ class ProductUtil extends Util
                     'BL.name', ])
                 ->get();
         } else {
-            $racks = collect($query->select(['rack', 'row', 'position', 'location_id'])->get());
+            $racks = collect($query->select(['product_racks.rack', 'product_racks.row', 'product_racks.position', 'product_racks.location_id'])->get());
 
             $racks = $racks->mapWithKeys(function ($item, $key) {
                 return [$item['location_id'] => $item->toArray()];

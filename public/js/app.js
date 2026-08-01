@@ -2376,9 +2376,13 @@ $(document).on('click', 'table.ajax_view tbody tr', function (e) {
         !$(e.target).is('td.selectable_td') &&
         !$(e.target).is('td.clickable_td') &&
         !$(e.target).is('a') &&
+        !$(e.target).closest('a').length &&
         !$(e.target).is('button') &&
+        !$(e.target).closest('button').length &&
         !$(e.target).hasClass('label') &&
+        !$(e.target).closest('.label').length &&
         !$(e.target).is('li') &&
+        !$(e.target).closest('li').length &&
         $(this).data('href') &&
         !$(e.target).is('i') &&
         !$(e.target).hasClass('view-product-gallery') &&

@@ -1262,6 +1262,7 @@ class PurchaseController extends Controller
             $products_array = [];
             foreach ($products as $product) {
                 $products_array[$product->product_id]['name'] = $product->name;
+                $products_array[$product->product_id]['secondary_name'] = $product->secondary_name;
                 $products_array[$product->product_id]['sku'] = $product->sub_sku;
                 $products_array[$product->product_id]['type'] = $product->type;
                 $products_array[$product->product_id]['variations'][]
@@ -1277,15 +1278,16 @@ class PurchaseController extends Controller
             $no_of_records = $products->count();
             if (! empty($products_array)) {
                 foreach ($products_array as $key => $value) {
+                    $formatted_name = \App\Utils\ProductUtil::getFormattedProductName($value['name'], $value['secondary_name'] ?? null, false);
                     if ($no_of_records > 1 && $value['type'] != 'single' && ! $only_variations) {
                         $result[] = [
                             'id' => $i,
-                            'text' => $value['name'] . ' - ' . $value['sku'],
+                            'text' => $formatted_name . ' - ' . $value['sku'],
                             'variation_id' => 0,
                             'product_id' => $key,
                         ];
                     }
-                    $name = $value['name'];
+                    $name = $formatted_name;
                     foreach ($value['variations'] as $variation) {
                         $text = $name;
                         if ($value['type'] == 'variable') {

@@ -9,7 +9,7 @@
 <tr id="line_{{ $line->id }}" class="worksheet-row @if($line->counted_by !== null) is-counted @endif">
 
     <td>
-        <strong>{{ $line->product->name ?? '' }}</strong> ({{ $line->variation->sub_sku ?? '' }})
+        <strong>{!! \App\Utils\ProductUtil::getFormattedProductName($line->product->name ?? '', $line->product->secondary_name ?? null, true) !!}</strong> ({{ $line->variation->sub_sku ?? '' }})
         @if(!empty($line->variation->name) && $line->variation->name !== 'DUMMY')
             <br><span class="text-muted">{{ $line->variation->name }}</span>
         @endif

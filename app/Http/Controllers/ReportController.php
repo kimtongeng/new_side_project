@@ -1748,6 +1748,7 @@ class ReportController extends Controller
                     ->where('t.type', 'purchase')
                     ->select(
                         'p.name as product_name',
+                        'p.secondary_name as secondary_name',
                         'p.type as product_type',
                         'pv.name as product_variation',
                         'v.name as variation_name',
@@ -1807,7 +1808,8 @@ class ReportController extends Controller
 
             return Datatables::of($query)
                 ->editColumn('product_name', function ($row) {
-                    $product_name = $row->product_name;
+                    $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($row->secondary_name ?? null) : null;
+                    $product_name = \App\Utils\ProductUtil::getFormattedProductName($row->product_name, $secondary_name, true);
                     if ($row->product_type == 'variable') {
                         $product_name .= ' - '.$row->product_variation.' - '.$row->variation_name;
                     }

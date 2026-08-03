@@ -239,7 +239,76 @@
     <script src="{{ asset('js/opening_stock.js?v=' . $asset_v) }}"></script>
     <script type="text/javascript">
         $(document).ready(function () {
+            var product_table_export_options = {
+                columns: function (idx, data, node) {
+                    return idx !== 0 && idx !== 2;
+                }
+            };
+
+            var product_table_buttons = [
+                {
+                    extend: 'csv',
+                    text: '<i class="fa fa-file-csv" aria-hidden="true"></i> ' + LANG.export_to_csv,
+                    className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-my-2',
+                    exportOptions: product_table_export_options,
+                    footer: true,
+                },
+                {
+                    extend: 'excel',
+                    text: '<i class="fa fa-file-excel" aria-hidden="true"></i> ' + LANG.export_to_excel,
+                    className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-my-2',
+                    exportOptions: product_table_export_options,
+                    footer: true,
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fa fa-print" aria-hidden="true"></i> ' + LANG.print,
+                    className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-my-2',
+                    exportOptions: {
+                        columns: function (idx, data, node) {
+                            return idx !== 0 && idx !== 2;
+                        },
+                        stripHtml: false,
+                    },
+                    footer: true,
+                    customize: function (win) {
+                        $(win.document.body).find('table img').css({
+                            'max-width': '60px',
+                            'max-height': '60px',
+                            'object-fit': 'cover',
+                            'border-radius': '4px',
+                            'display': 'inline-block'
+                        });
+                        if ($('.print_table_part').length > 0) {
+                            $($('.print_table_part').html()).insertBefore(
+                                $(win.document.body).find('table')
+                            );
+                        }
+                        if ($(win.document.body).find('table.hide-footer').length) {
+                            $(win.document.body).find('table.hide-footer tfoot').remove();
+                        }
+                        __currency_convert_recursively($(win.document.body).find('table'));
+                    },
+                },
+                {
+                    extend: 'colvis',
+                    text: '<i class="fa fa-columns" aria-hidden="true"></i> ' + LANG.col_vis,
+                    className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-my-2',
+                }
+            ];
+
+            if (typeof non_utf8_languages !== 'undefined' && typeof app_locale !== 'undefined' && non_utf8_languages.indexOf(app_locale) == -1) {
+                product_table_buttons.push({
+                    extend: 'pdf',
+                    text: '<i class="fa fa-file-pdf" aria-hidden="true"></i> ' + LANG.export_to_pdf,
+                    className: 'tw-dw-btn-xs tw-dw-btn tw-dw-btn-outline tw-my-2',
+                    exportOptions: product_table_export_options,
+                    footer: true,
+                });
+            }
+
             product_table = $('#product_table').DataTable({
+                buttons: product_table_buttons,
                 processing: true,
                 serverSide: true,
                 fixedHeader: false,

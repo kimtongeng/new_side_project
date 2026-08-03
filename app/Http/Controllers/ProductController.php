@@ -2163,7 +2163,7 @@ class ProductController extends Controller
             $result = $this->productUtil->filterProduct($business_id, $search_term, $location_id, $not_for_selling, $price_group_id, $product_types, $search_fields, $check_qty);
 
             foreach ($result as $row) {
-                $row->formatted_name = \App\Utils\ProductUtil::getFormattedProductName($row->name, $row->secondary_name, false);
+                $row->formatted_name = \App\Utils\ProductUtil::getFormattedProductName($row->name, $row->secondary_name, true);
             }
 
             return json_encode($result);
@@ -2203,6 +2203,7 @@ class ProductController extends Controller
                 $products->where(function ($query) use ($term) {
                     $query->where('products.name', 'like', '%' . $term . '%');
                     $query->orWhere('products.secondary_name', 'like', '%' . $term . '%');
+                    $query->orWhere('variations.name', 'like', '%' . $term . '%');
                     $query->orWhere('sku', 'like', '%' . $term . '%');
                     $query->orWhere('sub_sku', 'like', '%' . $term . '%');
                 });
@@ -2227,7 +2228,7 @@ class ProductController extends Controller
                 ->get();
 
             $products->transform(function ($item) {
-                $item->text = \App\Utils\ProductUtil::getFormattedProductName($item->name, $item->secondary_name, false) . ' - ' . $item->sku;
+                $item->text = \App\Utils\ProductUtil::getFormattedProductName($item->name, $item->secondary_name, true) . ' - ' . $item->sku;
                 return $item;
             });
 

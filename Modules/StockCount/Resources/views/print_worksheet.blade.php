@@ -275,7 +275,7 @@
                             @if(!empty($line->variation->sub_sku))
                                 {{ $line->variation->sub_sku }} - 
                             @endif
-                            <strong>{{ $line->product->name ?? '' }}</strong>
+                            <strong>{!! \App\Utils\ProductUtil::getFormattedProductName($line->product->name ?? '', $line->product->secondary_name ?? null, true) !!}</strong>
                             @if(!empty($line->variation->name) && $line->variation->name !== 'DUMMY')
                                 <small style="color: #555;">({{ $line->variation->name }})</small>
                             @endif

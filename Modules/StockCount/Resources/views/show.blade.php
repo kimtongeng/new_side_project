@@ -614,7 +614,7 @@
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>
-                                        {{ $line->product->name ?? '' }}
+                                        {!! \App\Utils\ProductUtil::getFormattedProductName($line->product->name ?? '', $line->product->secondary_name ?? null, true) !!}
                                         @if(!empty($line->variation->name) && $line->variation->name !== 'DUMMY')
                                             <span class="text-muted">({{ $line->variation->name }})</span>
                                         @endif

@@ -70,8 +70,9 @@ $(document).ready(function() {
                 },
             })
             .autocomplete('instance')._renderItem = function(ul, item) {
+            var product_name = item.formatted_name ? item.formatted_name : item.name;
             if (item.qty_available <= 0) {
-                var string = '<li class="ui-state-disabled">' + item.name;
+                var string = '<li class="ui-state-disabled">' + product_name;
                 if (item.type == 'variable') {
                     string += '-' + item.variation;
                 }
@@ -80,7 +81,7 @@ $(document).ready(function() {
             } else if (item.enable_stock != 1) {
                 return ul;
             } else {
-                var string = '<div>' + item.name;
+                var string = '<div>' + product_name;
                 if (item.type == 'variable') {
                     string += '-' + item.variation;
                 }

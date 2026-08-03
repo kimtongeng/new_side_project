@@ -1233,6 +1233,7 @@ class PurchaseController extends Controller
                 ->where(function ($query) use ($term) {
                     $query->where('products.name', 'like', '%' . $term . '%');
                     $query->orWhere('products.secondary_name', 'like', '%' . $term . '%');
+                    $query->orWhere('variations.name', 'like', '%' . $term . '%');
                     $query->orWhere('sku', 'like', '%' . $term . '%');
                     $query->orWhere('sub_sku', 'like', '%' . $term . '%');
                 })
@@ -1278,7 +1279,7 @@ class PurchaseController extends Controller
             $no_of_records = $products->count();
             if (! empty($products_array)) {
                 foreach ($products_array as $key => $value) {
-                    $formatted_name = \App\Utils\ProductUtil::getFormattedProductName($value['name'], $value['secondary_name'] ?? null, false);
+                    $formatted_name = \App\Utils\ProductUtil::getFormattedProductName($value['name'], $value['secondary_name'] ?? null, true);
                     if ($no_of_records > 1 && $value['type'] != 'single' && ! $only_variations) {
                         $result[] = [
                             'id' => $i,

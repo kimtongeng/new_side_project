@@ -198,40 +198,79 @@ class TelegramNotification
 
     public static function sendMessage(string $message, string $to = '', $location_id = "PT1001"): void
     {
+        $botToken  = null;
+        $chat_id   = null;
+        $topic_ids = [];
 
-        return;
-        // if (function_exists('fastcgi_finish_request')) {
-        //     @fastcgi_finish_request();
-        // }
+        // 1. Try dynamic config from DB first
+        try {
+            $dbGroup = \App\TelegramGroup::where('is_active', 1)
+                ->where('location_id', (string)$location_id)
+                ->with(['bot', 'topics' => function ($q) use ($to) {
+                    $q->where('is_active', 1)->where('topic_key', $to);
+                }])
+                ->first();
 
-        // $botToken = self::LOCAL_BOT;
-        // $groups = self::LOCAL_GROUP;
-        $botToken = self::PRODUCTION_BOT;
-        $groups = self::PRODUCTION_GROUP;
+            if ($dbGroup && $dbGroup->bot && $dbGroup->bot->is_active) {
+                $botToken = $dbGroup->bot->bot_token;
+                $chat_id  = $dbGroup->chat_id;
 
-        $group = $groups[$location_id] ?? null;
-        if (! $group) return;
+                foreach ($dbGroup->topics as $dbTopic) {
+                    if (! empty($dbTopic->topic_id)) {
+                        $splitIds = array_map('trim', explode(',', (string)$dbTopic->topic_id));
+                        foreach ($splitIds as $sId) {
+                            if ($sId !== '') {
+                                $topic_ids[] = $sId;
+                            }
+                        }
+                    }
+                }
+                $topic_ids = array_unique($topic_ids);
+            }
+        } catch (\Exception $de) {
+            \Log::warning("Telegram DB config fetch error: " . $de->getMessage());
+        }
 
+        // 2. Fallback to hardcoded constants if no active DB config found
+        if (empty($botToken) || empty($chat_id) || empty($topic_ids)) {
+            $fallbackBotToken = self::PRODUCTION_BOT;
+            $fallbackGroups   = self::PRODUCTION_GROUP;
 
+            $group = $fallbackGroups[$location_id] ?? null;
+            if (! $group) return;
 
+            $topic   = $group["topic"] ?? [];
+            $chat_id = $group["chat_id"] ?? '';
+            $raw_tid = $topic[$to] ?? null;
+            $botToken = $fallbackBotToken;
 
-        $topic = $group["topic"] ?? [];
-        $chat_id = $group["chat_id"] ?? '';
-        $topic_id = $topic[$to] ?? null;
+            if (! empty($raw_tid)) {
+                $splitIds = array_map('trim', explode(',', (string)$raw_tid));
+                foreach ($splitIds as $sId) {
+                    if ($sId !== '') {
+                        $topic_ids[] = $sId;
+                    }
+                }
+                $topic_ids = array_unique($topic_ids);
+            }
+        }
 
-        if (empty($topic_id) || empty($chat_id)) {
+        if (empty($topic_ids) || empty($chat_id) || empty($botToken)) {
             return;
         }
 
-        try {
-            Http::timeout(3)->get("https://api.telegram.org/bot{$botToken}/sendMessage", [
-                'chat_id' => $chat_id,
-                'message_thread_id' => $topic_id,
-                'text' => $message,
-                'parse_mode' => 'HTML',
-            ]);
-        } catch (\Exception $e) {
-            \Log::warning("Telegram sendMessage error: " . $e->getMessage());
+        // 3. Dispatch notification to all topic thread IDs
+        foreach ($topic_ids as $t_id) {
+            try {
+                Http::timeout(3)->get("https://api.telegram.org/bot{$botToken}/sendMessage", [
+                    'chat_id'           => $chat_id,
+                    'message_thread_id' => $t_id,
+                    'text'              => $message,
+                    'parse_mode'        => 'HTML',
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning("Telegram sendMessage error for topic {$t_id}: " . $e->getMessage());
+            }
         }
     }
 

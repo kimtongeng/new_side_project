@@ -820,6 +820,11 @@ class AdminSidebarMenu
                                 __('business.business_locations'),
                                 ['icon' => '', 'active' => request()->segment(1) == 'business-location']
                             );
+                            $sub->url(
+                                action([\App\Http\Controllers\TelegramSettingController::class, 'index']),
+                                'Telegram Settings',
+                                ['icon' => '', 'active' => request()->segment(1) == 'telegram-settings']
+                            );
                         }
                         if (auth()->user()->can('invoice_settings.access')) {
                             $sub->url(

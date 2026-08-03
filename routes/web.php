@@ -414,6 +414,25 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('notification/get-template/{transaction_id}/{template_for}', [NotificationController::class, 'getTemplate']);
     Route::post('notification/send', [NotificationController::class, 'send']);
 
+    // Telegram Settings...
+    Route::get('/telegram-settings', [\App\Http\Controllers\TelegramSettingController::class, 'index']);
+    Route::get('/telegram-settings/create-bot', [\App\Http\Controllers\TelegramSettingController::class, 'createBot']);
+    Route::post('/telegram-settings/store-bot', [\App\Http\Controllers\TelegramSettingController::class, 'storeBot']);
+    Route::get('/telegram-settings/edit-bot/{id}', [\App\Http\Controllers\TelegramSettingController::class, 'editBot']);
+    Route::put('/telegram-settings/update-bot/{id}', [\App\Http\Controllers\TelegramSettingController::class, 'updateBot']);
+    Route::get('/telegram-settings/delete-bot/{id}', [\App\Http\Controllers\TelegramSettingController::class, 'destroyBot']);
+    Route::post('/telegram-settings/test-bot', [\App\Http\Controllers\TelegramSettingController::class, 'testBot']);
+
+    Route::get('/telegram-settings/create-group', [\App\Http\Controllers\TelegramSettingController::class, 'createGroup']);
+    Route::post('/telegram-settings/store-group', [\App\Http\Controllers\TelegramSettingController::class, 'storeGroup']);
+    Route::get('/telegram-settings/edit-group/{id}', [\App\Http\Controllers\TelegramSettingController::class, 'editGroup']);
+    Route::put('/telegram-settings/update-group/{id}', [\App\Http\Controllers\TelegramSettingController::class, 'updateGroup']);
+    Route::get('/telegram-settings/delete-group/{id}', [\App\Http\Controllers\TelegramSettingController::class, 'destroyGroup']);
+
+    Route::get('/telegram-settings/edit-topics/{group_id}', [\App\Http\Controllers\TelegramSettingController::class, 'editTopics']);
+    Route::put('/telegram-settings/update-topics/{group_id}', [\App\Http\Controllers\TelegramSettingController::class, 'updateTopics']);
+    Route::post('/telegram-settings/send-test-message', [\App\Http\Controllers\TelegramSettingController::class, 'sendTestMessage']);
+
     Route::post('/purchase-return/update', [CombinedPurchaseReturnController::class, 'update']);
     Route::get('/purchase-return/edit/{id}', [CombinedPurchaseReturnController::class, 'edit']);
     Route::post('/purchase-return/save', [CombinedPurchaseReturnController::class, 'save']);

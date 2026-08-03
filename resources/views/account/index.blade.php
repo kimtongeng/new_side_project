@@ -28,6 +28,52 @@
             </div>
         @endif
         @can('account.access')
+            @component('components.filters', ['title' => __('report.filters')])
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('account_list_filter_location_id', __('business.business_location') . ':') !!}
+                        {!! Form::select('account_list_filter_location_id', $business_locations, null, [
+                            'class' => 'form-control select2',
+                            'style' => 'width:100%',
+                            'id' => 'account_list_filter_location_id',
+                            'placeholder' => __('lang_v1.all'),
+                        ]) !!}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('account_list_filter_account_type_id', __('lang_v1.account_type') . ':') !!}
+                        {!! Form::select('account_list_filter_account_type_id', $account_types_dropdown, null, [
+                            'class' => 'form-control select2',
+                            'style' => 'width:100%',
+                            'id' => 'account_list_filter_account_type_id',
+                            'placeholder' => __('lang_v1.all'),
+                        ]) !!}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('account_list_filter_created_by', __('lang_v1.added_by') . ':') !!}
+                        {!! Form::select('account_list_filter_created_by', $users, null, [
+                            'class' => 'form-control select2',
+                            'style' => 'width:100%',
+                            'id' => 'account_list_filter_created_by',
+                            'placeholder' => __('lang_v1.all'),
+                        ]) !!}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {!! Form::label('account_list_filter_user_level', __('lang_v1.user_level') . ':') !!}
+                        {!! Form::select('account_list_filter_user_level', $user_levels, null, [
+                            'class' => 'form-control select2',
+                            'style' => 'width:100%',
+                            'id' => 'account_list_filter_user_level',
+                            'placeholder' => __('lang_v1.all'),
+                        ]) !!}
+                    </div>
+                </div>
+            @endcomponent
             <div class="row">
                 @component('components.widget')
                 <div class="col-sm-12">
@@ -67,21 +113,23 @@
                                             ) !!}
                                         </div>
                                         <div class="col-md-8 col-xs-6 col-sm-6 text-right">
-                                            <button type="button"
-                                                class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full btn-modal pull-right"
-                                                data-container=".account_model"
-                                                data-href="{{ action([\App\Http\Controllers\AccountController::class, 'create']) }}"
-                                                style="cursor: pointer; touch-action: manipulation;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                    stroke-linecap="round" stroke-linejoin="round"
-                                                    class="icon icon-tabler icons-tabler-outline icon-tabler-plus"
-                                                    style="pointer-events: none; display: inline-block; vertical-align: middle;">
-                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                                    <path d="M12 5l0 14" />
-                                                    <path d="M5 12l14 0" />
-                                                </svg> <span style="pointer-events: none;">@lang('messages.add')</span>
-                                            </button>
+                                            @if(auth()->user()->can('account.access') || auth()->user()->can('account.create') || auth()->user()->can('add_account'))
+                                                <button type="button"
+                                                    class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full btn-modal pull-right"
+                                                    data-container=".account_model"
+                                                    data-href="{{ action([\App\Http\Controllers\AccountController::class, 'create']) }}"
+                                                    style="cursor: pointer; touch-action: manipulation;">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                        stroke-linecap="round" stroke-linejoin="round"
+                                                        class="icon icon-tabler icons-tabler-outline icon-tabler-plus"
+                                                        style="pointer-events: none; display: inline-block; vertical-align: middle;">
+                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                        <path d="M12 5l0 14" />
+                                                        <path d="M5 12l14 0" />
+                                                    </svg> <span style="pointer-events: none;">@lang('messages.add')</span>
+                                                </button>
+                                            @endif
                                         </div>
                                         {{-- @endcomponent --}}
                                     </div>
@@ -401,6 +449,10 @@
                     url: '/account/account?account_type=other',
                     data: function (d) {
                         d.account_status = $('#account_status').val();
+                        d.location_id = $('#account_list_filter_location_id').val();
+                        d.account_type_id = $('#account_list_filter_account_type_id').val();
+                        d.created_by = $('#account_list_filter_created_by').val();
+                        d.user_level = $('#account_list_filter_user_level').val();
                     }
                 },
                 columnDefs: [{
@@ -470,7 +522,7 @@
 
         });
 
-        $('#account_status').change(function () {
+        $(document).on('change', '#account_status, #account_list_filter_location_id, #account_list_filter_account_type_id, #account_list_filter_created_by, #account_list_filter_user_level', function () {
             other_account_table.ajax.reload();
         });
 

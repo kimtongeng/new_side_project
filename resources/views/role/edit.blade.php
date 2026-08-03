@@ -1596,6 +1596,60 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
+                {!! Form::checkbox('permissions[]', 'account.create', in_array('account.create', $role_permissions), 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'account.add_account' ) }}
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'account.edit', in_array('account.edit', $role_permissions), 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'account.edit_account' ) }}
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'account.show', in_array('account.show', $role_permissions), 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'account.account_book' ) }}
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'account.fund_transfer', in_array('account.fund_transfer', $role_permissions), 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'account.fund_transfer' ) }}
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'account.deposit', in_array('account.deposit', $role_permissions), 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'account.deposit' ) }}
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'account.close', in_array('account.close', $role_permissions), 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'messages.close' ) }} / {{ __( 'messages.activate' ) }} @lang('account.account')
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
                 {!! Form::checkbox('permissions[]', 'edit_account_transaction', in_array('edit_account_transaction', $role_permissions), 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.edit_account_transaction' ) }}
               </label>

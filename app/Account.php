@@ -21,6 +21,7 @@ class Account extends Model
     protected $casts = [
         'account_details' => 'array',
         'location_id' => 'array',
+        'user_level' => 'array',
     ];
 
     public static function forDropdown($business_id, $prepend_none, $closed = false, $show_balance = false, $location_id = null, $include_account_ids = [])

@@ -16,7 +16,7 @@
 
             <div class="form-group">
                 {!! Form::label('user_level', __( 'lang_v1.user_level' ) .":") !!}
-                {!! Form::select('user_level', $roles, null, ['class' => 'form-control select2', 'placeholder' => __( 'messages.please_select' ), 'style' => 'width:100%' ]); !!}
+                {!! Form::select('user_level[]', $roles, null, ['class' => 'form-control select2', 'multiple', 'style' => 'width:100%' ]); !!}
             </div>
 
             <div class="form-group">

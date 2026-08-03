@@ -65,8 +65,6 @@ class AccountController extends Controller
                     'pat.id'
                 )
                 ->leftJoin('users AS u', 'accounts.created_by', '=', 'u.id')
-                ->leftJoin('business_locations AS bl', 'accounts.location_id', '=', 'bl.id')
-                ->leftJoin('roles AS r', 'accounts.user_level', '=', 'r.id')
                 ->where('accounts.business_id', $business_id)
                 ->select([
                     'accounts.name',
@@ -79,8 +77,7 @@ class AccountController extends Controller
                     'accounts.account_details',
                     'is_closed',
                     'accounts.location_id',
-                    'bl.name as location_name',
-                    'r.name as role_name',
+                    'accounts.user_level',
                     DB::raw("SUM( IF(AT.type='credit', amount, -1*amount) ) as balance"),
                     DB::raw("CONCAT(COALESCE(u.surname, ''),' ',COALESCE(u.first_name, ''),' ',COALESCE(u.last_name,'')) as added_by"),
                 ]);
@@ -124,31 +121,83 @@ class AccountController extends Controller
 
                 $user_role_ids = auth()->user()->roles()->pluck('id')->toArray();
                 $accounts->where(function ($q) use ($user_role_ids) {
-                    $q->whereIn('accounts.user_level', $user_role_ids)
-                        ->orWhereNull('accounts.user_level');
+                    $q->whereNull('accounts.user_level');
+                    foreach ((array)$user_role_ids as $r_id) {
+                        $q->orWhere('accounts.user_level', $r_id)
+                          ->orWhereJsonContains('accounts.user_level', (string)$r_id)
+                          ->orWhereJsonContains('accounts.user_level', (int)$r_id);
+                    }
                 });
             }
 
             $is_closed = request()->input('account_status') == 'closed' ? 1 : 0;
-            $accounts->where('is_closed', $is_closed)
-                // ->whereNull('AT.deleted_at')
-                ->groupBy('accounts.id');
+            $accounts->where('is_closed', $is_closed);
+
+            if (! empty(request()->input('location_id'))) {
+                $loc_filter = request()->input('location_id');
+                $accounts->where(function ($q) use ($loc_filter) {
+                    $q->where('accounts.location_id', $loc_filter)
+                      ->orWhereJsonContains('accounts.location_id', (string)$loc_filter)
+                      ->orWhereJsonContains('accounts.location_id', (int)$loc_filter);
+                });
+            }
+
+            if (! empty(request()->input('account_type_id'))) {
+                $acc_type_filter = request()->input('account_type_id');
+                $accounts->where(function ($q) use ($acc_type_filter) {
+                    $q->where('accounts.account_type_id', $acc_type_filter)
+                      ->orWhere('ats.parent_account_type_id', $acc_type_filter);
+                });
+            }
+
+            if (! empty(request()->input('created_by'))) {
+                $accounts->where('accounts.created_by', request()->input('created_by'));
+            }
+
+            if (! empty(request()->input('user_level'))) {
+                $accounts->where('accounts.user_level', request()->input('user_level'));
+            }
+
+            $accounts->groupBy('accounts.id');
 
             return DataTables::of($accounts)
-                ->addColumn(
-                    'action',
-                    '<button data-href="{{action(\'App\Http\Controllers\AccountController@edit\',[$id])}}" data-container=".account_model" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal"><i class="glyphicon glyphicon-edit"></i> @lang("messages.edit")</button>
-                                <a href="{{action(\'App\Http\Controllers\AccountController@show\',[$id])}}" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-warning btn-xs"><i class="fa fa-book"></i> @lang("account.account_book")</a>&nbsp;
-                                @if($is_closed == 0)
-                                <button data-href="{{action(\'App\Http\Controllers\AccountController@getFundTransfer\',[$id])}}" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info btn-modal" data-container=".view_modal"><i class="fas fa-calculator"></i> @lang("account.fund_transfer")</button>
+                ->addColumn('action', function ($row) {
+                    $html = '';
 
-                                <button data-href="{{action(\'App\Http\Controllers\AccountController@getDeposit\',[$id])}}" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-success btn-modal" data-container=".view_modal"><i class="fas fa-money-bill-alt"></i> @lang("account.deposit")</button>
+                    // Edit
+                    if (auth()->user()->can('account.access') || auth()->user()->can('account.edit') || auth()->user()->can('edit_account')) {
+                        $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'edit'], [$row->id]) . '" data-container=".account_model" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal"><i class="glyphicon glyphicon-edit"></i> ' . __('messages.edit') . '</button> ';
+                    }
 
-                                <button data-url="{{action(\'App\Http\Controllers\AccountController@close\',[$id])}}" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error close_account"><i class="fa fa-power-off"></i> @lang("messages.close")</button>
-                                @elseif($is_closed == 1)
-                                    <button data-url="{{action(\'App\Http\Controllers\AccountController@activate\',[$id])}}" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-success activate_account"><i class="fa fa-power-off"></i> @lang("messages.activate")</button>
-                                @endif'
-                )
+                    // Account Book
+                    if (auth()->user()->can('account.access') || auth()->user()->can('account.show') || auth()->user()->can('view_account_book')) {
+                        $html .= '<a href="' . action([\App\Http\Controllers\AccountController::class, 'show'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-warning btn-xs"><i class="fa fa-book"></i> ' . __('account.account_book') . '</a> ';
+                    }
+
+                    if ($row->is_closed == 0) {
+                        // Fund Transfer
+                        if (auth()->user()->can('account.access') || auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer')) {
+                            $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getFundTransfer'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info btn-modal" data-container=".view_modal"><i class="fas fa-calculator"></i> ' . __('account.fund_transfer') . '</button> ';
+                        }
+
+                        // Deposit
+                        if (auth()->user()->can('account.access') || auth()->user()->can('account.deposit') || auth()->user()->can('deposit')) {
+                            $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getDeposit'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-success btn-modal" data-container=".view_modal"><i class="fas fa-money-bill-alt"></i> ' . __('account.deposit') . '</button> ';
+                        }
+
+                        // Close
+                        if (auth()->user()->can('account.access') || auth()->user()->can('account.close') || auth()->user()->can('close_account')) {
+                            $html .= '<button data-url="' . action([\App\Http\Controllers\AccountController::class, 'close'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error close_account"><i class="fa fa-power-off"></i> ' . __('messages.close') . '</button>';
+                        }
+                    } elseif ($row->is_closed == 1) {
+                        // Activate
+                        if (auth()->user()->can('account.access') || auth()->user()->can('account.activate') || auth()->user()->can('activate_account')) {
+                            $html .= '<button data-url="' . action([\App\Http\Controllers\AccountController::class, 'activate'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-success activate_account"><i class="fa fa-power-off"></i> ' . __('messages.activate') . '</button>';
+                        }
+                    }
+
+                    return $html;
+                })
                 ->editColumn('name', function ($row) {
                     if ($row->is_closed == 1) {
                         return $row->name . ' <small class="label pull-right bg-red no-print">' . __('account.closed') . '</small><span class="print_section">(' . __('account.closed') . ')</span>';
@@ -168,6 +217,18 @@ class AccountController extends Controller
                     return $row->location_name ?: __('report.all_locations');
                 })
                 ->editColumn('role_name', function ($row) use ($business_id) {
+                    $u_levels = $row->user_level;
+                    if (!is_array($u_levels) && !empty($u_levels)) {
+                        $u_levels = json_decode($u_levels, true) ?: [$u_levels];
+                    }
+                    if (!empty($u_levels) && is_array($u_levels)) {
+                        $role_names = Role::whereIn('id', $u_levels)->pluck('name')->toArray();
+                        $formatted_roles = array_map(function ($r) use ($business_id) {
+                            $r = str_replace('#' . $business_id, '', $r);
+                            return in_array($r, ['Admin', 'Cashier']) ? __('lang_v1.' . $r) : $r;
+                        }, $role_names);
+                        return !empty($formatted_roles) ? implode(', ', $formatted_roles) : __('messages.all');
+                    }
                     if (empty($row->role_name)) {
                         return __('messages.all');
                     }
@@ -241,8 +302,26 @@ class AccountController extends Controller
             ->with(['sub_types'])
             ->get();
 
+        $business_locations = BusinessLocation::forDropdown($business_id, true);
+
+        $account_types_dropdown = AccountType::where('business_id', $business_id)
+            ->whereNull('parent_account_type_id')
+            ->pluck('name', 'id');
+
+        $users = \App\User::forDropdown($business_id, false);
+
+        $roles_raw = Role::where('business_id', $business_id)->get();
+        $user_levels = [];
+        foreach ($roles_raw as $role_item) {
+            $r_name = str_replace('#' . $business_id, '', $role_item->name);
+            if (in_array($r_name, ['Admin', 'Cashier'])) {
+                $r_name = __('lang_v1.' . $r_name);
+            }
+            $user_levels[$role_item->id] = $r_name;
+        }
+
         return view('account.index')
-            ->with(compact('not_linked_payments', 'account_types'));
+            ->with(compact('not_linked_payments', 'account_types', 'business_locations', 'account_types_dropdown', 'users', 'user_levels'));
     }
 
     /**
@@ -252,7 +331,7 @@ class AccountController extends Controller
      */
     public function create()
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.create') && ! auth()->user()->can('add_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -286,7 +365,7 @@ class AccountController extends Controller
      */
     public function store(Request $request)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.create') && ! auth()->user()->can('add_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -298,11 +377,15 @@ class AccountController extends Controller
                 $input['business_id'] = $business_id;
                 $input['created_by'] = $user_id;
 
-                if (empty($input['location_id'])) {
+                if (empty($input['location_id']) || (is_array($input['location_id']) && count(array_filter($input['location_id'])) == 0)) {
                     $input['location_id'] = null;
+                } else if (is_array($input['location_id'])) {
+                    $input['location_id'] = array_values(array_filter($input['location_id']));
                 }
-                if (empty($input['user_level'])) {
+                if (empty($input['user_level']) || (is_array($input['user_level']) && count(array_filter($input['user_level'])) == 0)) {
                     $input['user_level'] = null;
+                } else if (is_array($input['user_level'])) {
+                    $input['user_level'] = array_values(array_filter($input['user_level']));
                 }
                 if (empty($input['account_type_id']) || !is_numeric($input['account_type_id'])) {
                     $input['account_type_id'] = null;
@@ -387,7 +470,7 @@ class AccountController extends Controller
      */
     public function show($id)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.show') && ! auth()->user()->can('view_account_book')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -611,7 +694,7 @@ class AccountController extends Controller
      */
     public function edit($id)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.edit') && ! auth()->user()->can('edit_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -650,7 +733,7 @@ class AccountController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.edit') && ! auth()->user()->can('edit_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -667,11 +750,15 @@ class AccountController extends Controller
                 $old_account = $account->replicate();
                 $old_account->load(['account_type', 'account_type.parent_account']);
 
-                if (empty($input['location_id'])) {
+                if (empty($input['location_id']) || (is_array($input['location_id']) && count(array_filter($input['location_id'])) == 0)) {
                     $input['location_id'] = null;
+                } else if (is_array($input['location_id'])) {
+                    $input['location_id'] = array_values(array_filter($input['location_id']));
                 }
-                if (empty($input['user_level'])) {
+                if (empty($input['user_level']) || (is_array($input['user_level']) && count(array_filter($input['user_level'])) == 0)) {
                     $input['user_level'] = null;
+                } else if (is_array($input['user_level'])) {
+                    $input['user_level'] = array_values(array_filter($input['user_level']));
                 }
                 if (empty($input['account_type_id']) || !is_numeric($input['account_type_id'])) {
                     $input['account_type_id'] = null;
@@ -790,7 +877,7 @@ class AccountController extends Controller
      */
     public function close($id)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.close') && ! auth()->user()->can('close_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -865,7 +952,7 @@ class AccountController extends Controller
      */
     public function getFundTransfer($id)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.fund_transfer') && ! auth()->user()->can('fund_transfer')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -930,7 +1017,7 @@ class AccountController extends Controller
      */
     public function postFundTransfer(Request $request)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.fund_transfer') && ! auth()->user()->can('fund_transfer')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1075,7 +1162,7 @@ class AccountController extends Controller
      */
     public function getDeposit($id)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.deposit') && ! auth()->user()->can('deposit')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1103,7 +1190,7 @@ class AccountController extends Controller
      */
     public function postDeposit(Request $request)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.deposit') && ! auth()->user()->can('deposit')) {
             abort(403, 'Unauthorized action.');
         }
 

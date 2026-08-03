@@ -198,16 +198,22 @@ class TelegramNotification
 
     public static function sendMessage(string $message, string $to = '', $location_id = "PT1001"): void
     {
+
         return;
         // if (function_exists('fastcgi_finish_request')) {
         //     @fastcgi_finish_request();
         // }
 
-        $botToken = self::LOCAL_BOT;
-        $groups = self::LOCAL_GROUP;
+        // $botToken = self::LOCAL_BOT;
+        // $groups = self::LOCAL_GROUP;
+        $botToken = self::PRODUCTION_BOT;
+        $groups = self::PRODUCTION_GROUP;
 
         $group = $groups[$location_id] ?? null;
         if (! $group) return;
+
+
+
 
         $topic = $group["topic"] ?? [];
         $chat_id = $group["chat_id"] ?? '';

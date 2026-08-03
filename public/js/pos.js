@@ -277,6 +277,11 @@ $(document).ready(function () {
                 var is_draft = true;
             }
 
+            var product_name = item.formatted_name ? item.formatted_name : item.name;
+            if (!item.formatted_name && item.secondary_name) {
+                product_name += ' - ' + item.secondary_name;
+            }
+
             if (
                 item.enable_stock == 1 &&
                 item.qty_available <= 0 &&
@@ -284,7 +289,7 @@ $(document).ready(function () {
                 !for_so &&
                 !is_draft
             ) {
-                var string = '<li class="ui-state-disabled">' + item.name;
+                var string = '<li class="ui-state-disabled">' + product_name;
                 if (item.type == 'variable') {
                     string += '-' + item.variation;
                 }
@@ -307,7 +312,7 @@ $(document).ready(function () {
                     ' (Out of stock) </li>';
                 return $(string).appendTo(ul);
             } else {
-                var string = '<div>' + item.name;
+                var string = '<div>' + product_name;
                 if (item.type == 'variable') {
                     string += '-' + item.variation;
                 }

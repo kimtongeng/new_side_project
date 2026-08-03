@@ -1041,6 +1041,7 @@ class SellController extends Controller
                 'p.image as product_image',
                 'p.enable_stock',
                 'p.name as product_actual_name',
+                'p.secondary_name',
                 'p.type as product_type',
                 'pv.name as product_variation_name',
                 'pv.is_dummy as is_dummy',

@@ -2162,6 +2162,10 @@ class ProductController extends Controller
 
             $result = $this->productUtil->filterProduct($business_id, $search_term, $location_id, $not_for_selling, $price_group_id, $product_types, $search_fields, $check_qty);
 
+            foreach ($result as $row) {
+                $row->formatted_name = \App\Utils\ProductUtil::getFormattedProductName($row->name, $row->secondary_name, false);
+            }
+
             return json_encode($result);
         }
     }

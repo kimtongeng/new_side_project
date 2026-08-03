@@ -27,7 +27,12 @@
 			value="{{$so_line->id}}">
 		@endif
 		@php
-			$product_name = $product->product_name . '<br/>' . $product->sub_sku ;
+			$product_name = $product->product_name;
+			$secondary_name = !empty($product->secondary_name) ? $product->secondary_name : (!empty($product->product->secondary_name) ? $product->product->secondary_name : '');
+			if (!empty($secondary_name) && strpos($product_name, $secondary_name) === false) {
+				$product_name = \App\Utils\ProductUtil::getFormattedProductName($product->product_actual_name ?? $product->product_name, $secondary_name, true);
+			}
+			$product_name .= '<br/>' . $product->sub_sku;
 			if(!empty($product->brand)){ $product_name .= ' ' . $product->brand ;}
 		@endphp
 

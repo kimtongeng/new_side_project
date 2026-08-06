@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -13,9 +14,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('accounts', function (Blueprint $table) {
-            $table->text('user_level')->nullable()->change();
-        });
+        DB::statement('ALTER TABLE accounts MODIFY user_level TEXT NULL;');
     }
 
     /**
@@ -25,8 +24,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('accounts', function (Blueprint $table) {
-            $table->integer('user_level')->nullable()->change();
-        });
+        DB::statement('ALTER TABLE accounts MODIFY user_level INT NULL;');
     }
 };

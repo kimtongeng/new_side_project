@@ -104,28 +104,29 @@ class AccountController extends Controller
                 $account_ids = array_unique($account_ids);
             }
 
-            if (! $this->moduleUtil->is_admin(auth()->user(), $business_id)) {
-                if ($permitted_locations != 'all') {
-                    $accounts->where(function ($q) use ($permitted_locations, $account_ids) {
-                        $q->whereNull('accounts.location_id')
-                            ->orWhereIn('accounts.location_id', $permitted_locations);
-                        foreach ((array)$permitted_locations as $loc_id) {
-                            $q->orWhereJsonContains('accounts.location_id', (string)$loc_id)
-                                ->orWhereJsonContains('accounts.location_id', (int)$loc_id);
-                        }
-                        if (!empty($account_ids)) {
-                            $q->orWhereIn('accounts.id', $account_ids);
-                        }
-                    });
-                }
+            if ($permitted_locations != 'all') {
+                $accounts->where(function ($q) use ($permitted_locations) {
+                    $q->whereNull('accounts.location_id')
+                        ->orWhere('accounts.location_id', '0')
+                        ->orWhereIn('accounts.location_id', (array)$permitted_locations);
+                    foreach ((array)$permitted_locations as $loc_id) {
+                        $q->orWhere('accounts.location_id', (string)$loc_id)
+                            ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])
+                            ->orWhereRaw("(JSON_VALID(accounts.location_id) = 1 AND (JSON_CONTAINS(accounts.location_id, ?) OR JSON_CONTAINS(accounts.location_id, ?)))", [json_encode((string)$loc_id), json_encode((int)$loc_id)]);
+                    }
+                });
+            }
 
+            if (! $this->moduleUtil->is_admin(auth()->user(), $business_id)) {
                 $user_role_ids = auth()->user()->roles()->pluck('id')->toArray();
                 $accounts->where(function ($q) use ($user_role_ids) {
-                    $q->whereNull('accounts.user_level');
+                    $q->whereNull('accounts.user_level')
+                      ->orWhere('accounts.user_level', '0');
                     foreach ((array)$user_role_ids as $r_id) {
                         $q->orWhere('accounts.user_level', $r_id)
-                          ->orWhereJsonContains('accounts.user_level', (string)$r_id)
-                          ->orWhereJsonContains('accounts.user_level', (int)$r_id);
+                          ->orWhere('accounts.user_level', (string)$r_id)
+                          ->orWhereRaw("accounts.user_level LIKE ?", ['%"' . $r_id . '"%'])
+                          ->orWhereRaw("(JSON_VALID(accounts.user_level) = 1 AND (JSON_CONTAINS(accounts.user_level, ?) OR JSON_CONTAINS(accounts.user_level, ?)))", [json_encode((string)$r_id), json_encode((int)$r_id)]);
                     }
                 });
             }
@@ -136,10 +137,33 @@ class AccountController extends Controller
             if (! empty(request()->input('location_id'))) {
                 $loc_filter = request()->input('location_id');
                 $accounts->where(function ($q) use ($loc_filter) {
-                    $q->where('accounts.location_id', $loc_filter)
-                      ->orWhereJsonContains('accounts.location_id', (string)$loc_filter)
-                      ->orWhereJsonContains('accounts.location_id', (int)$loc_filter);
+                    $q->whereNull('accounts.location_id')
+                      ->orWhere('accounts.location_id', '0')
+                      ->orWhere('accounts.location_id', $loc_filter)
+                      ->orWhere('accounts.location_id', (string)$loc_filter)
+                      ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_filter . '"%'])
+                      ->orWhereRaw("(JSON_VALID(accounts.location_id) = 1 AND (JSON_CONTAINS(accounts.location_id, ?) OR JSON_CONTAINS(accounts.location_id, ?)))", [json_encode((string)$loc_filter), json_encode((int)$loc_filter)]);
                 });
+            }
+
+            if (! empty(request()->input('account_type'))) {
+                $acc_type = request()->input('account_type');
+                if ($acc_type == 'capital') {
+                    $accounts->where(function ($q) {
+                        $q->where('ats.name', 'Capital')
+                          ->orWhere('pat.name', 'Capital');
+                    });
+                } elseif ($acc_type == 'other') {
+                    $accounts->where(function ($q) {
+                        $q->where(function ($q2) {
+                            $q2->whereNull('ats.name')
+                               ->orWhere('ats.name', '!=', 'Capital');
+                        })->where(function ($q3) {
+                            $q3->whereNull('pat.name')
+                               ->orWhere('pat.name', '!=', 'Capital');
+                        });
+                    });
+                }
             }
 
             if (! empty(request()->input('account_type_id'))) {
@@ -155,7 +179,15 @@ class AccountController extends Controller
             }
 
             if (! empty(request()->input('user_level'))) {
-                $accounts->where('accounts.user_level', request()->input('user_level'));
+                $u_filter = request()->input('user_level');
+                $accounts->where(function ($q) use ($u_filter) {
+                    $q->whereNull('accounts.user_level')
+                      ->orWhere('accounts.user_level', '0')
+                      ->orWhere('accounts.user_level', $u_filter)
+                      ->orWhere('accounts.user_level', (string)$u_filter)
+                      ->orWhereRaw("accounts.user_level LIKE ?", ['%"' . $u_filter . '"%'])
+                      ->orWhereRaw("(JSON_VALID(accounts.user_level) = 1 AND (JSON_CONTAINS(accounts.user_level, ?) OR JSON_CONTAINS(accounts.user_level, ?)))", [json_encode((string)$u_filter), json_encode((int)$u_filter)]);
+                });
             }
 
             $accounts->groupBy('accounts.id');
@@ -165,33 +197,33 @@ class AccountController extends Controller
                     $html = '';
 
                     // Edit
-                    if (auth()->user()->can('account.access') || auth()->user()->can('account.edit') || auth()->user()->can('edit_account')) {
+                    if (auth()->user()->can('account.edit') || auth()->user()->can('edit_account')) {
                         $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'edit'], [$row->id]) . '" data-container=".account_model" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal"><i class="glyphicon glyphicon-edit"></i> ' . __('messages.edit') . '</button> ';
                     }
 
                     // Account Book
-                    if (auth()->user()->can('account.access') || auth()->user()->can('account.show') || auth()->user()->can('view_account_book')) {
+                    if (auth()->user()->can('account.show') || auth()->user()->can('view_account_book')) {
                         $html .= '<a href="' . action([\App\Http\Controllers\AccountController::class, 'show'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-warning btn-xs"><i class="fa fa-book"></i> ' . __('account.account_book') . '</a> ';
                     }
 
                     if ($row->is_closed == 0) {
                         // Fund Transfer
-                        if (auth()->user()->can('account.access') || auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer')) {
+                        if (auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer')) {
                             $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getFundTransfer'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info btn-modal" data-container=".view_modal"><i class="fas fa-calculator"></i> ' . __('account.fund_transfer') . '</button> ';
                         }
 
                         // Deposit
-                        if (auth()->user()->can('account.access') || auth()->user()->can('account.deposit') || auth()->user()->can('deposit')) {
+                        if (auth()->user()->can('account.deposit') || auth()->user()->can('deposit')) {
                             $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getDeposit'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-success btn-modal" data-container=".view_modal"><i class="fas fa-money-bill-alt"></i> ' . __('account.deposit') . '</button> ';
                         }
 
                         // Close
-                        if (auth()->user()->can('account.access') || auth()->user()->can('account.close') || auth()->user()->can('close_account')) {
+                        if (auth()->user()->can('account.close') || auth()->user()->can('close_account')) {
                             $html .= '<button data-url="' . action([\App\Http\Controllers\AccountController::class, 'close'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error close_account"><i class="fa fa-power-off"></i> ' . __('messages.close') . '</button>';
                         }
                     } elseif ($row->is_closed == 1) {
                         // Activate
-                        if (auth()->user()->can('account.access') || auth()->user()->can('account.activate') || auth()->user()->can('activate_account')) {
+                        if (auth()->user()->can('account.activate') || auth()->user()->can('activate_account')) {
                             $html .= '<button data-url="' . action([\App\Http\Controllers\AccountController::class, 'activate'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-success activate_account"><i class="fa fa-power-off"></i> ' . __('messages.activate') . '</button>';
                         }
                     }
@@ -331,7 +363,7 @@ class AccountController extends Controller
      */
     public function create()
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.create') && ! auth()->user()->can('add_account')) {
+        if (! auth()->user()->can('account.create') && ! auth()->user()->can('add_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -365,7 +397,7 @@ class AccountController extends Controller
      */
     public function store(Request $request)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.create') && ! auth()->user()->can('add_account')) {
+        if (! auth()->user()->can('account.create') && ! auth()->user()->can('add_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -377,16 +409,12 @@ class AccountController extends Controller
                 $input['business_id'] = $business_id;
                 $input['created_by'] = $user_id;
 
-                if (empty($input['location_id']) || (is_array($input['location_id']) && count(array_filter($input['location_id'])) == 0)) {
-                    $input['location_id'] = null;
-                } else if (is_array($input['location_id'])) {
-                    $input['location_id'] = array_values(array_filter($input['location_id']));
-                }
-                if (empty($input['user_level']) || (is_array($input['user_level']) && count(array_filter($input['user_level'])) == 0)) {
-                    $input['user_level'] = null;
-                } else if (is_array($input['user_level'])) {
-                    $input['user_level'] = array_values(array_filter($input['user_level']));
-                }
+                $filtered_loc = is_array($input['location_id']) ? array_values(array_filter($input['location_id'], function ($v) { return $v !== null && $v !== ''; })) : [];
+                $input['location_id'] = ! empty($filtered_loc) ? $filtered_loc : null;
+
+                $filtered_user = is_array($input['user_level']) ? array_values(array_filter($input['user_level'], function ($v) { return $v !== null && $v !== ''; })) : [];
+                $input['user_level'] = ! empty($filtered_user) ? $filtered_user : null;
+
                 if (empty($input['account_type_id']) || !is_numeric($input['account_type_id'])) {
                     $input['account_type_id'] = null;
                 }
@@ -470,7 +498,7 @@ class AccountController extends Controller
      */
     public function show($id)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.show') && ! auth()->user()->can('view_account_book')) {
+        if (! auth()->user()->can('account.show') && ! auth()->user()->can('view_account_book')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -694,7 +722,7 @@ class AccountController extends Controller
      */
     public function edit($id)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.edit') && ! auth()->user()->can('edit_account')) {
+        if (! auth()->user()->can('account.edit') && ! auth()->user()->can('edit_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -733,7 +761,7 @@ class AccountController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.edit') && ! auth()->user()->can('edit_account')) {
+        if (! auth()->user()->can('account.edit') && ! auth()->user()->can('edit_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -750,16 +778,12 @@ class AccountController extends Controller
                 $old_account = $account->replicate();
                 $old_account->load(['account_type', 'account_type.parent_account']);
 
-                if (empty($input['location_id']) || (is_array($input['location_id']) && count(array_filter($input['location_id'])) == 0)) {
-                    $input['location_id'] = null;
-                } else if (is_array($input['location_id'])) {
-                    $input['location_id'] = array_values(array_filter($input['location_id']));
-                }
-                if (empty($input['user_level']) || (is_array($input['user_level']) && count(array_filter($input['user_level'])) == 0)) {
-                    $input['user_level'] = null;
-                } else if (is_array($input['user_level'])) {
-                    $input['user_level'] = array_values(array_filter($input['user_level']));
-                }
+                $filtered_loc = is_array($input['location_id']) ? array_values(array_filter($input['location_id'], function ($v) { return $v !== null && $v !== ''; })) : [];
+                $input['location_id'] = ! empty($filtered_loc) ? $filtered_loc : null;
+
+                $filtered_user = is_array($input['user_level']) ? array_values(array_filter($input['user_level'], function ($v) { return $v !== null && $v !== ''; })) : [];
+                $input['user_level'] = ! empty($filtered_user) ? $filtered_user : null;
+
                 if (empty($input['account_type_id']) || !is_numeric($input['account_type_id'])) {
                     $input['account_type_id'] = null;
                 }
@@ -877,7 +901,7 @@ class AccountController extends Controller
      */
     public function close($id)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.close') && ! auth()->user()->can('close_account')) {
+        if (! auth()->user()->can('account.close') && ! auth()->user()->can('close_account')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -952,7 +976,7 @@ class AccountController extends Controller
      */
     public function getFundTransfer($id)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.fund_transfer') && ! auth()->user()->can('fund_transfer')) {
+        if (! auth()->user()->can('account.fund_transfer') && ! auth()->user()->can('fund_transfer')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -963,9 +987,41 @@ class AccountController extends Controller
                 ->NotClosed()
                 ->find($id);
 
-            $accounts = Account::where('business_id', $business_id)
-                ->NotClosed()
-                ->get();
+            $accounts_query = Account::where('business_id', $business_id)
+                ->NotClosed();
+
+            $user = auth()->user();
+            $permitted_locations = $user ? $user->permitted_locations() : 'all';
+            $is_admin = $user ? $this->moduleUtil->is_admin($user, $business_id) : false;
+
+            if ($user && $permitted_locations != 'all') {
+                $accounts_query->where(function ($q) use ($permitted_locations) {
+                    $q->whereNull('accounts.location_id')
+                        ->orWhere('accounts.location_id', '0')
+                        ->orWhereIn('accounts.location_id', (array)$permitted_locations);
+                    foreach ((array)$permitted_locations as $loc_id) {
+                        $q->orWhere('accounts.location_id', (string)$loc_id)
+                            ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])
+                            ->orWhereRaw("(JSON_VALID(accounts.location_id) = 1 AND (JSON_CONTAINS(accounts.location_id, ?) OR JSON_CONTAINS(accounts.location_id, ?)))", [json_encode((string)$loc_id), json_encode((int)$loc_id)]);
+                    }
+                });
+            }
+
+            if ($user && ! $is_admin) {
+                $user_role_ids = $user->roles()->pluck('id')->toArray();
+                $accounts_query->where(function ($q) use ($user_role_ids) {
+                    $q->whereNull('accounts.user_level')
+                        ->orWhere('accounts.user_level', '0');
+                    foreach ((array)$user_role_ids as $r_id) {
+                        $q->orWhere('accounts.user_level', $r_id)
+                            ->orWhere('accounts.user_level', (string)$r_id)
+                            ->orWhereRaw("accounts.user_level LIKE ?", ['%"' . $r_id . '"%'])
+                            ->orWhereRaw("(JSON_VALID(accounts.user_level) = 1 AND (JSON_CONTAINS(accounts.user_level, ?) OR JSON_CONTAINS(accounts.user_level, ?)))", [json_encode((string)$r_id), json_encode((int)$r_id)]);
+                    }
+                });
+            }
+
+            $accounts = $accounts_query->get();
 
             $accounts_data = [];
             $all_accounts_dropdown = [];
@@ -1017,7 +1073,7 @@ class AccountController extends Controller
      */
     public function postFundTransfer(Request $request)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.fund_transfer') && ! auth()->user()->can('fund_transfer')) {
+        if (! auth()->user()->can('account.fund_transfer') && ! auth()->user()->can('fund_transfer')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1162,7 +1218,7 @@ class AccountController extends Controller
      */
     public function getDeposit($id)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.deposit') && ! auth()->user()->can('deposit')) {
+        if (! auth()->user()->can('account.deposit') && ! auth()->user()->can('deposit')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1173,9 +1229,7 @@ class AccountController extends Controller
                 ->NotClosed()
                 ->find($id);
 
-            $from_accounts = Account::where('business_id', $business_id)
-                ->NotClosed()
-                ->pluck('name', 'id');
+            $from_accounts = Account::forDropdown($business_id, true, false);
 
             return view('account.deposit')
                 ->with(compact('account', 'account', 'from_accounts'));
@@ -1190,7 +1244,7 @@ class AccountController extends Controller
      */
     public function postDeposit(Request $request)
     {
-        if (! auth()->user()->can('account.access') && ! auth()->user()->can('account.deposit') && ! auth()->user()->can('deposit')) {
+        if (! auth()->user()->can('account.deposit') && ! auth()->user()->can('deposit')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1690,7 +1744,7 @@ class AccountController extends Controller
      */
     public function activate($id)
     {
-        if (! auth()->user()->can('account.access')) {
+        if (! auth()->user()->can('account.close') && ! auth()->user()->can('close_account') && ! auth()->user()->can('account.activate') && ! auth()->user()->can('activate_account')) {
             abort(403, 'Unauthorized action.');
         }
 

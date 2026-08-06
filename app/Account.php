@@ -58,8 +58,9 @@ class Account extends Model
                     $q->whereNull('accounts.location_id')
                       ->orWhereIn('accounts.location_id', (array)$location_id);
                     foreach ((array)$location_id as $loc_id) {
-                        $q->orWhereJsonContains('accounts.location_id', (string)$loc_id)
-                          ->orWhereJsonContains('accounts.location_id', (int)$loc_id);
+                        $q->orWhere('accounts.location_id', (string)$loc_id)
+                          ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])
+                          ->orWhereRaw("(JSON_VALID(accounts.location_id) = 1 AND (JSON_CONTAINS(accounts.location_id, ?) OR JSON_CONTAINS(accounts.location_id, ?)))", [json_encode((string)$loc_id), json_encode((int)$loc_id)]);
                     }
                     if (! empty($merged_include_ids)) {
                         $q->orWhereIn('accounts.id', $merged_include_ids);
@@ -93,26 +94,33 @@ class Account extends Model
         $moduleUtil = new \App\Utils\ModuleUtil;
         $is_admin = $user ? $moduleUtil->is_admin($user, $business_id) : false;
 
-        if ($user && ! $is_admin) {
+        if ($user) {
             if ($permitted_locations != 'all') {
-                $query->where(function ($q) use ($permitted_locations, $account_ids) {
+                $query->where(function ($q) use ($permitted_locations) {
                     $q->whereNull('accounts.location_id')
-                      ->orWhereIn('accounts.location_id', $permitted_locations);
+                      ->orWhere('accounts.location_id', '0')
+                      ->orWhereIn('accounts.location_id', (array)$permitted_locations);
                     foreach ((array)$permitted_locations as $loc_id) {
-                        $q->orWhereJsonContains('accounts.location_id', (string)$loc_id)
-                          ->orWhereJsonContains('accounts.location_id', (int)$loc_id);
-                    }
-                    if (!empty($account_ids)) {
-                        $q->orWhereIn('accounts.id', $account_ids);
+                        $q->orWhere('accounts.location_id', (string)$loc_id)
+                          ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])
+                          ->orWhereRaw("(JSON_VALID(accounts.location_id) = 1 AND (JSON_CONTAINS(accounts.location_id, ?) OR JSON_CONTAINS(accounts.location_id, ?)))", [json_encode((string)$loc_id), json_encode((int)$loc_id)]);
                     }
                 });
             }
 
-            $user_role_ids = $user->roles()->pluck('id')->toArray();
-            $query->where(function ($q) use ($user_role_ids) {
-                $q->whereIn('accounts.user_level', $user_role_ids)
-                  ->orWhereNull('accounts.user_level');
-            });
+            if (! $is_admin) {
+                $user_role_ids = $user->roles()->pluck('id')->toArray();
+                $query->where(function ($q) use ($user_role_ids) {
+                    $q->whereNull('accounts.user_level')
+                      ->orWhere('accounts.user_level', '0');
+                    foreach ((array)$user_role_ids as $r_id) {
+                        $q->orWhere('accounts.user_level', $r_id)
+                          ->orWhere('accounts.user_level', (string)$r_id)
+                          ->orWhereRaw("accounts.user_level LIKE ?", ['%"' . $r_id . '"%'])
+                          ->orWhereRaw("(JSON_VALID(accounts.user_level) = 1 AND (JSON_CONTAINS(accounts.user_level, ?) OR JSON_CONTAINS(accounts.user_level, ?)))", [json_encode((string)$r_id), json_encode((int)$r_id)]);
+                    }
+                });
+            }
         }
 
         $can_access_account = auth()->user()->can('account.access');

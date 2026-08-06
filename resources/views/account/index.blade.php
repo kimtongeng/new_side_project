@@ -102,36 +102,35 @@
                         <div class="tab-content">
                             <div class="tab-pane active" id="other_accounts">
                                 <div class="row">
-                                    <div class="col-md-12">
-                                        {{-- @component('components.widget') --}}
-                                        <div class="col-md-4 col-xs-6 col-sm-6">
-                                            {!! Form::select(
-                                                'account_status',
-                                                ['active' => __('business.is_active'), 'closed' => __('account.closed')],
-                                                null,
-                                                ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'account_status'],
-                                            ) !!}
+                                        <div class="tw-flex tw-items-center tw-justify-between tw-gap-2 tw-mb-4 tw-w-full">
+                                            <div class="tw-w-44 sm:tw-w-64">
+                                                {!! Form::select(
+                                                    'account_status',
+                                                    ['active' => __('business.is_active'), 'closed' => __('account.closed')],
+                                                    null,
+                                                    ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'account_status'],
+                                                ) !!}
+                                            </div>
+                                            <div>
+                                                @if(auth()->user()->can('account.create') || auth()->user()->can('add_account'))
+                                                    <button type="button"
+                                                        class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full btn-modal"
+                                                        data-container=".account_model"
+                                                        data-href="{{ action([\App\Http\Controllers\AccountController::class, 'create']) }}"
+                                                        style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; position: relative; z-index: 10;">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                            stroke-linecap="round" stroke-linejoin="round"
+                                                            class="icon icon-tabler icons-tabler-outline icon-tabler-plus"
+                                                            style="pointer-events: none; display: inline-block; vertical-align: middle;">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                            <path d="M12 5l0 14" />
+                                                            <path d="M5 12l14 0" />
+                                                        </svg> <span style="pointer-events: none;">@lang('messages.add')</span>
+                                                    </button>
+                                                @endif
+                                            </div>
                                         </div>
-                                        <div class="col-md-8 col-xs-6 col-sm-6 text-right">
-                                            @if(auth()->user()->can('account.access') || auth()->user()->can('account.create') || auth()->user()->can('add_account'))
-                                                <button type="button"
-                                                    class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full btn-modal pull-right"
-                                                    data-container=".account_model"
-                                                    data-href="{{ action([\App\Http\Controllers\AccountController::class, 'create']) }}"
-                                                    style="cursor: pointer; touch-action: manipulation;">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                        stroke-linecap="round" stroke-linejoin="round"
-                                                        class="icon icon-tabler icons-tabler-outline icon-tabler-plus"
-                                                        style="pointer-events: none; display: inline-block; vertical-align: middle;">
-                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                                        <path d="M12 5l0 14" />
-                                                        <path d="M5 12l14 0" />
-                                                    </svg> <span style="pointer-events: none;">@lang('messages.add')</span>
-                                                </button>
-                                            @endif
-                                        </div>
-                                        {{-- @endcomponent --}}
                                     </div>
                                     <div class="col-sm-12">
                                         <br>
@@ -456,7 +455,7 @@
                     }
                 },
                 columnDefs: [{
-                    "targets": [8, 10],
+                    "targets": [3, 4, 8, 10],
                     "orderable": false,
                     "searchable": false
                 }],
@@ -474,11 +473,11 @@
                 },
                 {
                     data: 'location_name',
-                    name: 'bl.name'
+                    name: 'location_name'
                 },
                 {
                     data: 'role_name',
-                    name: 'r.name'
+                    name: 'role_name'
                 },
                 {
                     data: 'account_number',
@@ -553,6 +552,8 @@
         });
 
         $(document).on('shown.bs.modal', '.account_model', function (e) {
+            $('.modal-backdrop').css('z-index', 1040);
+            $(this).css('z-index', 1050);
             $(this).find('.select2').each(function () {
                 if ($(this).hasClass('select2-hidden-accessible')) {
                     $(this).select2('destroy');

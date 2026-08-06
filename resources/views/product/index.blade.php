@@ -272,6 +272,9 @@
                     },
                     footer: true,
                     customize: function (win) {
+                        if (!win || !win.document || !win.document.body) {
+                            return;
+                        }
                         $(win.document.body).find('table img').css({
                             'max-width': '60px',
                             'max-height': '60px',
@@ -287,7 +290,9 @@
                         if ($(win.document.body).find('table.hide-footer').length) {
                             $(win.document.body).find('table.hide-footer tfoot').remove();
                         }
-                        __currency_convert_recursively($(win.document.body).find('table'));
+                        if (typeof __currency_convert_recursively === 'function') {
+                            __currency_convert_recursively($(win.document.body).find('table'));
+                        }
                     },
                 },
                 {

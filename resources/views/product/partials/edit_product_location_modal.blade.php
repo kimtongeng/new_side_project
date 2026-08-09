@@ -10,6 +10,8 @@
 			    <div class="modal-body">
 			    	<div class="form-group">
 		                {!! Form::label('product_location',  __('purchase.business_location') . ':') !!}
+		                &nbsp;&nbsp;<button type="button" class="btn btn-primary btn-xs select-all" id="select_all_modal_locations">@lang('lang_v1.select_all')</button>
+		                <button type="button" class="btn btn-default btn-xs deselect-all" id="deselect_all_modal_locations">@lang('lang_v1.deselect_all')</button>
 		                {!! Form::select('product_location[]', $business_locations, null, ['class' => 'form-control', 'style' => 'width:100%', 'required', 'multiple', 'id' => 'product_location']); !!}
 		                {!! Form::hidden('products', null, ['id' => 'products_to_update_location']) !!}
 

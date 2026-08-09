@@ -6,9 +6,10 @@
 	            <h3 class="box-title">@lang('sale.location'): {{$value}}</h3>
 	        </div>
 			<div class="box-body">
-				<div class="row tw-overflow-scroll">
+				<div class="row">
 					<div class="col-sm-12">
-						<table class="table table-condensed table-bordered text-center table-responsive table-striped add_opening_stock_table">
+						<div class="table-responsive">
+							<table class="table table-condensed table-bordered text-center table-striped add_opening_stock_table">
 								<thead>
 								<tr class="bg-green">
 									<th>@lang( 'product.product_name' )</th>
@@ -111,52 +112,30 @@
 	</td>
 	<td>
 		@if($loop->index == 0)
-			<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-primary add_stock_row" data-sub-key="{{ count($purchases[$key][$variation->id])}}" 
-				data-row-html='<tr>
-					<td>
-						{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} @if( $product->type == "variable" ) (<b>{{ $variation->product_variation->name }}</b> : {{ $variation->name }}) @endif
-					</td>
-					<td>
-					<div class="input-group">
-	              		<input class="form-control input-sm input_number purchase_quantity" required="" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][quantity]" type="text" value="0">
-			              <span class="input-group-addon">
-			                {{ $product->unit->short_name }}
-			              </span>
-	        			</div>
-					</td>
-	<td>
-		<input class="form-control input-sm input_number unit_price" required="" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][purchase_price]" type="text" value="{{@num_format($purcahse_price)}}">
-	</td>
-
-	@if($enable_expiry == 1 && $product->enable_stock == 1)
-	<td>
-		<input class="form-control input-sm os_exp_date" required="" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][exp_date]" type="text" readonly>
-	</td>
-	@endif
-
-	@if($enable_lot == 1)
-	<td>
-		<input class="form-control input-sm" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][lot_number]" type="text">
-	</td>
-	@endif
-	<td>
-		<span class="row_subtotal_before_tax">
-			0.00
-		</span>
-	</td>
-	<td>
-		<div class="input-group date">
-			<input class="form-control input-sm os_date" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][transaction_date]" type="text" readonly>
-		</div>
-	</td>
-	<td>
-		<textarea rows="3" class="form-control input-sm" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][purchase_line_note]"></textarea>
-	</td>
-	<td>&nbsp;</td></tr>'
-	><i class="fa fa-plus"></i></button>
-	@else
-		&nbsp;
-	@endif
+			@php
+				$formatted_price = number_format(
+					(float)$purcahse_price, 
+					session('business.currency_precision', 2), 
+					session('currency')['decimal_separator'] ?? '.', 
+					session('currency')['thousand_separator'] ?? ','
+				);
+				$row_html = '<tr><td>' . \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) . ($product->type == 'variable' ? ' (<b>' . e($variation->product_variation->name) . '</b> : ' . e($variation->name) . ')' : '') . '</td><td><div class="input-group"><input class="form-control input-sm input_number purchase_quantity" required="" name="stocks[' . $key . '][' . $variation->id . '][__subkey__][quantity]" type="text" value="0"><span class="input-group-addon">' . e($product->unit->short_name) . '</span></div>';
+				if(!empty($product->second_unit)) {
+					$row_html .= '<br><span>' . __('lang_v1.quantity_in_second_unit', ['unit' => $product->second_unit->short_name]) . '*:</span><br><input class="form-control input-sm input_number input_quantity" required="" name="stocks[' . $key . '][' . $variation->id . '][__subkey__][secondary_unit_quantity]" type="text" value="0">';
+				}
+				$row_html .= '</td><td><input class="form-control input-sm input_number unit_price" required="" name="stocks[' . $key . '][' . $variation->id . '][__subkey__][purchase_price]" type="text" value="' . $formatted_price . '"></td>';
+				if($enable_expiry == 1 && $product->enable_stock == 1) {
+					$row_html .= '<td><input class="form-control input-sm os_exp_date" required="" name="stocks[' . $key . '][' . $variation->id . '][__subkey__][exp_date]" type="text" readonly></td>';
+				}
+				if($enable_lot == 1) {
+					$row_html .= '<td><input class="form-control input-sm" name="stocks[' . $key . '][' . $variation->id . '][__subkey__][lot_number]" type="text"></td>';
+				}
+				$row_html .= '<td><span class="row_subtotal_before_tax">0.00</span></td><td><div class="input-group date"><input class="form-control input-sm os_date" name="stocks[' . $key . '][' . $variation->id . '][__subkey__][transaction_date]" type="text" readonly></div></td><td><textarea rows="3" class="form-control input-sm" name="stocks[' . $key . '][' . $variation->id . '][__subkey__][purchase_line_note]"></textarea></td><td>&nbsp;</td></tr>';
+			@endphp
+			<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary add_stock_row" data-sub-key="{{ count($purchases[$key][$variation->id])}}" data-row-html="{{ $row_html }}"><i class="fa fa-plus"></i></button>
+		@else
+			&nbsp;
+		@endif
 			</td>
 			</tr>
 		@endforeach
@@ -164,14 +143,14 @@
 								</tbody>
 								<tfoot>
 								<tr>
-									<td colspan="@if($enable_expiry == 1 && $product->enable_stock == 1 && $enable_lot == 1) 5 @elseif(($enable_expiry == 1 && $product->enable_stock == 1) || $enable_lot == 1) @else 3 @endif"></td>
+									<td colspan="@if($enable_expiry == 1 && $product->enable_stock == 1 && $enable_lot == 1) 5 @elseif(($enable_expiry == 1 && $product->enable_stock == 1) || $enable_lot == 1) 4 @else 3 @endif"></td>
 									<td><strong>@lang( 'lang_v1.total_amount_exc_tax' ): </strong> <span id="total_subtotal">{{@num_format($subtotal)}}</span>
 									<input type="hidden" id="total_subtotal_hidden" value=0>
 									</td>
 								</tr>
 								</tfoot>
 						</table>
-						
+						</div>
 					</div>
 				</div>
 			</div>

@@ -526,12 +526,16 @@
                 });
             });
 
-            $(document).on('click', '#delete-selected', function (e) {
+            $(document).on('click', '#delete-selected, #delete-selected-top, .delete-selected-btn', function (e) {
                 e.preventDefault();
                 var selected_rows = getSelectedRows();
 
                 if (selected_rows.length > 0) {
-                    $('input#selected_rows').val(selected_rows);
+                    $('input#selected_rows, input#selected_rows_top').val(selected_rows);
+                    var form = $(this).closest('form');
+                    if (!form.length) {
+                        form = $('form#mass_delete_form');
+                    }
                     swal({
                         title: LANG.sure,
                         icon: "warning",
@@ -539,21 +543,25 @@
                         dangerMode: true,
                     }).then((willDelete) => {
                         if (willDelete) {
-                            $('form#mass_delete_form').submit();
+                            form.submit();
                         }
                     });
                 } else {
-                    $('input#selected_rows').val('');
+                    $('input#selected_rows, input#selected_rows_top').val('');
                     swal('@lang('lang_v1.no_row_selected')');
                 }
             });
 
-            $(document).on('click', '#deactivate-selected', function (e) {
+            $(document).on('click', '#deactivate-selected, #deactivate-selected-top, .deactivate-selected-btn', function (e) {
                 e.preventDefault();
                 var selected_rows = getSelectedRows();
 
                 if (selected_rows.length > 0) {
-                    $('input#selected_products').val(selected_rows);
+                    $('input#selected_products, input#selected_products_top').val(selected_rows);
+                    var form = $(this).closest('form');
+                    if (!form.length) {
+                        form = $('form#mass_deactivate_form');
+                    }
                     swal({
                         title: LANG.sure,
                         icon: "warning",
@@ -561,8 +569,6 @@
                         dangerMode: true,
                     }).then((willDelete) => {
                         if (willDelete) {
-                            var form = $('form#mass_deactivate_form')
-
                             var data = form.serialize();
                             $.ajax({
                                 method: form.attr('method'),
@@ -573,9 +579,7 @@
                                     if (result.success == true) {
                                         toastr.success(result.msg);
                                         product_table.ajax.reload();
-                                        form
-                                            .find('#selected_products')
-                                            .val('');
+                                        $('input#selected_products, input#selected_products_top').val('');
                                     } else {
                                         toastr.error(result.msg);
                                     }
@@ -584,23 +588,27 @@
                         }
                     });
                 } else {
-                    $('input#selected_products').val('');
+                    $('input#selected_products, input#selected_products_top').val('');
                     swal('@lang('lang_v1.no_row_selected')');
                 }
-            })
+            });
 
-            $(document).on('click', '#edit-selected', function (e) {
+            $(document).on('click', '#edit-selected, #edit-selected-top, .edit-selected-btn', function (e) {
                 e.preventDefault();
                 var selected_rows = getSelectedRows();
 
                 if (selected_rows.length > 0) {
-                    $('input#selected_products_for_edit').val(selected_rows);
-                    $('form#bulk_edit_form').submit();
+                    $('input#selected_products_for_edit, input#selected_products_for_edit_top').val(selected_rows);
+                    var form = $(this).closest('form');
+                    if (!form.length) {
+                        form = $('form#bulk_edit_form');
+                    }
+                    form.submit();
                 } else {
-                    $('input#selected_products').val('');
+                    $('input#selected_products, input#selected_products_top').val('');
                     swal('@lang('lang_v1.no_row_selected')');
                 }
-            })
+            });
 
             $('table#product_table tbody').on('click', 'a.activate-product', function (e) {
                 e.preventDefault();

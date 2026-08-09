@@ -255,6 +255,8 @@
         <div class="col-sm-4">
             <div class="form-group">
                 {!! Form::label('product_locations', __('business.business_locations') . ':') !!} @show_tooltip(__('lang_v1.product_location_help'))
+                &nbsp;&nbsp;<button type="button" class="btn btn-primary btn-xs select-all" id="select_all_locations">@lang('lang_v1.select_all')</button>
+                <button type="button" class="btn btn-default btn-xs deselect-all" id="deselect_all_locations">@lang('lang_v1.deselect_all')</button>
                 {!! Form::select('product_locations[]', $business_locations, $default_location, ['class' => 'form-control select2', 'multiple', 'id' => 'product_locations']); !!}
             </div>
         </div>

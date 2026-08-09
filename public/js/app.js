@@ -2423,17 +2423,19 @@ $(document).on('click', 'td.clickable_td', function (e) {
 
 $(document).on('click', 'button.select-all', function () {
     var this_select = $(this).closest('.form-group').find('select');
+    var vals = [];
     this_select.find('option').each(function () {
-        $(this).prop('selected', 'selected');
+        var v = $(this).val();
+        var t = $.trim($(this).text()).toLowerCase();
+        if (v !== '' && v !== 'none' && v !== '0' && t !== 'none' && t !== 'please select' && t !== 'select all') {
+            vals.push(v);
+        }
     });
-    this_select.trigger('change');
+    this_select.val(vals).trigger('change');
 });
 $(document).on('click', 'button.deselect-all', function () {
     var this_select = $(this).closest('.form-group').find('select');
-    this_select.find('option').each(function () {
-        $(this).prop('selected', '');
-    });
-    this_select.trigger('change');
+    this_select.val(null).trigger('change');
 });
 
 $(document).on('change', 'input.row-select', function () {

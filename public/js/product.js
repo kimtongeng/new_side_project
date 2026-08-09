@@ -27,6 +27,28 @@ $(document).ready(function () {
         if ($('#opening_stock_button').length) {
             $('#opening_stock_button').attr('disabled', true);
         }
+    $(document).on('click', '#select_all_locations, #select_all_modal_locations, .select-all', function (e) {
+        var target = $(this).closest('.form-group').find('select');
+        if (!target.length) {
+            target = $('#product_locations, #product_location');
+        }
+        var valid_values = [];
+        target.find('option').each(function() {
+            var val = $(this).val();
+            var txt = $.trim($(this).text()).toLowerCase();
+            if (val !== '' && val !== 'none' && val !== '0' && txt !== 'none' && txt !== 'please select' && txt !== 'select all') {
+                valid_values.push(val);
+            }
+        });
+        target.val(valid_values).trigger('change');
+    });
+
+    $(document).on('click', '#deselect_all_locations, #deselect_all_modal_locations, .deselect-all', function (e) {
+        var target = $(this).closest('.form-group').find('select');
+        if (!target.length) {
+            target = $('#product_locations, #product_location');
+        }
+        target.val(null).trigger('change');
     });
 
     //Start For product type single

@@ -35,7 +35,9 @@ class Account extends Model
                 }
             } else {
                 $query->where(function ($q) use ($location_id, $include_account_ids) {
-                    $q->whereIn('accounts.location_id', (array)$location_id);
+                    $q->whereNull('accounts.location_id')
+                      ->orWhere('accounts.location_id', '0')
+                      ->orWhereIn('accounts.location_id', (array)$location_id);
                     foreach ((array)$location_id as $loc_id) {
                         $q->orWhere('accounts.location_id', (string)$loc_id)
                           ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])
@@ -48,8 +50,6 @@ class Account extends Model
             }
         } elseif (! empty($include_account_ids)) {
             $query->whereIn('accounts.id', (array)$include_account_ids);
-        } else {
-            $query->whereRaw('1 = 0');
         }
 
         $user = auth()->user();
@@ -79,12 +79,17 @@ class Account extends Model
 
         if ($user) {
             if ($permitted_locations != 'all') {
-                $query->where(function ($q) use ($permitted_locations) {
-                    $q->whereIn('accounts.location_id', (array)$permitted_locations);
+                $query->where(function ($q) use ($permitted_locations, $account_ids) {
+                    $q->whereNull('accounts.location_id')
+                      ->orWhere('accounts.location_id', '0')
+                      ->orWhereIn('accounts.location_id', (array)$permitted_locations);
                     foreach ((array)$permitted_locations as $loc_id) {
                         $q->orWhere('accounts.location_id', (string)$loc_id)
                           ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])
                           ->orWhereRaw("(JSON_VALID(accounts.location_id) = 1 AND (JSON_CONTAINS(accounts.location_id, ?) OR JSON_CONTAINS(accounts.location_id, ?)))", [json_encode((string)$loc_id), json_encode((int)$loc_id)]);
+                    }
+                    if (! empty($account_ids)) {
+                        $q->orWhereIn('accounts.id', $account_ids);
                     }
                 });
             }
@@ -93,7 +98,9 @@ class Account extends Model
                 $user_role_ids = $user->roles()->pluck('id')->toArray();
                 $query->where(function ($q) use ($user_role_ids) {
                     $q->whereNull('accounts.user_level')
-                      ->orWhere('accounts.user_level', '0');
+                      ->orWhere('accounts.user_level', '0')
+                      ->orWhere('accounts.user_level', '[]')
+                      ->orWhere('accounts.user_level', '[""]');
                     foreach ((array)$user_role_ids as $r_id) {
                         $q->orWhere('accounts.user_level', $r_id)
                           ->orWhere('accounts.user_level', (string)$r_id)

@@ -12,7 +12,6 @@
             <div class="form-group">
                 <strong>@lang('account.selected_account')</strong>: 
                 {{$account->name}}
-                {!! Form::hidden('account_id', $account->id) !!}
             </div>
 
             <div class="form-group">

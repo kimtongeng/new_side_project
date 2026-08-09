@@ -162,7 +162,6 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
                             {{--
                             <div class="tab-pane" id="capital_accounts">
                                 <table class="table table-bordered table-striped" id="capital_account_table"

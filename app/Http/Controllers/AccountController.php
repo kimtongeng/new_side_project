@@ -119,7 +119,9 @@ class AccountController extends Controller
                 $user_role_ids = auth()->user()->roles()->pluck('id')->toArray();
                 $accounts->where(function ($q) use ($user_role_ids) {
                     $q->whereNull('accounts.user_level')
-                      ->orWhere('accounts.user_level', '0');
+                      ->orWhere('accounts.user_level', '0')
+                      ->orWhere('accounts.user_level', '[]')
+                      ->orWhere('accounts.user_level', '[""]');
                     foreach ((array)$user_role_ids as $r_id) {
                         $q->orWhere('accounts.user_level', $r_id)
                           ->orWhere('accounts.user_level', (string)$r_id)

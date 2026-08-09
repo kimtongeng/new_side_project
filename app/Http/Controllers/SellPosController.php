@@ -213,6 +213,10 @@ class SellPosController extends Controller
         $bl_attributes = $business_locations['attributes'];
         $business_locations = $business_locations['locations'];
 
+        if (!empty($default_location) && !isset($business_locations[$default_location->id])) {
+            $default_location = null;
+        }
+
         //set first location as default locaton
         if (empty($default_location)) {
             foreach ($business_locations as $id => $name) {

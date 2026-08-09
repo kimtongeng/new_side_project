@@ -1,7 +1,9 @@
 @php
   $role_permissions = isset($role_permissions) ? $role_permissions : [];
   $pos_settings = !empty(session('business.pos_settings')) ? json_decode(session('business.pos_settings'), true) : [];
+  $common_settings = !empty(session('business.common_settings')) ? session('business.common_settings') : [];
   $is_service_staff = isset($role->is_service_staff) ? $role->is_service_staff : 0;
+  $enabled_modules = !empty($enabled_modules) ? $enabled_modules : [];
 @endphp
 
 @include('role.partials.permission_search')
@@ -364,7 +366,7 @@
   </div>
 </div>
 
-<!-- 7. Purchase -->
+<!-- 7. Purchase & Stock Adjustment -->
 @if(in_array('purchases', $enabled_modules) || in_array('stock_adjustment', $enabled_modules))
 <div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
   <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
@@ -438,7 +440,110 @@
 </div>
 @endif
 
-<!-- 8. POS Sale -->
+<!-- 8. Purchase Requisition -->
+@if(!empty($common_settings['enable_purchase_requisition']))
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('lang_v1.purchase_requisition')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[purchase_requisition_view]', 'purchase_requisition.view_all', in_array('purchase_requisition.view_all', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_all_purchase_requisition') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[purchase_requisition_view]', 'purchase_requisition.view_own', in_array('purchase_requisition.view_own', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_own_purchase_requisition') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'purchase_requisition.create', in_array('purchase_requisition.create', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.create_purchase_requisition') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'purchase_requisition.delete', in_array('purchase_requisition.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.delete_purchase_requisition') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
+<!-- 9. Purchase Order -->
+@if(!empty($common_settings['enable_purchase_order']))
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('lang_v1.purchase_order')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[purchase_order_view]', 'purchase_order.view_all', in_array('purchase_order.view_all', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_all_purchase_order') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[purchase_order_view]', 'purchase_order.view_own', in_array('purchase_order.view_own', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_own_purchase_order') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'purchase_order.create', in_array('purchase_order.create', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.create_purchase_order') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'purchase_order.update', in_array('purchase_order.update', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.edit_purchase_order') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'purchase_order.delete', in_array('purchase_order.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.delete_purchase_order') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
+<!-- 10. POS Sale -->
 <div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
   <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
     <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
@@ -547,7 +652,7 @@
   </div>
 </div>
 
-<!-- 9. Sale -->
+<!-- 11. Sale -->
 <div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
   <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
     <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
@@ -648,12 +753,784 @@
             <label>{!! Form::checkbox('permissions[]', 'edit_product_discount_from_sale_screen', in_array('edit_product_discount_from_sale_screen', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.edit_product_discount_from_sale_screen') }}</label>
           </div>
         </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'discount.access', in_array('discount.access', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.discount.access') }}</label>
+          </div>
+        </div>
+        @if(in_array('types_of_service', $enabled_modules))
+          <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+            <div class="checkbox" style="margin-top: 0;">
+              <label>{!! Form::checkbox('permissions[]', 'access_types_of_service', in_array('access_types_of_service', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_types_of_service') }}</label>
+            </div>
+          </div>
+        @endif
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'access_sell_return', in_array('access_sell_return', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_all_sell_return') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'access_own_sell_return', in_array('access_own_sell_return', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_own_sell_return') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'edit_invoice_number', in_array('edit_invoice_number', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.add_edit_invoice_number') }}</label>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 10. Selling Price Groups -->
+<!-- 12. Sales Order -->
+@if(!empty($pos_settings['enable_sales_order']))
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('lang_v1.sales_order')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[so_view]', 'so.view_all', in_array('so.view_all', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_all_so') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[so_view]', 'so.view_own', in_array('so.view_own', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_own_so') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'so.create', in_array('so.create', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.create_so') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'so.update', in_array('so.update', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.edit_so') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'so.delete', in_array('so.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.delete_so') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
+<!-- 13. Draft -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('sale.draft')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[draft_view]', 'draft.view_all', in_array('draft.view_all', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_all_drafts') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[draft_view]', 'draft.view_own', in_array('draft.view_own', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_own_drafts') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'draft.update', in_array('draft.update', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.edit_draft') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'draft.delete', in_array('draft.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.delete_draft') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 14. Quotation -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('lang_v1.quotation')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[quotation_view]', 'quotation.view_all', in_array('quotation.view_all', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_all_quotations') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[quotation_view]', 'quotation.view_own', in_array('quotation.view_own', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_own_quotations') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'quotation.update', in_array('quotation.update', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.edit_quotation') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'quotation.delete', in_array('quotation.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.delete_quotation') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 15. Shipments -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('lang_v1.shipments')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[shipping_view]', 'access_shipping', in_array('access_shipping', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_all_shipments') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[shipping_view]', 'access_own_shipping', in_array('access_own_shipping', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_own_shipping') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'access_pending_shipments_only', in_array('access_pending_shipments_only', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_pending_shipments_only') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'access_commission_agent_shipping', in_array('access_commission_agent_shipping', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_commission_agent_shipping') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 16. Cash Register -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('cash_register.cash_register')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'view_cash_register', in_array('view_cash_register', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_cash_register') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'close_cash_register', in_array('close_cash_register', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.close_cash_register') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 17. Brand -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('role.brand')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'brand.view', in_array('brand.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.brand.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'brand.create', in_array('brand.create', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.brand.create') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'brand.update', in_array('brand.update', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.brand.update') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'brand.delete', in_array('brand.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.brand.delete') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 18. Tax Rate -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('role.tax_rate')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'tax_rate.view', in_array('tax_rate.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.tax_rate.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'tax_rate.create', in_array('tax_rate.create', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.tax_rate.create') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'tax_rate.update', in_array('tax_rate.update', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.tax_rate.update') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'tax_rate.delete', in_array('tax_rate.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.tax_rate.delete') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 19. Unit -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('role.unit')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'unit.view', in_array('unit.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.unit.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'unit.create', in_array('unit.create', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.unit.create') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'unit.update', in_array('unit.update', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.unit.update') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'unit.delete', in_array('unit.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.unit.delete') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 20. Category -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('category.category')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'category.view', in_array('category.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.category.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'category.create', in_array('category.create', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.category.create') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'category.update', in_array('category.update', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.category.update') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'category.delete', in_array('category.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.category.delete') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 21. Report -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('role.report')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        @if(in_array('purchases', $enabled_modules) || in_array('add_sale', $enabled_modules) || in_array('pos_sale', $enabled_modules))
+          <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+            <div class="checkbox" style="margin-top: 0;">
+              <label>{!! Form::checkbox('permissions[]', 'purchase_n_sell_report.view', in_array('purchase_n_sell_report.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.purchase_n_sell_report.view') }}</label>
+            </div>
+          </div>
+        @endif
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'tax_report.view', in_array('tax_report.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.tax_report.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'contacts_report.view', in_array('contacts_report.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.contacts_report.view') }}</label>
+          </div>
+        </div>
+        @if(in_array('expenses', $enabled_modules))
+          <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+            <div class="checkbox" style="margin-top: 0;">
+              <label>{!! Form::checkbox('permissions[]', 'expense_report.view', in_array('expense_report.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.expense_report.view') }}</label>
+            </div>
+          </div>
+        @endif
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'profit_loss_report.view', in_array('profit_loss_report.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.profit_loss_report.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'stock_report.view', in_array('stock_report.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.stock_report.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'trending_product_report.view', in_array('trending_product_report.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.trending_product_report.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'register_report.view', in_array('register_report.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.register_report.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'sales_representative.view', in_array('sales_representative.view', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.sales_representative.view') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'view_product_stock_value', in_array('view_product_stock_value', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_product_stock_value') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 22. Settings -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('role.settings')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'business_settings.access', in_array('business_settings.access', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.business_settings.access') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'barcode_settings.access', in_array('barcode_settings.access', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.barcode_settings.access') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'invoice_settings.access', in_array('invoice_settings.access', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('role.invoice_settings.access') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'access_printers', in_array('access_printers', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_printers') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 23. Expense -->
+@if(in_array('expenses', $enabled_modules))
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('lang_v1.expense')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[expense_view]', 'all_expense.access', in_array('all_expense.access', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_all_expense') }}</label>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[expense_view]', 'view_own_expense', in_array('view_own_expense', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.view_own_expense') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'expense.add', in_array('expense.add', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('expense.add_expense') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'expense.edit', in_array('expense.edit', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('expense.edit_expense') }}</label>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'expense.delete', in_array('expense.delete', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.delete_expense') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
+<!-- 24. Dashboard -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('role.dashboard') @show_tooltip(__('tooltip.dashboard_permission'))
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'dashboard.data', (empty($role_permissions) || in_array('dashboard.data', $role_permissions)), ['class' => 'input-icheck']); !!} {{ __('role.dashboard.data') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 25. Account -->
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('account.account')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.access', in_array('account.access', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.access_accounts') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.create', in_array('account.create', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.add_account') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.edit', in_array('account.edit', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.edit_account') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.show', in_array('account.show', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.account_book') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.fund_transfer', in_array('account.fund_transfer', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.fund_transfer') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.deposit', in_array('account.deposit', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.deposit') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.close', in_array('account.close', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('messages.close') }} / {{ __('messages.activate') }} @lang('account.account')</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'edit_account_transaction', in_array('edit_account_transaction', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.edit_account_transaction') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'delete_account_transaction', in_array('delete_account_transaction', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.delete_account_transaction') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 26. Bookings -->
+@if(in_array('booking', $enabled_modules))
+<div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
+  <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
+    <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
+      <i class="fa fa-chevron-right text-muted group-chevron" style="margin-right: 8px; font-size: 13px; transition: transform 0.2s;"></i>
+      @lang('restaurant.bookings')
+    </h3>
+    <div class="box-tools pull-right">
+      <span class="badge bg-gray selected-count-badge" style="font-weight: normal; margin-right: 5px;">0 selected</span>
+      <button type="button" class="btn btn-box-tool"><i class="fa fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="box-body permission-body" style="padding: 15px 20px; display: none;">
+    <div class="row">
+      <div class="col-md-2" style="border-right: 1px solid #eee;">
+        <div class="checkbox" style="margin-top: 0;">
+          <label style="font-weight: bold; color: #3c8dbc;">
+            <input type="checkbox" class="check_all input-icheck"> {{ __('role.select_all') }}
+          </label>
+        </div>
+      </div>
+      <div class="col-md-10">
+        <div class="col-md-6 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[bookings_view]', 'crud_all_bookings', in_array('crud_all_bookings', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('restaurant.add_edit_view_all_booking') }}</label>
+          </div>
+        </div>
+        <div class="col-md-6 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::radio('radio_option[bookings_view]', 'crud_own_bookings', in_array('crud_own_bookings', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('restaurant.add_edit_view_own_booking') }}</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
+<!-- 27. Selling Price Groups -->
 <div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
   <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
     <h3 class="box-title" style="font-size: 15px; font-weight: 600; color: #333;">
@@ -694,7 +1571,7 @@
   </div>
 </div>
 
-<!-- 11. Restaurant -->
+<!-- 28. Restaurant -->
 @if(in_array('tables', $enabled_modules))
 <div class="box box-solid check_group permission_group" style="border: 1px solid #d2d6de; border-radius: 4px; margin-bottom: 12px;">
   <div class="box-header with-border permission-header" style="background-color: #f9fafc; cursor: pointer; padding: 10px 15px;">
@@ -728,5 +1605,5 @@
 </div>
 @endif
 
-<!-- Additional Module Permissions -->
+<!-- 29. Additional Module Permissions -->
 @include('role.partials.module_permissions')

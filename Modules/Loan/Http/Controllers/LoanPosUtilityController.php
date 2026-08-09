@@ -208,7 +208,7 @@ class LoanPosUtilityController extends Controller
         $payment_types = $this->productUtil->payment_types($location_id, true);
         $payment_line = $this->dummyPaymentLine;
 
-        $accounts = $this->moduleUtil->isModuleEnabled('account') ? Account::forDropdown($business_id, true, false, true) : [];
+        $accounts = $this->moduleUtil->isModuleEnabled('account') ? Account::forDropdown($business_id, true, false, true, $location_id) : [];
 
         return view('Loan::pos.partials.payment_row')
             ->with(compact('payment_types', 'row_index', 'removable', 'payment_line', 'accounts'));

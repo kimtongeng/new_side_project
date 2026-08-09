@@ -27,5 +27,15 @@
                 </div>
             </div>
         </div>
+        <div class="col-sm-12"><hr></div>
+        <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('clear_cache', __('lang_v1.clear_cache') . ':') !!}
+                <p class="help-block">@lang('lang_v1.clear_cache_help')</p>
+                <button type="button" class="tw-dw-btn tw-dw-btn-error tw-text-white" id="clear_cache_btn">
+                    <i class="fa fa-trash"></i> @lang('lang_v1.clear_cache')
+                </button>
+            </div>
+        </div>
     </div>
 </div>

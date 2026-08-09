@@ -175,7 +175,7 @@ class LoanPosController extends Controller
         $change_return = $this->dummyPaymentLine;
         $types = Contact::getContactTypes();
         $customer_groups = CustomerGroup::forDropdown($business_id);
-        $accounts = $this->moduleUtil->isModuleEnabled('account') ? Account::forDropdown($business_id, true, false, true) : [];
+        $accounts = $this->moduleUtil->isModuleEnabled('account') ? Account::forDropdown($business_id, true, false, true, !empty($default_location->id) ? $default_location->id : null) : [];
         $price_groups = SellingPriceGroup::forDropdown($business_id);
         $default_price_group_id = !empty($default_location->selling_price_group_id) && array_key_exists($default_location->selling_price_group_id, $price_groups) ? $default_location->selling_price_group_id : null;
 

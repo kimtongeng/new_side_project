@@ -407,7 +407,7 @@ class ModuleUtil extends Util
     {
         $dropdown = [];
 
-        if ($this->isModuleEnabled('account')) {
+        if ($this->isModuleEnabled('account', $business_id)) {
             $dropdown = Account::forDropdown($business_id, $prepend_none, $closed, $show_balance, $location_id, $include_account_ids);
         }
 

@@ -373,7 +373,9 @@ class AccountReportsController extends Controller
         $business_id = session()->get('user.business_id');
         if (request()->ajax()) {
             $payment = TransactionPayment::where('business_id', $business_id)->findOrFail($id);
-            $accounts = Account::forDropdown($business_id, false);
+            $transaction = Transaction::where('business_id', $business_id)->find($payment->transaction_id);
+            $location_id = $transaction ? $transaction->location_id : null;
+            $accounts = Account::forDropdown($business_id, false, false, false, $location_id);
 
             return view('account_reports.link_account_modal')
                 ->with(compact('accounts', 'payment'));

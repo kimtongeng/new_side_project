@@ -299,18 +299,18 @@ class PurchaseController extends Controller
         $payment_types = $this->productUtil->payment_types(null, true, $business_id);
 
         //Accounts
-        $default_location_id = null;
-        if (is_object($business_locations) && method_exists($business_locations, 'keys')) {
-            $default_location_id = $business_locations->keys()->first();
-        } elseif (is_array($business_locations) && !empty($business_locations)) {
-            $default_location_id = array_key_first($business_locations);
+        $default_location = null;
+        if (count($business_locations) == 1) {
+            $default_location = is_object($business_locations) && method_exists($business_locations, 'keys')
+                ? $business_locations->keys()->first()
+                : (is_array($business_locations) ? array_key_first($business_locations) : null);
         }
-        $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, false, $default_location_id);
+        $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, false, $default_location);
 
         $common_settings = ! empty(session('business.common_settings')) ? session('business.common_settings') : [];
 
         return view('purchase.create')
-            ->with(compact('taxes', 'orderStatuses', 'business_locations', 'currency_details', 'default_purchase_status', 'customer_groups', 'types', 'shortcuts', 'payment_line', 'payment_types', 'accounts', 'bl_attributes', 'common_settings'));
+            ->with(compact('taxes', 'orderStatuses', 'business_locations', 'default_location', 'currency_details', 'default_purchase_status', 'customer_groups', 'types', 'shortcuts', 'payment_line', 'payment_types', 'accounts', 'bl_attributes', 'common_settings'));
     }
 
     /**
@@ -695,7 +695,9 @@ class PurchaseController extends Controller
 
         $orderStatuses = $this->productUtil->orderStatuses();
 
-        $business_locations = BusinessLocation::forDropdown($business_id);
+        $business_locations = BusinessLocation::forDropdown($business_id, false, true);
+        $bl_attributes = $business_locations['attributes'];
+        $business_locations = $business_locations['locations'];
 
         $default_purchase_status = null;
         if (request()->session()->get('business.enable_purchase_status') != 1) {
@@ -740,6 +742,7 @@ class PurchaseController extends Controller
                 'purchase',
                 'orderStatuses',
                 'business_locations',
+                'bl_attributes',
                 'business',
                 'currency_details',
                 'default_purchase_status',

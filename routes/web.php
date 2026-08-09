@@ -108,6 +108,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/get-requisition-products', [PurchaseRequisitionController::class, 'getRequisitionProducts'])->name('get-requisition-products');
     Route::get('get-purchase-requisitions/{location_id}', [PurchaseRequisitionController::class, 'getPurchaseRequisitions']);
     Route::get('get-purchase-requisition-lines/{purchase_requisition_id}', [PurchaseRequisitionController::class, 'getPurchaseRequisitionLines']);
+    Route::get('get-location-accounts/{location_id?}', [AccountController::class, 'getAccountsByLocation']);
 
     Route::get('/sign-in-as-user/{id}', [ManageUserController::class, 'signInAsUser'])->name('sign-in-as-user');
 
@@ -121,6 +122,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 
     Route::post('/test-email', [BusinessController::class, 'testEmailConfiguration']);
     Route::post('/test-sms', [BusinessController::class, 'testSmsConfiguration']);
+    Route::get('/business/clear-cache', [BusinessController::class, 'clearCache'])->name('business.clearCache');
     Route::get('/business/settings', [BusinessController::class, 'getBusinessSettings'])->name('business.getBusinessSettings');
     Route::post('/business/update', [BusinessController::class, 'postBusinessSettings'])->name('business.postBusinessSettings');
     Route::get('/user/profile', [UserController::class, 'getProfile'])->name('user.getProfile');
@@ -457,6 +459,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::get('/edit-account-transaction/{id}', [AccountController::class, 'editAccountTransaction']);
         Route::post('/update-account-transaction/{id}', [AccountController::class, 'updateAccountTransaction']);
         Route::get('/get-account-balance/{id}', [AccountController::class, 'getAccountBalance']);
+        Route::get('/get-location-accounts/{location_id?}', [AccountController::class, 'getAccountsByLocation']);
         Route::get('/balance-sheet', [AccountReportsController::class, 'balanceSheet']);
         Route::get('/trial-balance', [AccountReportsController::class, 'trialBalance']);
         Route::get('/payment-account-report', [AccountReportsController::class, 'paymentAccountReport']);

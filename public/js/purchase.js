@@ -1326,14 +1326,41 @@ function get_purchase_requisitions() {
 
 $(document).on('change', 'select#location_id', function() {
     get_purchase_requisitions();
+    var location_id = $(this).val();
     var default_payment_accounts = $(this).find(':selected').data('default_payment_accounts');
     if (typeof default_payment_accounts === 'string') {
-        try { default_payment_accounts = JSON.parse(default_payment_accounts); } catch(e) {}
+        try { default_payment_accounts = JSON.parse(default_payment_accounts); } catch(e) { default_payment_accounts = {}; }
     }
-    var payment_type = $('.payment_types_dropdown').val();
-    if (payment_type && default_payment_accounts && default_payment_accounts[payment_type]) {
-        var default_account = default_payment_accounts[payment_type]['account'] ? default_payment_accounts[payment_type]['account'] : '';
-        $('.account-dropdown').val(default_account).change();
+    
+    if ($('.account-dropdown').length) {
+        $.ajax({
+            url: '/get-location-accounts/' + (location_id ? location_id : ''),
+            dataType: 'json',
+            success: function(accounts) {
+                $('.account-dropdown').each(function() {
+                    var $acc_dropdown = $(this);
+                    if ($acc_dropdown.hasClass('select2-hidden-accessible')) {
+                        $acc_dropdown.select2('destroy');
+                    }
+                    $acc_dropdown.empty();
+                    $.each(accounts, function(key, value) {
+                        $acc_dropdown.append($('<option>', {
+                            value: key,
+                            text: value
+                        }));
+                    });
+                    $acc_dropdown.select2();
+                    var payment_row = $acc_dropdown.closest('.payment_row');
+                    var payment_type = payment_row.find('.payment_types_dropdown').val();
+                    if (payment_type && default_payment_accounts && default_payment_accounts[payment_type]) {
+                        var default_account = default_payment_accounts[payment_type]['account'] ? default_payment_accounts[payment_type]['account'] : '';
+                        $acc_dropdown.val(default_account).trigger('change');
+                    } else {
+                        $acc_dropdown.val('').trigger('change');
+                    }
+                });
+            }
+        });
     }
 });
 

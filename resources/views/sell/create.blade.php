@@ -1029,7 +1029,9 @@
 	            }
 	        });
 
-			if($('.payment_types_dropdown').length){
+			if ($('select#select_location_id').length && $('select#select_location_id').val()) {
+				$('select#select_location_id').trigger('change');
+			} else if($('.payment_types_dropdown').length){
 				$('.payment_types_dropdown').change();
 			}
 

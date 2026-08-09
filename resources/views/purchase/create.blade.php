@@ -599,7 +599,9 @@
                 ignoreReadonly: true,
             });
 
-			if($('.payment_types_dropdown').length){
+			if ($('select#location_id').length && $('select#location_id').val()) {
+				$('select#location_id').trigger('change');
+			} else if($('.payment_types_dropdown').length){
 				$('.payment_types_dropdown').change();
 			}
 			set_payment_type_dropdown();
@@ -607,33 +609,39 @@
 				set_payment_type_dropdown();
 			});
     	});
-    	$(document).on('change', '.payment_types_dropdown, #location_id', function(e) {
+    	$(document).on('change', '.payment_types_dropdown', function(e) {
 		    var default_accounts = $('select#location_id').length ? 
 		                $('select#location_id')
 		                .find(':selected')
 		                .data('default_payment_accounts') : [];
-		    var payment_types_dropdown = $('.payment_types_dropdown');
+		    if (typeof default_accounts === 'string') {
+		        try { default_accounts = JSON.parse(default_accounts); } catch(e) { default_accounts = {}; }
+		    }
+		    var payment_types_dropdown = $(this);
 		    var payment_type = payment_types_dropdown.val();
 		    var payment_row = payment_types_dropdown.closest('.payment_row');
 	        var row_index = payment_row.find('.payment_row_index').val();
 
 	        var account_dropdown = payment_row.find('select#account_' + row_index);
+	        if (!account_dropdown.length) {
+	            account_dropdown = payment_row.find('.account-dropdown');
+	        }
 		    if (payment_type && payment_type != 'advance') {
-		        var default_account = default_accounts && default_accounts[payment_type]['account'] ? 
+		        var default_account = default_accounts && default_accounts[payment_type] && default_accounts[payment_type]['account'] ? 
 		            default_accounts[payment_type]['account'] : '';
-		        if (account_dropdown.length && default_accounts) {
+		        if (account_dropdown.length) {
 		            account_dropdown.val(default_account);
 		            account_dropdown.change();
 		        }
 		    }
 
 		    if (payment_type == 'advance') {
-		        if (account_dropdown) {
+		        if (account_dropdown.length) {
 		            account_dropdown.prop('disabled', true);
 		            account_dropdown.closest('.form-group').addClass('hide');
 		        }
 		    } else {
-		        if (account_dropdown) {
+		        if (account_dropdown.length) {
 		            account_dropdown.prop('disabled', false); 
 		            account_dropdown.closest('.form-group').removeClass('hide');
 		        }    
@@ -642,7 +650,10 @@
 
 		function set_payment_type_dropdown() {
 			var payment_settings = $('#location_id').find(':selected').data('default_payment_accounts');
-			payment_settings = payment_settings ? payment_settings : [];
+			if (typeof payment_settings === 'string') {
+			    try { payment_settings = JSON.parse(payment_settings); } catch(e) { payment_settings = {}; }
+			}
+			payment_settings = payment_settings ? payment_settings : {};
 			enabled_payment_types = [];
 			for (var key in payment_settings) {
 				if (payment_settings[key] && payment_settings[key]['is_enabled']) {

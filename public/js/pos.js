@@ -63,6 +63,43 @@ $(document).ready(function () {
 
         set_payment_type_dropdown();
 
+        var location_id = $(this).val();
+        var default_payment_accounts = $(this).find(':selected').data('default_payment_accounts');
+        if (typeof default_payment_accounts === 'string') {
+            try { default_payment_accounts = JSON.parse(default_payment_accounts); } catch(e) { default_payment_accounts = {}; }
+        }
+
+        if ($('.account-dropdown').length) {
+            $.ajax({
+                url: '/get-location-accounts/' + (location_id ? location_id : ''),
+                dataType: 'json',
+                success: function(accounts) {
+                    $('.account-dropdown').each(function() {
+                        var $acc_dropdown = $(this);
+                        if ($acc_dropdown.hasClass('select2-hidden-accessible')) {
+                            $acc_dropdown.select2('destroy');
+                        }
+                        $acc_dropdown.empty();
+                        $.each(accounts, function(key, value) {
+                            $acc_dropdown.append($('<option>', {
+                                value: key,
+                                text: value
+                            }));
+                        });
+                        $acc_dropdown.select2();
+                        var payment_row = $acc_dropdown.closest('.payment_row');
+                        var payment_type = payment_row.find('.payment_types_dropdown').val();
+                        if (payment_type && default_payment_accounts && default_payment_accounts[payment_type]) {
+                            var default_account = default_payment_accounts[payment_type]['account'] ? default_payment_accounts[payment_type]['account'] : '';
+                            $acc_dropdown.val(default_account).trigger('change');
+                        } else {
+                            $acc_dropdown.val('').trigger('change');
+                        }
+                    });
+                }
+            });
+        }
+
         if ($('#types_of_service_id').length && $('#types_of_service_id').val()) {
             $('#types_of_service_id').change();
         }
@@ -2641,8 +2678,7 @@ $(document).on('change', '.payment_types_dropdown', function (e) {
 
         var account_dropdown = payment_row.find('select#account_' + row_index);
         if (account_dropdown.length && default_accounts) {
-            account_dropdown.val(default_account);
-            account_dropdown.change();
+            account_dropdown.val(default_account).trigger('change');
         }
     }
 

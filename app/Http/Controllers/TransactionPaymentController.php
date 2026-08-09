@@ -576,7 +576,8 @@ class TransactionPaymentController extends Controller
             $payment_types = $this->transactionUtil->payment_types(null, false, $business_id);
 
             //Accounts
-            $accounts = $this->moduleUtil->accountsDropdown($business_id, true);
+            $location_id = request()->input('location_id');
+            $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, true, $location_id);
 
             return view('transaction_payment.pay_supplier_due_modal')
                 ->with(compact('contact_details', 'payment_types', 'payment_line', 'due_payment_type', 'ob_due', 'amount_formated', 'accounts'));

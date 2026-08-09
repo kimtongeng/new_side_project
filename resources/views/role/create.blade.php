@@ -1587,8 +1587,15 @@
         </div>
         <hr>
         <div class="row check_group">
-        <div class="col-md-3">
+        <div class="col-md-1">
           <h4>@lang( 'account.account' )</h4>
+        </div>
+        <div class="col-md-2">
+          <div class="checkbox">
+              <label>
+                <input type="checkbox" class="check_all input-icheck" > {{ __( 'role.select_all' ) }}
+              </label>
+            </div>
         </div>
         <div class="col-md-9">
           <div class="col-md-12">

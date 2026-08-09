@@ -271,7 +271,7 @@ class LoanPosEditController extends Controller
             $types['both'] = __('lang_v1.both_supplier_customer');
         }
         $customer_groups = CustomerGroup::forDropdown($business_id);
-        $accounts = $this->moduleUtil->isModuleEnabled('account') ? Account::forDropdown($business_id, true, false, true) : [];
+        $accounts = $this->moduleUtil->isModuleEnabled('account') ? Account::forDropdown($business_id, true, false, true, $transaction->location_id) : [];
         $waiters = $this->productUtil->isModuleEnabled('service_staff') && !empty($pos_settings['inline_service_staff']) ? $this->productUtil->serviceStaffDropdown($business_id) : [];
         $redeem_details = request()->session()->get('business.enable_rp') == 1 ? $this->transactionUtil->getRewardRedeemDetails($business_id, $transaction->contact_id) : [];
         if (!empty($redeem_details)) {

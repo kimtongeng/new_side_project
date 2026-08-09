@@ -1586,5 +1586,8 @@ return [
     "selling_price" => "Selling price",
     "edit_selling_price" => "Edit Selling Price",
     "selling_price_less_than_cost_price" => "Selling price cannot be less than cost price",
-    "user_level" => "User Level"
+    "user_level" => "User Level",
+    "clear_cache" => "Clear Cache",
+    "clear_cache_help" => "Clear application cache, view cache, route cache and config cache",
+    "cache_cleared_successfully" => "Cache cleared successfully"
 ];

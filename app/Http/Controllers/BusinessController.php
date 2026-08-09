@@ -617,4 +617,41 @@ class BusinessController extends Controller
 
         return $output;
     }
+
+    /**
+     * Clears application cache, view cache, route cache, and config cache
+      *
+      * @return \Illuminate\Http\Response
+      */
+    public function clearCache()
+    {
+        if (! auth()->user()->can('business_settings.access')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $notAllowed = $this->businessUtil->notAllowedInDemo();
+            if (! empty($notAllowed)) {
+                return $notAllowed;
+            }
+
+            \Illuminate\Support\Facades\Artisan::call('cache:clear');
+            \Illuminate\Support\Facades\Artisan::call('view:clear');
+            \Illuminate\Support\Facades\Artisan::call('route:clear');
+            \Illuminate\Support\Facades\Artisan::call('config:clear');
+
+            $output = [
+                'success' => 1,
+                'msg' => __('lang_v1.cache_cleared_successfully'),
+            ];
+        } catch (\Exception $e) {
+            \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
+            $output = [
+                'success' => 0,
+                'msg' => $e->getMessage(),
+            ];
+        }
+
+        return $output;
+    }
 }

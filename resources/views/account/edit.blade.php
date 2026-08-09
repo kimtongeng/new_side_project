@@ -11,6 +11,10 @@
     <div class="modal-body">
             <div class="form-group">
                 {!! Form::label('location_id', __( 'business.business_location' ) .":") !!}
+                <div class="pull-right">
+                    <button type="button" class="btn btn-primary btn-xs select-all">@lang('lang_v1.select_all')</button>
+                    <button type="button" class="btn btn-default btn-xs deselect-all">@lang('lang_v1.deselect_all')</button>
+                </div>
                 {!! Form::select('location_id[]', $business_locations, $account->location_id, ['class' => 'form-control select2', 'multiple', 'style' => 'width:100%' ]); !!}
             </div>
 

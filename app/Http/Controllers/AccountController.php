@@ -106,9 +106,7 @@ class AccountController extends Controller
 
             if ($permitted_locations != 'all') {
                 $accounts->where(function ($q) use ($permitted_locations) {
-                    $q->whereNull('accounts.location_id')
-                        ->orWhere('accounts.location_id', '0')
-                        ->orWhereIn('accounts.location_id', (array)$permitted_locations);
+                    $q->whereIn('accounts.location_id', (array)$permitted_locations);
                     foreach ((array)$permitted_locations as $loc_id) {
                         $q->orWhere('accounts.location_id', (string)$loc_id)
                             ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])
@@ -137,10 +135,9 @@ class AccountController extends Controller
             if (! empty(request()->input('location_id'))) {
                 $loc_filter = request()->input('location_id');
                 $accounts->where(function ($q) use ($loc_filter) {
-                    $q->whereNull('accounts.location_id')
-                      ->orWhere('accounts.location_id', '0')
-                      ->orWhere('accounts.location_id', $loc_filter)
+                    $q->where('accounts.location_id', $loc_filter)
                       ->orWhere('accounts.location_id', (string)$loc_filter)
+                      ->orWhereIn('accounts.location_id', (array)$loc_filter)
                       ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_filter . '"%'])
                       ->orWhereRaw("(JSON_VALID(accounts.location_id) = 1 AND (JSON_CONTAINS(accounts.location_id, ?) OR JSON_CONTAINS(accounts.location_id, ?)))", [json_encode((string)$loc_filter), json_encode((int)$loc_filter)]);
                 });
@@ -239,14 +236,14 @@ class AccountController extends Controller
                 })
                 ->editColumn('location_name', function ($row) {
                     if (empty($row->location_id)) {
-                        return __('report.all_locations');
+                        return __('lang_v1.none');
                     }
                     $loc_ids = is_array($row->location_id) ? $row->location_id : json_decode($row->location_id, true);
                     if (!empty($loc_ids) && is_array($loc_ids)) {
                         $loc_names = BusinessLocation::whereIn('id', $loc_ids)->pluck('name')->toArray();
-                        return !empty($loc_names) ? implode(', ', $loc_names) : __('report.all_locations');
+                        return !empty($loc_names) ? implode(', ', $loc_names) : __('lang_v1.none');
                     }
-                    return $row->location_name ?: __('report.all_locations');
+                    return $row->location_name ?: __('lang_v1.none');
                 })
                 ->editColumn('role_name', function ($row) use ($business_id) {
                     $u_levels = $row->user_level;
@@ -489,6 +486,20 @@ class AccountController extends Controller
 
             return $output;
         }
+    }
+
+    /**
+     * Get accounts dropdown for a specific location
+     *
+     * @param  int|null  $location_id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAccountsByLocation($location_id = null)
+    {
+        $business_id = session()->get('user.business_id');
+        $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, false, $location_id ?: null);
+
+        return response()->json($accounts);
     }
 
     /**
@@ -996,9 +1007,7 @@ class AccountController extends Controller
 
             if ($user && $permitted_locations != 'all') {
                 $accounts_query->where(function ($q) use ($permitted_locations) {
-                    $q->whereNull('accounts.location_id')
-                        ->orWhere('accounts.location_id', '0')
-                        ->orWhereIn('accounts.location_id', (array)$permitted_locations);
+                    $q->whereIn('accounts.location_id', (array)$permitted_locations);
                     foreach ((array)$permitted_locations as $loc_id) {
                         $q->orWhere('accounts.location_id', (string)$loc_id)
                             ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])

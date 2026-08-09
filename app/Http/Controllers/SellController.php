@@ -747,7 +747,7 @@ class SellController extends Controller
 
         $default_location = null;
         foreach ($business_locations as $id => $name) {
-            $default_location = BusinessLocation::findOrFail($id);
+            $default_location = BusinessLocation::find($id);
             break;
         }
 

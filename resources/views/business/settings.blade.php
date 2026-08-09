@@ -229,6 +229,33 @@
             browseLabel: LANG.file_browse_label,
             removeLabel: LANG.remove,
         });
+
+        $(document).on('click', '#clear_cache_btn', function() {
+            var btn = $(this);
+            btn.attr('disabled', true);
+            $.ajax({
+                method: 'GET',
+                url: "{{ action([\App\Http\Controllers\BusinessController::class, 'clearCache']) }}",
+                dataType: 'json',
+                success: function(result) {
+                    if (result.success == true) {
+                        swal({
+                            text: result.msg,
+                            icon: 'success'
+                        });
+                    } else {
+                        swal({
+                            text: result.msg,
+                            icon: 'error'
+                        });
+                    }
+                    btn.attr('disabled', false);
+                },
+                error: function() {
+                    btn.attr('disabled', false);
+                }
+            });
+        });
     });
 </script>
 @endsection

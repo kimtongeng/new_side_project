@@ -29,44 +29,27 @@ class Account extends Model
         $query = Account::where('business_id', $business_id);
 
         if (! empty($location_id)) {
-            $location_account_ids = [];
-            if ($location_id !== 'all_locations_only') {
-                $loc = BusinessLocation::find($location_id);
-                if ($loc && ! empty($loc->default_payment_accounts)) {
-                    $default_payment_accounts = json_decode($loc->default_payment_accounts, true);
-                    if (is_array($default_payment_accounts)) {
-                        foreach ($default_payment_accounts as $acc_setting) {
-                            if (! empty($acc_setting['is_enabled']) && ! empty($acc_setting['account'])) {
-                                $location_account_ids[] = $acc_setting['account'];
-                            }
-                        }
-                    }
-                }
-            }
-
-            $merged_include_ids = array_unique(array_merge((array)$include_account_ids, $location_account_ids));
-
             if ($location_id === 'all_locations_only') {
-                $query->where(function ($q) use ($merged_include_ids) {
-                    $q->whereNull('accounts.location_id');
-                    if (! empty($merged_include_ids)) {
-                        $q->orWhereIn('accounts.id', $merged_include_ids);
-                    }
-                });
+                if (! empty($include_account_ids)) {
+                    $query->whereIn('accounts.id', (array)$include_account_ids);
+                }
             } else {
-                $query->where(function ($q) use ($location_id, $merged_include_ids) {
-                    $q->whereNull('accounts.location_id')
-                      ->orWhereIn('accounts.location_id', (array)$location_id);
+                $query->where(function ($q) use ($location_id, $include_account_ids) {
+                    $q->whereIn('accounts.location_id', (array)$location_id);
                     foreach ((array)$location_id as $loc_id) {
                         $q->orWhere('accounts.location_id', (string)$loc_id)
                           ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])
                           ->orWhereRaw("(JSON_VALID(accounts.location_id) = 1 AND (JSON_CONTAINS(accounts.location_id, ?) OR JSON_CONTAINS(accounts.location_id, ?)))", [json_encode((string)$loc_id), json_encode((int)$loc_id)]);
                     }
-                    if (! empty($merged_include_ids)) {
-                        $q->orWhereIn('accounts.id', $merged_include_ids);
+                    if (! empty($include_account_ids)) {
+                        $q->orWhereIn('accounts.id', (array)$include_account_ids);
                     }
                 });
             }
+        } elseif (! empty($include_account_ids)) {
+            $query->whereIn('accounts.id', (array)$include_account_ids);
+        } else {
+            $query->whereRaw('1 = 0');
         }
 
         $user = auth()->user();
@@ -97,9 +80,7 @@ class Account extends Model
         if ($user) {
             if ($permitted_locations != 'all') {
                 $query->where(function ($q) use ($permitted_locations) {
-                    $q->whereNull('accounts.location_id')
-                      ->orWhere('accounts.location_id', '0')
-                      ->orWhereIn('accounts.location_id', (array)$permitted_locations);
+                    $q->whereIn('accounts.location_id', (array)$permitted_locations);
                     foreach ((array)$permitted_locations as $loc_id) {
                         $q->orWhere('accounts.location_id', (string)$loc_id)
                           ->orWhereRaw("accounts.location_id LIKE ?", ['%"' . $loc_id . '"%'])

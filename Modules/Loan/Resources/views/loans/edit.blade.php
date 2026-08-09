@@ -390,6 +390,34 @@
                 updateCalculatorRecipient();
             });
 
+            $(document).on('change', 'select#location_id', function() {
+                var location_id = $(this).val();
+                if ($('select#account_id').length) {
+                    var current_account = $('select#account_id').val();
+                    $.ajax({
+                        url: '/get-location-accounts/' + (location_id ? location_id : ''),
+                        dataType: 'json',
+                        success: function(accounts) {
+                            var $acc = $('select#account_id');
+                            if ($acc.hasClass('select2-hidden-accessible')) {
+                                $acc.select2('destroy');
+                            }
+                            $acc.empty();
+                            $.each(accounts, function(key, value) {
+                                $acc.append($('<option>', {
+                                    value: key,
+                                    text: value
+                                }));
+                            });
+                            if (current_account && accounts.hasOwnProperty(current_account)) {
+                                $acc.val(current_account);
+                            }
+                            $acc.select2();
+                        }
+                    });
+                }
+            });
+
             if (typeof $.fn.datepicker !== 'undefined') {
                 $('#start_date').datepicker({
                     autoclose: true,

@@ -401,6 +401,34 @@
                 updateCalculatorRecipient();
             });
 
+            $(document).on('change', 'select#location_id', function() {
+                var location_id = $(this).val();
+                if ($('select#account_id').length) {
+                    $.ajax({
+                        url: '/get-location-accounts/' + (location_id ? location_id : ''),
+                        dataType: 'json',
+                        success: function(accounts) {
+                            var $acc = $('select#account_id');
+                            if ($acc.hasClass('select2-hidden-accessible')) {
+                                $acc.select2('destroy');
+                            }
+                            $acc.empty();
+                            $.each(accounts, function(key, value) {
+                                $acc.append($('<option>', {
+                                    value: key,
+                                    text: value
+                                }));
+                            });
+                            $acc.select2();
+                        }
+                    });
+                }
+            });
+
+            if ($('select#location_id').length && $('select#location_id').val()) {
+                $('select#location_id').trigger('change');
+            }
+
             if (typeof $.fn.datepicker !== 'undefined') {
                 $('#start_date').datepicker({
                     autoclose: true,

@@ -16,12 +16,15 @@
     @endphp
     @component('components.widget', ['class' => 'box-primary'])
         {!! Form::open(['url' => action([\App\Http\Controllers\RoleController::class, 'update'], [$role->id]), 'method' => 'PUT', 'id' => 'role_form' ]) !!}
-        <div class="row" style="margin-bottom: 15px;">
+        <div class="row" style="margin-bottom: 15px; display: flex; align-items: flex-end; justify-content: space-between;">
           <div class="col-md-4">
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 0;">
               {!! Form::label('name', __( 'user.role_name' ) . ':*') !!}
               {!! Form::text('name', str_replace( '#' . auth()->user()->business_id, '', $role->name) , ['class' => 'form-control', 'required', 'placeholder' => __( 'user.role_name' ) ]); !!}
             </div>
+          </div>
+          <div class="col-md-8 text-right" style="display: flex; align-items: flex-end; justify-content: flex-end;">
+            <button type="submit" class="tw-dw-btn tw-dw-btn-primary tw-dw-btn-md tw-text-white">@lang( 'messages.update' )</button>
           </div>
         </div>
 

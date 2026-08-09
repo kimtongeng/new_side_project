@@ -127,7 +127,7 @@ class Account extends Model
             $query->where('is_closed', 0);
         }
 
-        $accounts = $query->get();
+        $accounts = $query->orderBy('name', 'asc')->get();
 
         $dropdown = [];
         if ($prepend_none) {

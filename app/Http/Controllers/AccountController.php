@@ -200,12 +200,12 @@ class AccountController extends Controller
 
                     // Edit
                     if (auth()->user()->can('account.edit') || auth()->user()->can('edit_account')) {
-                        $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'edit'], [$row->id]) . '" data-container=".account_model" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal"><i class="glyphicon glyphicon-edit"></i> ' . __('messages.edit') . '</button> ';
+                        $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'edit'], [$row->id]) . '" data-container=".account_model" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal"><i class="glyphicon glyphicon-edit"></i> ' . __('messages.edit') . '</button>';
                     }
 
                     // Account Book
                     if (auth()->user()->can('account.show') || auth()->user()->can('view_account_book')) {
-                        $html .= '<a href="' . action([\App\Http\Controllers\AccountController::class, 'show'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-warning btn-xs"><i class="fa fa-book"></i> ' . __('account.account_book') . '</a> ';
+                        $html .= '<a href="' . action([\App\Http\Controllers\AccountController::class, 'show'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-warning btn-xs"><i class="fa fa-book"></i> ' . __('account.account_book') . '</a>';
                     }
 
                     $pending_count = AccountTransaction::where('account_id', $row->id)
@@ -214,18 +214,18 @@ class AccountController extends Controller
                         ->count();
 
                     if ($pending_count > 0) {
-                        $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getPendingTransfers'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning btn-modal" data-container=".view_modal"><i class="fa fa-clock-o"></i> ' . __('account.pending') . ' (' . $pending_count . ')</button> ';
+                        $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getPendingTransfers'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-warning btn-modal" style="background-color: #f39c12 !important; color: #ffffff !important; border: 1px solid #e08e0b !important;" data-container=".view_modal"><i class="fa fa-clock-o"></i> ' . __('account.pending') . ' (' . $pending_count . ')</button>';
                     }
 
                     if ($row->is_closed == 0) {
                         // Fund Transfer
                         if (auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer')) {
-                            $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getFundTransfer'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info btn-modal" data-container=".view_modal"><i class="fas fa-calculator"></i> ' . __('account.fund_transfer') . '</button> ';
+                            $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getFundTransfer'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info btn-modal" data-container=".view_modal"><i class="fas fa-calculator"></i> ' . __('account.fund_transfer') . '</button>';
                         }
 
                         // Deposit
                         if (auth()->user()->can('account.deposit') || auth()->user()->can('deposit')) {
-                            $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getDeposit'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-success btn-modal" data-container=".view_modal"><i class="fas fa-money-bill-alt"></i> ' . __('account.deposit') . '</button> ';
+                            $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getDeposit'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-success btn-modal" data-container=".view_modal"><i class="fas fa-money-bill-alt"></i> ' . __('account.deposit') . '</button>';
                         }
 
                         // Close
@@ -239,24 +239,28 @@ class AccountController extends Controller
                         }
                     }
 
-                    return $html;
+                    return '<div class="tw-flex tw-items-center tw-gap-1 tw-flex-wrap">' . $html . '</div>';
                 })
                 ->editColumn('name', function ($row) {
-                    $name_html = $row->name;
+                    if ($row->is_closed == 1) {
+                        return $row->name . ' <small class="label pull-right bg-red no-print">' . __('account.closed') . '</small><span class="print_section">(' . __('account.closed') . ')</span>';
+                    } else {
+                        return $row->name;
+                    }
+                })
+                ->editColumn('note', function ($row) {
+                    $note_html = $row->note ?? '';
                     $pending_count = AccountTransaction::where('account_id', $row->id)
                         ->where('status', 'pending')
                         ->whereNull('deleted_at')
                         ->count();
 
                     if ($pending_count > 0) {
-                        $name_html .= ' <a href="' . action([\App\Http\Controllers\AccountController::class, 'show'], [$row->id]) . '" class="label bg-yellow no-print" title="' . __('account.pending') . '" style="font-size: 11px; margin-left: 5px;"><i class="fa fa-clock-o"></i> ' . __('account.pending') . ' (' . $pending_count . ')</a>';
+                        $pending_badge = '<a data-href="' . action([\App\Http\Controllers\AccountController::class, 'getPendingTransfers'], [$row->id]) . '" class="label bg-yellow no-print btn-modal" data-container=".view_modal" title="' . __('account.pending') . '" style="font-size: 11px; cursor: pointer; display: inline-block;"><i class="fa fa-clock-o"></i> ' . __('account.pending') . ' (' . $pending_count . ')</a>';
+                        $note_html = !empty($note_html) ? $note_html . ' ' . $pending_badge : $pending_badge;
                     }
 
-                    if ($row->is_closed == 1) {
-                        return $name_html . ' <small class="label pull-right bg-red no-print">' . __('account.closed') . '</small><span class="print_section">(' . __('account.closed') . ')</span>';
-                    } else {
-                        return $name_html;
-                    }
+                    return $note_html;
                 })
                 ->editColumn('location_name', function ($row) {
                     if (empty($row->location_id)) {
@@ -329,7 +333,7 @@ class AccountController extends Controller
                 })
                 ->removeColumn('id')
                 ->removeColumn('is_closed')
-                ->rawColumns(['action', 'balance', 'name', 'account_details'])
+                ->rawColumns(['action', 'balance', 'name', 'account_details', 'note'])
                 ->make(true);
         }
 
@@ -730,8 +734,8 @@ class AccountController extends Controller
                     $is_pending = ($row->status == 'pending') || (! empty($row->transfer_transaction) && $row->transfer_transaction->status == 'pending');
 
                     if ($is_pending && (auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer') || auth()->user()->can('superadmin'))) {
-                        $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success change_transfer_status" data-href="' . action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$row->id]) . '?status=final"><i class="fa fa-check"></i> ' . __('account.approve') . '</button> ';
-                        $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error change_transfer_status" data-href="' . action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$row->id]) . '?status=rejected"><i class="fa fa-times"></i> ' . __('account.reject') . '</button> ';
+                        $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success change_transfer_status" data-href="' . action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$row->id]) . '?status=final" style="display: inline-flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg> ' . __('account.approve') . '</button> ';
+                        $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error change_transfer_status" data-href="' . action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$row->id]) . '?status=rejected" style="display: inline-flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg> ' . __('account.reject') . '</button> ';
                     }
 
                     if (auth()->user()->can('delete_account_transaction')) {

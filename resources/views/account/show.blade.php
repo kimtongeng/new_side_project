@@ -281,6 +281,23 @@
                 });
             }
         });
+
+        $(document).on('show.bs.modal', '.modal', function () {
+            var openModals = $('.modal:visible').not(this).length;
+            if (openModals > 0) {
+                var zIndex = 1050 + (20 * openModals);
+                $(this).css('z-index', zIndex);
+                setTimeout(function() {
+                    $('.modal-backdrop').last().css('z-index', zIndex - 5);
+                }, 0);
+            }
+        });
+
+        $(document).on('hidden.bs.modal', '.modal', function () {
+            if ($('.modal:visible').length > 0) {
+                $('body').addClass('modal-open');
+            }
+        });
     });
 
     function update_account_balance(argument) {

@@ -261,6 +261,9 @@
 
         <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel" id="account_type_modal">
         </div>
+
+        <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel" id="edit_account_transaction">
+        </div>
     </section>
     <!-- /.content -->
 
@@ -607,5 +610,110 @@
                 }
             });
         });
+
+        $(document).on('show.bs.modal', '#edit_account_transaction', function () {
+            $(this).css('z-index', 1070);
+            setTimeout(function() {
+                $('.modal-backdrop').last().css('z-index', 1065);
+            }, 0);
+        });
+
+        $(document).on('hidden.bs.modal', '#edit_account_transaction', function () {
+            if ($('.modal:visible').length > 0) {
+                $('body').addClass('modal-open');
+            }
+        });
+
+        $(document).on('shown.bs.modal', '#edit_account_transaction', function(e) {
+            $(this).find('.select2').each(function () {
+                if ($(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2('destroy');
+                }
+                $(this).select2({
+                    dropdownParent: $(this).closest('.modal-content')
+                });
+            });
+            $('#edit_account_transaction_form').validate({
+                submitHandler: function(form) {
+                    e.preventDefault();
+                    var data = $(form).serialize();
+                    $.ajax({
+                        method: 'POST',
+                        url: $(form).attr('action'),
+                        dataType: 'json',
+                        data: data,
+                        beforeSend: function(xhr) {
+                            __disable_submit_button($(form).find('button[type="submit"]'));
+                        },
+                        success: function(result) {
+                            if (result.success == true) {
+                                $('#edit_account_transaction').modal('hide');
+                                toastr.success(result.msg);
+
+                                if (typeof(other_account_table) != 'undefined' && other_account_table.ajax) {
+                                    other_account_table.ajax.reload();
+                                }
+                                if (typeof(capital_account_table) != 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
+                                    capital_account_table.ajax.reload();
+                                }
+
+                                if ($('div.view_modal').is(':visible')) {
+                                    var pendingUrl = $('div.view_modal').find('.modal-title').data('pending-url');
+                                    if (pendingUrl) {
+                                        $.get(pendingUrl, function(html) {
+                                            $('div.view_modal').html(html);
+                                        });
+                                    }
+                                }
+                            } else {
+                                toastr.error(result.msg);
+                            }
+                        },
+                        complete: function() {
+                            __enable_submit_button($(form).find('button[type="submit"]'));
+                        }
+                    });
+                },
+            });
+        });
+
+        $(document).on('click', '.change_transfer_status', function(e){
+            e.preventDefault();
+            var href = $(this).data('href');
+            swal({
+              title: LANG.sure,
+              icon: "warning",
+              buttons: true,
+              dangerMode: true,
+            }).then((willChange) => {
+                if (willChange) {
+                    $.ajax({
+                        url: href,
+                        type: 'POST',
+                        dataType: "json",
+                        data: { _token: '{{ csrf_token() }}' },
+                        success: function(result){
+                            if(result.success === true){
+                                toastr.success(result.msg);
+                                $('div.view_modal').modal('hide');
+                                if (typeof other_account_table !== 'undefined' && other_account_table.ajax) {
+                                    other_account_table.ajax.reload();
+                                }
+                                if (typeof capital_account_table !== 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
+                                    capital_account_table.ajax.reload();
+                                }
+                            } else {
+                                toastr.error(result.msg);
+                            }
+                        }
+                    });
+                }
+            });
+        });
     </script>
+    <style>
+        #edit_account_transaction {
+            z-index: 1070 !important;
+        }
+    </style>
 @endsection

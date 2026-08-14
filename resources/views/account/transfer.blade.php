@@ -15,10 +15,38 @@
                 {!! Form::select('from_account', $all_accounts_dropdown, $from_account->id, ['class' => 'form-control select2', 'required', 'id' => 'from_account', 'style' => 'width:100%' ]); !!}
             </div>
 
+            @if(auth()->user()->can('account.enable_immediate_credit_pending_transfer') || auth()->user()->can('superadmin'))
+            <div class="well" style="background-color: #fffde7; border: 2px dashed #fbc02d; border-radius: 6px; padding: 12px 15px; margin-bottom: 15px;">
+                <div class="checkbox" style="margin-top: 0; margin-bottom: 5px;">
+                    <label style="font-weight: bold; font-size: 14px; color: #222;">
+                        <input type="checkbox" name="transfer_type" value="immediate_credit_pending" id="enable_immediate_credit_pending">
+                        @lang('account.enable_immediate_credit_pending_transfer')
+                    </label>
+                </div>
+                <p class="help-block" style="color: #666; margin-bottom: 0; font-size: 12px; line-height: 1.4;">
+                    @lang('account.enable_immediate_credit_pending_transfer_help')
+                </p>
+            </div>
+            @endif
+
             <div class="form-group">
                 {!! Form::label('to_account', __( 'account.transfer_to' ) .":*") !!}
                 {!! Form::select('to_account', $to_accounts, null, ['class' => 'form-control select2', 'required', 'id' => 'to_account', 'style' => 'width:100%', 'placeholder' => __('messages.please_select') ]); !!}
             </div>
+
+            @if(auth()->user()->can('account.enable_pending_transfer') || auth()->user()->can('superadmin'))
+            <div class="well" style="background-color: #fffde7; border: 2px dashed #fbc02d; border-radius: 6px; padding: 12px 15px; margin-bottom: 15px;">
+                <div class="checkbox" style="margin-top: 0; margin-bottom: 5px;">
+                    <label style="font-weight: bold; font-size: 14px; color: #222;">
+                        <input type="checkbox" name="transfer_type" value="pending_transfer" id="enable_pending_transfer">
+                        @lang('account.enable_pending_transfer')
+                    </label>
+                </div>
+                <p class="help-block" style="color: #666; margin-bottom: 0; font-size: 12px; line-height: 1.4;">
+                    @lang('account.enable_pending_transfer_help')
+                </p>
+            </div>
+            @endif
 
             <div class="form-group">
                 {!! Form::label('amount', __( 'sale.amount' ) .":*") !!}
@@ -112,6 +140,18 @@
 
     $(document).on('change', '#from_account', function(){
       filterToAccounts();
+    });
+
+    $(document).on('change', '#enable_immediate_credit_pending', function() {
+      if ($(this).is(':checked')) {
+        $('#enable_pending_transfer').prop('checked', false);
+      }
+    });
+
+    $(document).on('change', '#enable_pending_transfer', function() {
+      if ($(this).is(':checked')) {
+        $('#enable_immediate_credit_pending').prop('checked', false);
+      }
     });
   });
 </script>

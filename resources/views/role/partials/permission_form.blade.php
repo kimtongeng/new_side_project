@@ -1486,6 +1486,16 @@
             <label>{!! Form::checkbox('permissions[]', 'delete_account_transaction', in_array('delete_account_transaction', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('lang_v1.delete_account_transaction') }}</label>
           </div>
         </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.enable_pending_transfer', in_array('account.enable_pending_transfer', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.enable_pending_transfer') }}</label>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
+          <div class="checkbox" style="margin-top: 0;">
+            <label>{!! Form::checkbox('permissions[]', 'account.enable_immediate_credit_pending_transfer', in_array('account.enable_immediate_credit_pending_transfer', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.enable_immediate_credit_pending_transfer') }}</label>
+          </div>
+        </div>
       </div>
     </div>
   </div>

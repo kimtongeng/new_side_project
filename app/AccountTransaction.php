@@ -66,6 +66,7 @@ class AccountTransaction extends Model
             'transaction_payment_id' => ! empty($data['transaction_payment_id']) ? $data['transaction_payment_id'] : null,
             'note' => ! empty($data['note']) ? $data['note'] : null,
             'transfer_transaction_id' => ! empty($data['transfer_transaction_id']) ? $data['transfer_transaction_id'] : null,
+            'status' => ! empty($data['status']) ? $data['status'] : 'final',
         ];
 
         $account_transaction = AccountTransaction::create($transaction_data);
@@ -125,5 +126,10 @@ class AccountTransaction extends Model
     public function account()
     {
         return $this->belongsTo(\App\Account::class, 'account_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(\App\User::class, 'created_by');
     }
 }

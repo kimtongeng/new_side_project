@@ -119,7 +119,7 @@ class Account extends Model
             // })
             $query->select('accounts.name',
                     'accounts.id',
-                    DB::raw("(SELECT SUM( IF(account_transactions.type='credit', amount, -1*amount) ) as balance from account_transactions where account_transactions.account_id = accounts.id AND deleted_at is NULL) as balance")
+                    DB::raw("(SELECT SUM( IF(account_transactions.type='credit', amount, -1*amount) ) as balance from account_transactions where account_transactions.account_id = accounts.id AND deleted_at is NULL AND (status IS NULL OR status = 'final')) as balance")
                 );
         }
 

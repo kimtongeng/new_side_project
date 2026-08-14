@@ -50,7 +50,10 @@ class AccountController extends Controller
         if (request()->ajax()) {
             $accounts = Account::leftjoin('account_transactions as AT', function ($join) {
                 $join->on('AT.account_id', '=', 'accounts.id')
-                    ->whereNull('AT.deleted_at');
+                    ->whereNull('AT.deleted_at')
+                    ->where(function ($q) {
+                        $q->whereNull('AT.status')->orWhere('AT.status', 'final');
+                    });
             })
                 ->leftjoin(
                     'account_types as ats',
@@ -205,6 +208,15 @@ class AccountController extends Controller
                         $html .= '<a href="' . action([\App\Http\Controllers\AccountController::class, 'show'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-warning btn-xs"><i class="fa fa-book"></i> ' . __('account.account_book') . '</a> ';
                     }
 
+                    $pending_count = AccountTransaction::where('account_id', $row->id)
+                        ->where('status', 'pending')
+                        ->whereNull('deleted_at')
+                        ->count();
+
+                    if ($pending_count > 0) {
+                        $html .= '<button data-href="' . action([\App\Http\Controllers\AccountController::class, 'getPendingTransfers'], [$row->id]) . '" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning btn-modal" data-container=".view_modal"><i class="fa fa-clock-o"></i> ' . __('account.pending') . ' (' . $pending_count . ')</button> ';
+                    }
+
                     if ($row->is_closed == 0) {
                         // Fund Transfer
                         if (auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer')) {
@@ -230,10 +242,20 @@ class AccountController extends Controller
                     return $html;
                 })
                 ->editColumn('name', function ($row) {
+                    $name_html = $row->name;
+                    $pending_count = AccountTransaction::where('account_id', $row->id)
+                        ->where('status', 'pending')
+                        ->whereNull('deleted_at')
+                        ->count();
+
+                    if ($pending_count > 0) {
+                        $name_html .= ' <a href="' . action([\App\Http\Controllers\AccountController::class, 'show'], [$row->id]) . '" class="label bg-yellow no-print" title="' . __('account.pending') . '" style="font-size: 11px; margin-left: 5px;"><i class="fa fa-clock-o"></i> ' . __('account.pending') . ' (' . $pending_count . ')</a>';
+                    }
+
                     if ($row->is_closed == 1) {
-                        return $row->name . ' <small class="label pull-right bg-red no-print">' . __('account.closed') . '</small><span class="print_section">(' . __('account.closed') . ')</span>';
+                        return $name_html . ' <small class="label pull-right bg-red no-print">' . __('account.closed') . '</small><span class="print_section">(' . __('account.closed') . ')</span>';
                     } else {
-                        return $row->name;
+                        return $name_html;
                     }
                 })
                 ->editColumn('location_name', function ($row) {
@@ -533,7 +555,10 @@ class AccountController extends Controller
                     DB::raw('SUM(IF(account_transactions.type="credit", account_transactions.amount, -1 * account_transactions.amount)) as prev_bal'),
                 ])
                 ->where('account_transactions.operation_date', '<', $start_date)
-                ->whereNull('account_transactions.deleted_at');
+                ->whereNull('account_transactions.deleted_at')
+                ->where(function ($q) {
+                    $q->whereNull('account_transactions.status')->orWhere('account_transactions.status', 'final');
+                });
             if (! empty(request()->input('type'))) {
                 $before_bal_query->where('account_transactions.type', request()->input('type'));
             }
@@ -570,6 +595,7 @@ class AccountController extends Controller
                     'operation_date',
                     'account_transactions.sub_type',
                     'transfer_transaction_id',
+                    'account_transactions.status',
                     'A.id as account_id',
                     'account_transactions.transaction_id',
                     'account_transactions.id',
@@ -676,6 +702,10 @@ class AccountController extends Controller
                     )
                         ->where('operation_date', '>=', $start_date)
                         ->where('operation_date', '<=', $row->operation_date)
+                        ->whereNull('deleted_at')
+                        ->where(function ($q) {
+                            $q->whereNull('status')->orWhere('status', 'final');
+                        })
                         ->select(DB::raw("SUM(IF(type='credit', amount, -1 * amount)) as balance"))
                         ->first()->balance;
                     $bal = $bal_before_start_date + $current_bal;
@@ -686,10 +716,24 @@ class AccountController extends Controller
                     return $this->commonUtil->format_date($row->operation_date, true);
                 })
                 ->editColumn('sub_type', function ($row) {
-                    return $this->__getPaymentDetails($row);
+                    $details = $this->__getPaymentDetails($row);
+                    if (! empty($row->status) && $row->status == 'pending') {
+                        $details .= ' <span class="label label-warning" style="margin-left: 5px;">' . __('account.pending') . '</span>';
+                    } elseif (! empty($row->transfer_transaction) && ! empty($row->transfer_transaction->status) && $row->transfer_transaction->status == 'pending') {
+                        $details .= ' <span class="label label-warning" style="margin-left: 5px;">' . __('account.pending') . '</span>';
+                    }
+                    return $details;
                 })
                 ->editColumn('action', function ($row) {
                     $action = '';
+
+                    $is_pending = ($row->status == 'pending') || (! empty($row->transfer_transaction) && $row->transfer_transaction->status == 'pending');
+
+                    if ($is_pending && (auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer') || auth()->user()->can('superadmin'))) {
+                        $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success change_transfer_status" data-href="' . action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$row->id]) . '?status=final"><i class="fa fa-check"></i> ' . __('account.approve') . '</button> ';
+                        $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error change_transfer_status" data-href="' . action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$row->id]) . '?status=rejected"><i class="fa fa-times"></i> ' . __('account.reject') . '</button> ';
+                    }
+
                     if (auth()->user()->can('delete_account_transaction')) {
                         if ($row->sub_type == 'fund_transfer' || $row->sub_type == 'deposit') {
                             $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-error delete_account_transaction" data-href="' . action([\App\Http\Controllers\AccountController::class, 'destroyAccountTransaction'], [$row->id]) . '"><i class="fa fa-trash"></i> ' . __('messages.delete') . '</button>';
@@ -1109,6 +1153,18 @@ class AccountController extends Controller
                 }
             }
 
+            $transfer_type = $request->input('transfer_type');
+            $debit_status = 'final';
+            $credit_status = 'final';
+
+            if ($transfer_type == 'pending_transfer') {
+                $debit_status = 'final';
+                $credit_status = 'pending';
+            } elseif ($transfer_type == 'immediate_credit_pending') {
+                $debit_status = 'pending';
+                $credit_status = 'final';
+            }
+
             if (! empty($amount)) {
                 $debit_data = [
                     'amount'              => $amount,
@@ -1119,6 +1175,7 @@ class AccountController extends Controller
                     'note'                => $note,
                     'transfer_account_id' => $to_id,
                     'operation_date'      => $this->commonUtil->uf_date($request->input('operation_date'), true),
+                    'status'              => $debit_status,
                 ];
 
                 DB::beginTransaction();
@@ -1135,6 +1192,7 @@ class AccountController extends Controller
                     'transfer_account_id'    => $from_id,
                     'transfer_transaction_id' => $debit->id,
                     'operation_date'         => $this->commonUtil->uf_date($request->input('operation_date'), true),
+                    'status'                 => $credit_status,
                 ];
 
                 $credit = AccountTransaction::createAccountTransaction($credit_data);
@@ -1384,6 +1442,9 @@ class AccountController extends Controller
             'accounts.id'
         )
             ->whereNull('AT.deleted_at')
+            ->where(function ($q) {
+                $q->whereNull('AT.status')->orWhere('AT.status', 'final');
+            })
             ->where('accounts.business_id', $business_id)
             ->where('accounts.id', $id)
             ->select('accounts.*', DB::raw("SUM( IF(AT.type='credit', amount, -1 * amount) ) as balance"))
@@ -1858,6 +1919,94 @@ class AccountController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
+
+            $output = [
+                'success' => false,
+                'msg' => __('messages.something_went_wrong'),
+            ];
+        }
+
+        return $output;
+    }
+
+    /**
+     * Get Pending Transfers modal for an account
+     *
+     * @param int $id
+     * @return Response
+     */
+    public function getPendingTransfers($id)
+    {
+        if (! auth()->user()->can('account.access')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $business_id = session()->get('user.business_id');
+        $account = Account::where('business_id', $business_id)->findOrFail($id);
+
+        $pending_transactions = AccountTransaction::where('account_id', $id)
+            ->where('status', 'pending')
+            ->whereNull('deleted_at')
+            ->with(['transfer_transaction', 'transfer_transaction.account', 'user'])
+            ->orderBy('operation_date', 'desc')
+            ->get();
+
+        return view('account.pending_transfers_modal')
+            ->with(compact('account', 'pending_transactions'));
+    }
+
+    /**
+     * Change transfer transaction status (Approve / Reject)
+     *
+     * @param  Request  $request
+     * @param  int  $id
+     * @return Response
+     */
+    public function changeTransferStatus(Request $request, $id)
+    {
+        if (! auth()->user()->can('account.fund_transfer') && ! auth()->user()->can('fund_transfer') && ! auth()->user()->can('superadmin')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+            $business_id = session()->get('user.business_id');
+            $status = $request->input('status');
+
+            if (! in_array($status, ['final', 'rejected'])) {
+                return [
+                    'success' => false,
+                    'msg' => __('messages.something_went_wrong'),
+                ];
+            }
+
+            DB::beginTransaction();
+
+            $transaction = AccountTransaction::findOrFail($id);
+            $transfer_transaction = ! empty($transaction->transfer_transaction_id) 
+                ? AccountTransaction::find($transaction->transfer_transaction_id) 
+                : null;
+
+            $transaction->status = $status;
+            $transaction->save();
+
+            if (! empty($transfer_transaction)) {
+                $transfer_transaction->status = $status;
+                $transfer_transaction->save();
+            }
+
+            DB::commit();
+
+            $msg = ($status == 'final') 
+                ? __('account.transfer_approved_success') 
+                : __('account.transfer_rejected_success');
+
+            $output = [
+                'success' => true,
+                'msg' => $msg,
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
             \Log::emergency('File:' . $e->getFile() . 'Line:' . $e->getLine() . 'Message:' . $e->getMessage());
 
             $output = [

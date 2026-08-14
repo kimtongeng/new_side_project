@@ -458,6 +458,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::get('/delete-account-transaction/{id}', [AccountController::class, 'destroyAccountTransaction']);
         Route::get('/edit-account-transaction/{id}', [AccountController::class, 'editAccountTransaction']);
         Route::post('/update-account-transaction/{id}', [AccountController::class, 'updateAccountTransaction']);
+        Route::post('/change-transfer-status/{id}', [AccountController::class, 'changeTransferStatus']);
+        Route::get('/pending-transfers/{id}', [AccountController::class, 'getPendingTransfers']);
         Route::get('/get-account-balance/{id}', [AccountController::class, 'getAccountBalance']);
         Route::get('/get-location-accounts/{location_id?}', [AccountController::class, 'getAccountsByLocation']);
         Route::get('/balance-sheet', [AccountReportsController::class, 'balanceSheet']);

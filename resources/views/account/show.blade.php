@@ -252,6 +252,37 @@
         });
     });
 
+    $(document).on('click', '.change_transfer_status', function(e){
+        e.preventDefault();
+        var href = $(this).data('href');
+        swal({
+          title: LANG.sure,
+          icon: "warning",
+          buttons: true,
+          dangerMode: true,
+        }).then((willChange) => {
+            if (willChange) {
+                $.ajax({
+                    url: href,
+                    type: 'POST',
+                    dataType: "json",
+                    data: { _token: '{{ csrf_token() }}' },
+                    success: function(result){
+                        if(result.success === true){
+                            toastr.success(result.msg);
+                            if (typeof(account_book) != 'undefined') {
+                                account_book.ajax.reload();
+                            }
+                            update_account_balance();
+                        } else {
+                            toastr.error(result.msg);
+                        }
+                    }
+                });
+            }
+        });
+    });
+
     function update_account_balance(argument) {
         $('span#account_balance').html('<i class="fas fa-sync fa-spin"></i>');
         $.ajax({

@@ -29,54 +29,53 @@
         @endif
         @can('account.access')
             @component('components.filters', ['title' => __('report.filters')])
-                <div class="col-md-3">
-                    <div class="form-group">
-                        {!! Form::label('account_list_filter_location_id', __('business.business_location') . ':') !!}
-                        {!! Form::select('account_list_filter_location_id', $business_locations, null, [
-                            'class' => 'form-control select2',
-                            'style' => 'width:100%',
-                            'id' => 'account_list_filter_location_id',
-                            'placeholder' => __('lang_v1.all'),
-                        ]) !!}
-                    </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    {!! Form::label('account_list_filter_location_id', __('business.business_location') . ':') !!}
+                    {!! Form::select('account_list_filter_location_id', $business_locations, null, [
+                'class' => 'form-control select2',
+                'style' => 'width:100%',
+                'id' => 'account_list_filter_location_id',
+                'placeholder' => __('lang_v1.all'),
+            ]) !!}
                 </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        {!! Form::label('account_list_filter_account_type_id', __('lang_v1.account_type') . ':') !!}
-                        {!! Form::select('account_list_filter_account_type_id', $account_types_dropdown, null, [
-                            'class' => 'form-control select2',
-                            'style' => 'width:100%',
-                            'id' => 'account_list_filter_account_type_id',
-                            'placeholder' => __('lang_v1.all'),
-                        ]) !!}
-                    </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    {!! Form::label('account_list_filter_account_type_id', __('lang_v1.account_type') . ':') !!}
+                    {!! Form::select('account_list_filter_account_type_id', $account_types_dropdown, null, [
+                'class' => 'form-control select2',
+                'style' => 'width:100%',
+                'id' => 'account_list_filter_account_type_id',
+                'placeholder' => __('lang_v1.all'),
+            ]) !!}
                 </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        {!! Form::label('account_list_filter_created_by', __('lang_v1.added_by') . ':') !!}
-                        {!! Form::select('account_list_filter_created_by', $users, null, [
-                            'class' => 'form-control select2',
-                            'style' => 'width:100%',
-                            'id' => 'account_list_filter_created_by',
-                            'placeholder' => __('lang_v1.all'),
-                        ]) !!}
-                    </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    {!! Form::label('account_list_filter_created_by', __('lang_v1.added_by') . ':') !!}
+                    {!! Form::select('account_list_filter_created_by', $users, null, [
+                'class' => 'form-control select2',
+                'style' => 'width:100%',
+                'id' => 'account_list_filter_created_by',
+                'placeholder' => __('lang_v1.all'),
+            ]) !!}
                 </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        {!! Form::label('account_list_filter_user_level', __('lang_v1.user_level') . ':') !!}
-                        {!! Form::select('account_list_filter_user_level', $user_levels, null, [
-                            'class' => 'form-control select2',
-                            'style' => 'width:100%',
-                            'id' => 'account_list_filter_user_level',
-                            'placeholder' => __('lang_v1.all'),
-                        ]) !!}
-                    </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    {!! Form::label('account_list_filter_user_level', __('lang_v1.user_level') . ':') !!}
+                    {!! Form::select('account_list_filter_user_level', $user_levels, null, [
+                'class' => 'form-control select2',
+                'style' => 'width:100%',
+                'id' => 'account_list_filter_user_level',
+                'placeholder' => __('lang_v1.all'),
+            ]) !!}
                 </div>
+            </div>
             @endcomponent
             <div class="row">
-                @component('components.widget')
-                <div class="col-sm-12">
+                <div class="col-md-12">
                     <div class="nav-tabs-custom">
                         <ul class="nav nav-tabs">
                             <li class="active">
@@ -101,67 +100,62 @@
                         </ul>
                         <div class="tab-content">
                             <div class="tab-pane active" id="other_accounts">
-                                <div class="row">
-                                        <div class="tw-flex tw-items-center tw-justify-between tw-gap-2 tw-mb-4 tw-w-full">
-                                            <div class="tw-w-44 sm:tw-w-64">
-                                                {!! Form::select(
-                                                    'account_status',
-                                                    ['active' => __('business.is_active'), 'closed' => __('account.closed')],
-                                                    null,
-                                                    ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'account_status'],
-                                                ) !!}
-                                            </div>
-                                            <div>
-                                                @if(auth()->user()->can('account.create') || auth()->user()->can('add_account'))
-                                                    <button type="button"
-                                                        class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full btn-modal"
-                                                        data-container=".account_model"
-                                                        data-href="{{ action([\App\Http\Controllers\AccountController::class, 'create']) }}"
-                                                        style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; position: relative; z-index: 10;">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                            stroke-linecap="round" stroke-linejoin="round"
-                                                            class="icon icon-tabler icons-tabler-outline icon-tabler-plus"
-                                                            style="pointer-events: none; display: inline-block; vertical-align: middle;">
-                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                                            <path d="M12 5l0 14" />
-                                                            <path d="M5 12l14 0" />
-                                                        </svg> <span style="pointer-events: none;">@lang('messages.add')</span>
-                                                    </button>
-                                                @endif
-                                            </div>
-                                        </div>
+                                <div class="tw-flex tw-items-center tw-justify-between tw-gap-2 tw-mb-4 tw-w-full">
+                                    <div class="tw-w-44 sm:tw-w-64">
+                                        {!! Form::select(
+                                            'account_status',
+                                            ['active' => __('business.is_active'), 'closed' => __('account.closed')],
+                                            null,
+                                            ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'account_status'],
+                                        ) !!}
                                     </div>
-                                    <div class="col-sm-12">
-                                        <br>
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered table-striped" id="other_account_table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>@lang('lang_v1.name')</th>
-                                                        <th>@lang('lang_v1.account_type')</th>
-                                                        <th>@lang('lang_v1.account_sub_type')</th>
-                                                        <th>@lang('business.business_location')</th>
-                                                        <th>@lang('lang_v1.user_level')</th>
-                                                        <th>@lang('account.account_number')</th>
-                                                        <th>@lang('brand.note')</th>
-                                                        <th>@lang('lang_v1.balance')</th>
-                                                        <th>@lang('lang_v1.account_details')</th>
-                                                        <th>@lang('lang_v1.added_by')</th>
-                                                        <th>@lang('messages.action')</th>
-                                                    </tr>
-                                                </thead>
-                                                <tfoot>
-                                                    <tr class="bg-gray font-17 footer-total text-center">
-                                                        <td colspan="7"><strong>@lang('sale.total'):</strong></td>
-                                                        <td class="footer_total_balance"></td>
-                                                        <td colspan="3"></td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
-                                        </div>
+                                    <div>
+                                        @if(auth()->user()->can('account.create') || auth()->user()->can('add_account'))
+                                            <button type="button"
+                                                class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full btn-modal"
+                                                data-container=".account_model"
+                                                data-href="{{ action([\App\Http\Controllers\AccountController::class, 'create']) }}"
+                                                style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; position: relative; z-index: 10;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round"
+                                                    class="icon icon-tabler icons-tabler-outline icon-tabler-plus"
+                                                    style="pointer-events: none; display: inline-block; vertical-align: middle;">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                    <path d="M12 5l0 14" />
+                                                    <path d="M5 12l14 0" />
+                                                </svg> <span style="pointer-events: none;">@lang('messages.add')</span>
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped" id="other_account_table" style="width: 100%;">
+                                        <thead>
+                                            <tr>
+                                                <th>@lang('lang_v1.name')</th>
+                                                <th>@lang('lang_v1.account_type')</th>
+                                                <th>@lang('lang_v1.account_sub_type')</th>
+                                                <th>@lang('business.business_location')</th>
+                                                <th>@lang('lang_v1.user_level')</th>
+                                                <th>@lang('account.account_number')</th>
+                                                <th>@lang('brand.note')</th>
+                                                <th>@lang('lang_v1.balance')</th>
+                                                <th>@lang('lang_v1.account_details')</th>
+                                                <th>@lang('lang_v1.added_by')</th>
+                                                <th>@lang('messages.action')</th>
+                                            </tr>
+                                        </thead>
+                                        <tfoot>
+                                            <tr class="bg-gray font-17 footer-total text-center">
+                                                <td colspan="7"><strong>@lang('sale.total'):</strong></td>
+                                                <td class="footer_total_balance"></td>
+                                                <td colspan="3"></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
                             {{--
                             <div class="tab-pane" id="capital_accounts">
                                 <table class="table table-bordered table-striped" id="capital_account_table"
@@ -206,9 +200,9 @@
                                                                                         <td>
 
                                                                                             {!! Form::open([
-                                                        'url' => action([\App\Http\Controllers\AccountTypeController::class, 'destroy'], $account_type->id),
-                                                        'method' => 'delete',
-                                                    ]) !!}
+                                                         'url' => action([\App\Http\Controllers\AccountTypeController::class, 'destroy'], $account_type->id),
+                                                         'method' => 'delete',
+                                                     ]) !!}
                                                                                             <button type="button"
                                                                                                 class="tw-dw-btn tw-dw-btn-primary tw-dw-btn-outline tw-dw-btn-xs btn-modal"
                                                                                                 data-href="{{ action([\App\Http\Controllers\AccountTypeController::class, 'edit'], $account_type->id) }}"
@@ -252,7 +246,6 @@
                         </div>
                     </div>
                 </div>
-                @endcomponent
             </div>
         @endcan
 
@@ -262,7 +255,8 @@
         <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel" id="account_type_modal">
         </div>
 
-        <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel" id="edit_account_transaction">
+        <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel"
+            id="edit_account_transaction">
         </div>
     </section>
     <!-- /.content -->
@@ -613,7 +607,7 @@
 
         $(document).on('show.bs.modal', '#edit_account_transaction', function () {
             $(this).css('z-index', 1070);
-            setTimeout(function() {
+            setTimeout(function () {
                 $('.modal-backdrop').last().css('z-index', 1065);
             }, 0);
         });
@@ -624,7 +618,7 @@
             }
         });
 
-        $(document).on('shown.bs.modal', '#edit_account_transaction', function(e) {
+        $(document).on('shown.bs.modal', '#edit_account_transaction', function (e) {
             $(this).find('.select2').each(function () {
                 if ($(this).hasClass('select2-hidden-accessible')) {
                     $(this).select2('destroy');
@@ -634,7 +628,7 @@
                 });
             });
             $('#edit_account_transaction_form').validate({
-                submitHandler: function(form) {
+                submitHandler: function (form) {
                     e.preventDefault();
                     var data = $(form).serialize();
                     $.ajax({
@@ -642,25 +636,25 @@
                         url: $(form).attr('action'),
                         dataType: 'json',
                         data: data,
-                        beforeSend: function(xhr) {
+                        beforeSend: function (xhr) {
                             __disable_submit_button($(form).find('button[type="submit"]'));
                         },
-                        success: function(result) {
+                        success: function (result) {
                             if (result.success == true) {
                                 $('#edit_account_transaction').modal('hide');
                                 toastr.success(result.msg);
 
-                                if (typeof(other_account_table) != 'undefined' && other_account_table.ajax) {
+                                if (typeof (other_account_table) != 'undefined' && other_account_table.ajax) {
                                     other_account_table.ajax.reload();
                                 }
-                                if (typeof(capital_account_table) != 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
+                                if (typeof (capital_account_table) != 'undefined' && $('#capital_account_table').length && capital_account_table.ajax) {
                                     capital_account_table.ajax.reload();
                                 }
 
                                 if ($('div.view_modal').is(':visible')) {
                                     var pendingUrl = $('div.view_modal').find('.modal-title').data('pending-url');
                                     if (pendingUrl) {
-                                        $.get(pendingUrl, function(html) {
+                                        $.get(pendingUrl, function (html) {
                                             $('div.view_modal').html(html);
                                         });
                                     }
@@ -669,7 +663,7 @@
                                 toastr.error(result.msg);
                             }
                         },
-                        complete: function() {
+                        complete: function () {
                             __enable_submit_button($(form).find('button[type="submit"]'));
                         }
                     });
@@ -677,14 +671,14 @@
             });
         });
 
-        $(document).on('click', '.change_transfer_status', function(e){
+        $(document).on('click', '.change_transfer_status', function (e) {
             e.preventDefault();
             var href = $(this).data('href');
             swal({
-              title: LANG.sure,
-              icon: "warning",
-              buttons: true,
-              dangerMode: true,
+                title: LANG.sure,
+                icon: "warning",
+                buttons: true,
+                dangerMode: true,
             }).then((willChange) => {
                 if (willChange) {
                     $.ajax({
@@ -692,8 +686,8 @@
                         type: 'POST',
                         dataType: "json",
                         data: { _token: '{{ csrf_token() }}' },
-                        success: function(result){
-                            if(result.success === true){
+                        success: function (result) {
+                            if (result.success === true) {
                                 toastr.success(result.msg);
                                 $('div.view_modal').modal('hide');
                                 if (typeof other_account_table !== 'undefined' && other_account_table.ajax) {
@@ -714,6 +708,20 @@
     <style>
         #edit_account_transaction {
             z-index: 1070 !important;
+        }
+        @media (max-width: 767px) {
+            section.content {
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+            }
+            .nav-tabs-custom > .tab-content {
+                padding: 10px 4px !important;
+            }
+            .table-responsive {
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+            }
         }
     </style>
 @endsection

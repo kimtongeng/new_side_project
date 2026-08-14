@@ -17,6 +17,10 @@
 
         <div class="modal-body" style="padding: 20px;">
             @if($pending_transactions->count() > 0)
+                @php
+                    $is_admin = auth()->user()->hasRole('Admin#' . session('business.id')) || auth()->user()->can('superadmin');
+                    $current_user_id = auth()->id();
+                @endphp
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped" style="margin-bottom: 0;">
                         <thead>
@@ -31,6 +35,10 @@
                         </thead>
                         <tbody>
                             @foreach($pending_transactions as $trans)
+                                @php
+                                    $is_creator = ($trans->created_by == $current_user_id) || (!empty($trans->transfer_transaction) && $trans->transfer_transaction->created_by == $current_user_id);
+                                    $can_manage = $is_admin || !$is_creator;
+                                @endphp
                                 <tr>
                                     <td style="vertical-align: middle; white-space: nowrap;">{{ @format_datetime($trans->operation_date) }}</td>
                                     <td style="vertical-align: middle;">
@@ -64,33 +72,39 @@
                                     <td style="vertical-align: middle;">{{ $trans->user->user_full_name ?? '-' }}</td>
                                     <td style="vertical-align: middle;">
                                         <div class="tw-flex tw-items-center tw-gap-1 tw-flex-wrap" style="white-space: nowrap;">
-                                            @if(auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer') || auth()->user()->can('superadmin'))
-                                                <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success change_transfer_status" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$trans->id]) }}?status=final" title="@lang('account.accept')" style="display: inline-flex; align-items: center; gap: 4px;">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                        <path d="M5 12l5 5l10 -10" />
-                                                    </svg>
-                                                    <span>@lang('account.accept')</span>
-                                                </button>
-                                                <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error change_transfer_status" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$trans->id]) }}?status=rejected" title="@lang('account.reject')" style="display: inline-flex; align-items: center; gap: 4px;">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                        <path d="M18 6l-12 12" />
-                                                        <path d="M6 6l12 12" />
-                                                    </svg>
-                                                    <span>@lang('account.reject')</span>
-                                                </button>
-                                            @endif
-                                            @if(auth()->user()->can('edit_account_transaction'))
-                                                <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$trans->id]) }}" title="@lang('messages.edit')" style="display: inline-flex; align-items: center; gap: 4px;">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                        <path d="M9 7h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3" />
-                                                        <path d="M9 15h3l8.5 -8.5a1.5 1.5 0 0 0 -3 -3l-8.5 8.5v3" />
-                                                        <line x1="16" y1="5" x2="19" y2="8" />
-                                                    </svg>
-                                                    <span>@lang('messages.edit')</span>
-                                                </button>
+                                            @if($can_manage)
+                                                @if(auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer') || auth()->user()->can('superadmin'))
+                                                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success change_transfer_status" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$trans->id]) }}?status=final" title="@lang('account.accept')" style="display: inline-flex; align-items: center; gap: 4px;">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M5 12l5 5l10 -10" />
+                                                        </svg>
+                                                        <span>@lang('account.accept')</span>
+                                                    </button>
+                                                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error change_transfer_status" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$trans->id]) }}?status=rejected" title="@lang('account.reject')" style="display: inline-flex; align-items: center; gap: 4px;">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M18 6l-12 12" />
+                                                            <path d="M6 6l12 12" />
+                                                        </svg>
+                                                        <span>@lang('account.reject')</span>
+                                                    </button>
+                                                @endif
+                                                @if(auth()->user()->can('edit_account_transaction'))
+                                                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$trans->id]) }}" title="@lang('messages.edit')" style="display: inline-flex; align-items: center; gap: 4px;">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                            <path d="M9 7h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3" />
+                                                            <path d="M9 15h3l8.5 -8.5a1.5 1.5 0 0 0 -3 -3l-8.5 8.5v3" />
+                                                            <line x1="16" y1="5" x2="19" y2="8" />
+                                                        </svg>
+                                                        <span>@lang('messages.edit')</span>
+                                                    </button>
+                                                @endif
+                                            @else
+                                                <span class="label bg-gray" style="font-size: 11px; padding: 3px 8px; border-radius: 4px;" title="@lang('account.creator_cannot_approve')">
+                                                    <i class="fa fa-lock"></i> @lang('account.creator_cannot_approve')
+                                                </span>
                                             @endif
                                         </div>
                                     </td>

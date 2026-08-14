@@ -542,6 +542,8 @@ class AccountController extends Controller
         }
 
         $business_id = request()->session()->get('user.business_id');
+        $is_admin = $this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('superadmin');
+        $current_user_id = auth()->id();
 
         if (request()->ajax()) {
             $start_date = request()->input('start_date');
@@ -728,24 +730,30 @@ class AccountController extends Controller
                     }
                     return $details;
                 })
-                ->editColumn('action', function ($row) {
+                ->editColumn('action', function ($row) use ($is_admin, $current_user_id) {
                     $action = '';
 
                     $is_pending = ($row->status == 'pending') || (! empty($row->transfer_transaction) && $row->transfer_transaction->status == 'pending');
+                    $is_creator = ($row->created_by == $current_user_id) || (! empty($row->transfer_transaction) && $row->transfer_transaction->created_by == $current_user_id);
+                    $can_manage_pending = $is_admin || ! $is_creator;
 
-                    if ($is_pending && (auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer') || auth()->user()->can('superadmin'))) {
+                    if ($is_pending && $can_manage_pending && (auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer') || auth()->user()->can('superadmin'))) {
                         $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success change_transfer_status" data-href="' . action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$row->id]) . '?status=final" style="display: inline-flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg> ' . __('account.approve') . '</button> ';
                         $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error change_transfer_status" data-href="' . action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$row->id]) . '?status=rejected" style="display: inline-flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg> ' . __('account.reject') . '</button> ';
                     }
 
                     if (auth()->user()->can('delete_account_transaction')) {
                         if ($row->sub_type == 'fund_transfer' || $row->sub_type == 'deposit') {
-                            $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-error delete_account_transaction" data-href="' . action([\App\Http\Controllers\AccountController::class, 'destroyAccountTransaction'], [$row->id]) . '"><i class="fa fa-trash"></i> ' . __('messages.delete') . '</button>';
+                            if (! $is_pending || $can_manage_pending) {
+                                $action .= '<button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-error delete_account_transaction" data-href="' . action([\App\Http\Controllers\AccountController::class, 'destroyAccountTransaction'], [$row->id]) . '"><i class="fa fa-trash"></i> ' . __('messages.delete') . '</button>';
+                            }
                         }
                     }
                     if (auth()->user()->can('edit_account_transaction')) {
                         if ($row->sub_type == 'fund_transfer' || $row->sub_type == 'deposit' || $row->sub_type == 'opening_balance') {
-                            $action .= ' <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="' . action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$row->id]) . '"><i class="fa fa-edit"></i> ' . __('messages.edit') . '</button>';
+                            if (! $is_pending || $can_manage_pending) {
+                                $action .= ' <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="' . action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$row->id]) . '"><i class="fa fa-edit"></i> ' . __('messages.edit') . '</button>';
+                            }
                         }
                     }
 
@@ -1865,6 +1873,15 @@ class AccountController extends Controller
         $business_id = request()->session()->get('user.business_id');
         $account_transaction = AccountTransaction::with(['account', 'transfer_transaction'])->findOrFail($id);
 
+        $is_pending = ($account_transaction->status == 'pending') || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->status == 'pending');
+        $is_admin = $this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('superadmin');
+        $current_user_id = auth()->id();
+        $is_creator = ($account_transaction->created_by == $current_user_id) || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->created_by == $current_user_id);
+
+        if ($is_pending && $is_creator && ! $is_admin) {
+            abort(403, __('account.creator_cannot_approve'));
+        }
+
         $accounts = Account::where('business_id', $business_id)
             ->NotClosed()
             ->pluck('name', 'id');
@@ -1880,9 +1897,22 @@ class AccountController extends Controller
         }
 
         try {
-            DB::beginTransaction();
-
+            $business_id = request()->session()->get('user.business_id');
             $account_transaction = AccountTransaction::with(['transfer_transaction'])->findOrFail($id);
+
+            $is_pending = ($account_transaction->status == 'pending') || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->status == 'pending');
+            $is_admin = $this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('superadmin');
+            $current_user_id = auth()->id();
+            $is_creator = ($account_transaction->created_by == $current_user_id) || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->created_by == $current_user_id);
+
+            if ($is_pending && $is_creator && ! $is_admin) {
+                return [
+                    'success' => false,
+                    'msg' => __('account.creator_cannot_approve'),
+                ];
+            }
+
+            DB::beginTransaction();
 
             $amount = $this->commonUtil->num_uf($request->input('amount'));
             $note = $request->input('note');
@@ -1986,7 +2016,20 @@ class AccountController extends Controller
 
             DB::beginTransaction();
 
-            $transaction = AccountTransaction::findOrFail($id);
+            $transaction = AccountTransaction::with(['transfer_transaction'])->findOrFail($id);
+
+            $is_pending = ($transaction->status == 'pending') || (! empty($transaction->transfer_transaction) && $transaction->transfer_transaction->status == 'pending');
+            $is_admin = $this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('superadmin');
+            $current_user_id = auth()->id();
+            $is_creator = ($transaction->created_by == $current_user_id) || (! empty($transaction->transfer_transaction) && $transaction->transfer_transaction->created_by == $current_user_id);
+
+            if ($is_pending && $is_creator && ! $is_admin) {
+                return [
+                    'success' => false,
+                    'msg' => __('account.creator_cannot_approve'),
+                ];
+            }
+
             $transfer_transaction = ! empty($transaction->transfer_transaction_id) 
                 ? AccountTransaction::find($transaction->transfer_transaction_id) 
                 : null;

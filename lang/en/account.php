@@ -62,4 +62,6 @@ return [
     'transfer_rejected_success' => 'Transfer rejected successfully',
     'pending_transfers' => 'Pending Transfers',
     'accept' => 'Accept',
+    'creator_cannot_approve' => 'Creator cannot accept, reject, or edit their own pending transfer.',
 ];
+

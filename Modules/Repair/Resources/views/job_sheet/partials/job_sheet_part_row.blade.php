@@ -33,10 +33,10 @@
     <td style="min-width: 200px; vertical-align: middle;">
         <div style="display: flex; align-items: center; gap: 10px;">
             <div style="width: 50px; height: 50px; border: 1px solid #dee2e6; border-radius: 4px; overflow: hidden; background: #fff; display: inline-flex; align-items: center; justify-content: center;">
-                <img src="{{ $product_image }}" alt="{{ $variation_name }}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+                <img src="{{ $product_image }}" alt="{{ strip_tags($variation_name) }}" style="width: 100%; height: 100%; object-fit: contain; display: block;">
             </div>
             <div style="min-width: 0;">
-                <div style="font-weight: 600; font-size: 14px; line-height: 1.2;">{{ $variation_name }}</div>
+                <div style="font-weight: 600; font-size: 14px; line-height: 1.2;">{!! $variation_name !!}</div>
                 @if(isset($current_stock))
                     <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">
                         {{ @format_quantity($current_stock) }} {{ $unit }} in stock

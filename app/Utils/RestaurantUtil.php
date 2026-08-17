@@ -184,6 +184,7 @@ class RestaurantUtil extends Util
 
         $orders = $query->select(
             'p.name as product_name',
+            'p.secondary_name as secondary_name',
             'p.type as product_type',
             'v.name as variation_name',
             'pv.name as product_variation_name',
@@ -202,6 +203,10 @@ class RestaurantUtil extends Util
         )
                 ->orderBy('created_at', 'desc')
                 ->get();
+
+        foreach ($orders as $order) {
+            $order->product_name = ProductUtil::getFormattedProductName($order->product_name, $order->secondary_name, true);
+        }
 
         return $orders;
     }

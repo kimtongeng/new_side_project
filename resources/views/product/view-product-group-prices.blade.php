@@ -2,7 +2,7 @@
 	<div class="modal-content">
 		<div class="modal-header">
 		    <button type="button" class="close no-print" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-		      <h4 class="modal-title" id="modalTitle">{{$product->name}}</h4>
+		      <h4 class="modal-title" id="modalTitle">{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!}</h4>
 	    </div>
 	    <div class="modal-body">
       		<div class="row">

@@ -23,7 +23,7 @@
                 </div>
                 <div class="col-md-12">
                     <strong>Part:</strong>
-                    <span id="variation_name">{{ $part['variation_name'] }}</span>
+                    <span id="variation_name">{!! $part['variation_name'] !!}</span>
                 </div>
             </div>
 

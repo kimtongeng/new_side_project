@@ -43,7 +43,7 @@
 			{{-- Product Name --}}
 			@if(!empty($print['name']))
 				<span style="display: block !important">
-					{{$details['details']->product_actual_name}}
+					{!! \App\Utils\ProductUtil::getFormattedProductName($details['details']->product_actual_name, $details['details']->secondary_name, true) !!}
 				</span>
 			@endif
 

@@ -432,7 +432,7 @@
 	                        				<p style="width: 28px;" class="m-0">
 	                        				</p>
 	                        				<p class="text-left width-60 m-0" style="margin:0;">
-	                        					{{$modifier['name']}} 
+	                        					{!! $modifier['name'] !!} 
 	                        					@if(!empty($modifier['sub_sku'])), {{$modifier['sub_sku']}} @endif @if(!empty($modifier['cat_code'])), {{$modifier['cat_code']}}@endif
 			                            		@if(!empty($modifier['sell_line_note']))({!!$modifier['sell_line_note']!!}) @endif
 	                        				</p>

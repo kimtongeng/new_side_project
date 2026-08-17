@@ -1012,7 +1012,9 @@ class ReportController extends Controller
         $labels = [];
         foreach ($products as $product) {
             $values[] = (float) $product->total_unit_sold;
-            $labels[] = $product->product.' - '.$product->sku.' ('.$product->unit.')';
+            $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($product->secondary_name ?? null) : null;
+            $product_name = \App\Utils\ProductUtil::getFormattedProductName($product->product, $secondary_name, false);
+            $labels[] = $product_name.' - '.$product->sku.' ('.$product->unit.')';
         }
 
         $chart = new CommonChart;
@@ -1835,8 +1837,23 @@ class ReportController extends Controller
                 ->editColumn('unit_purchase_price', function ($row) {
                     return $this->transactionUtil->num_f($row->unit_purchase_price, true);
                 })
-                ->editColumn('supplier', '@if(!empty($supplier_business_name)) {{$supplier_business_name}},<br>@endif {{$supplier}}')
-                ->rawColumns(['ref_no', 'unit_purchase_price', 'subtotal', 'purchase_qty', 'quantity_adjusted', 'supplier'])
+                ->filterColumn('p.name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('p.name', 'like', "%{$keyword}%")
+                          ->orWhere('p.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('v.name', 'like', "%{$keyword}%")
+                          ->orWhere('pv.name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->filterColumn('product_name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('p.name', 'like', "%{$keyword}%")
+                          ->orWhere('p.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('v.name', 'like', "%{$keyword}%")
+                          ->orWhere('pv.name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->rawColumns(['product_name', 'ref_no', 'unit_purchase_price', 'subtotal', 'purchase_qty', 'quantity_adjusted', 'supplier'])
                 ->make(true);
         }
 
@@ -2025,7 +2042,22 @@ class ReportController extends Controller
 
                     return $html;
                 })
-                ->editColumn('customer', '@if(!empty($supplier_business_name)) {{$supplier_business_name}},<br>@endif {{$customer}}')
+                ->filterColumn('p.name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('p.name', 'like', "%{$keyword}%")
+                          ->orWhere('p.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('v.name', 'like', "%{$keyword}%")
+                          ->orWhere('pv.name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->filterColumn('product_name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('p.name', 'like', "%{$keyword}%")
+                          ->orWhere('p.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('v.name', 'like', "%{$keyword}%")
+                          ->orWhere('pv.name', 'like', "%{$keyword}%");
+                    });
+                })
                 ->rawColumns(['product_name', 'invoice_no', 'unit_sale_price', 'subtotal', 'sell_qty', 'discount_amount', 'unit_price', 'tax', 'customer', 'payment_methods'])
                 ->make(true);
         }
@@ -2255,6 +2287,7 @@ class ReportController extends Controller
 
             $products = $query->select(
                 'products.name as product',
+                'products.secondary_name as secondary_name',
                 'v.name as variation_name',
                 'sub_sku',
                 'pl.lot_number',
@@ -2285,10 +2318,12 @@ class ReportController extends Controller
                     return '<span data-is_quantity="true" class="display_currency total_stock" data-currency_symbol=false data-orig-value="'.(float) $stock.'" data-unit="'.$row->unit.'" >'.(float) $stock.'</span> '.$row->unit;
                 })
                 ->editColumn('product', function ($row) {
+                    $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($row->secondary_name ?? null) : null;
+                    $product_name = \App\Utils\ProductUtil::getFormattedProductName($row->product, $secondary_name, true);
                     if ($row->variation_name != 'DUMMY') {
-                        return $row->product.' ('.$row->variation_name.')';
+                        return $product_name.' ('.$row->variation_name.')';
                     } else {
-                        return $row->product;
+                        return $product_name;
                     }
                 })
                 ->editColumn('total_sold', function ($row) {
@@ -2318,10 +2353,26 @@ class ReportController extends Controller
                         return '--';
                     }
                 })
+                ->filterColumn('products.name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('products.name', 'like', "%{$keyword}%")
+                          ->orWhere('products.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('v.name', 'like', "%{$keyword}%")
+                          ->orWhere('v.sub_sku', 'like', "%{$keyword}%");
+                    });
+                })
+                ->filterColumn('product', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('products.name', 'like', "%{$keyword}%")
+                          ->orWhere('products.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('v.name', 'like', "%{$keyword}%")
+                          ->orWhere('v.sub_sku', 'like', "%{$keyword}%");
+                    });
+                })
                 ->removeColumn('unit')
                 ->removeColumn('id')
                 ->removeColumn('variation_name')
-                ->rawColumns(['exp_date', 'stock', 'total_sold', 'total_adjusted'])
+                ->rawColumns(['product', 'exp_date', 'stock', 'total_sold', 'total_adjusted'])
                 ->make(true);
         }
 
@@ -3358,6 +3409,7 @@ class ReportController extends Controller
                     'v.sub_sku as sku',
                     'p.type as product_type',
                     'p.name as product_name',
+                    'p.secondary_name as secondary_name',
                     'v.name as variation_name',
                     'pv.name as product_variation',
                     'u.short_name as unit',
@@ -3433,7 +3485,8 @@ class ReportController extends Controller
 
             return Datatables::of($query)
                 ->editColumn('product_name', function ($row) {
-                    $product_name = $row->product_name;
+                    $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($row->secondary_name ?? null) : null;
+                    $product_name = \App\Utils\ProductUtil::getFormattedProductName($row->product_name, $secondary_name, true);
                     if ($row->product_type == 'variable') {
                         $product_name .= ' - '.$row->product_variation.' - '.$row->variation_name;
                     }
@@ -3497,7 +3550,23 @@ class ReportController extends Controller
                           ->orWhere('stock_adjustment.ref_no', 'like', ["%{$keyword}%"]);
                 })
 
-                ->rawColumns(['subtotal', 'selling_price', 'quantity', 'purchase_price', 'sale_invoice_no', 'purchase_ref_no', 'supplier', 'customer'])
+                ->filterColumn('p.name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('p.name', 'like', "%{$keyword}%")
+                          ->orWhere('p.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('v.name', 'like', "%{$keyword}%")
+                          ->orWhere('pv.name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->filterColumn('product_name', function ($query, $keyword) {
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('p.name', 'like', "%{$keyword}%")
+                          ->orWhere('p.secondary_name', 'like', "%{$keyword}%")
+                          ->orWhere('v.name', 'like', "%{$keyword}%")
+                          ->orWhere('pv.name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->rawColumns(['product_name', 'subtotal', 'selling_price', 'quantity', 'purchase_price', 'sale_invoice_no', 'purchase_ref_no', 'supplier', 'customer'])
                 ->make(true);
         }
 

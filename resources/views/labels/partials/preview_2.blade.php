@@ -20,7 +20,7 @@
 					{{-- Product Name --}}
 					@if(!empty($print['name']))
 						<span style="display: block !important; font-size: {{$print['name_size']}}px">
-							{{$page_product->product_actual_name}}
+							{!! \App\Utils\ProductUtil::getFormattedProductName($page_product->product_actual_name, $page_product->secondary_name, true) !!}
 
 							@if(!empty($print['lot_number']) && !empty($page_product->lot_number))
 								<span style="font-size: {{12*$factor}}px">

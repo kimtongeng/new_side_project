@@ -1,6 +1,6 @@
 <tbody class="product_rows" id="product_{{$product->id}}">
 	<tr class="bg-green">
-		<td>{{$product->name}} ({{$product->sku}})</td>
+		<td>{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} ({{$product->sku}})</td>
 		<td>
 			{!! Form::select('products[' . $product->id . '][category_id]', $categories, $product->category_id, ['placeholder' => __('messages.please_select'), 'class' => 'form-control select2 input-sm category_id', 'style' => 'width: 100%;']); !!}
 		</td>

@@ -844,7 +844,7 @@
                         @endphp
 
                         <!-- Product Card -->
-                        <div class="product-card-wrapper" data-name="{{ strtolower($product->name) }}"
+                        <div class="product-card-wrapper" data-name="{{ strtolower($product->name . ' ' . ($product->secondary_name ?? '')) }}"
                             data-sku="{{ strtolower($product->sku ?? '') }}"
                             data-sub-sku="{{ strtolower($product->variations->pluck('sub_sku')->implode(' ')) }}">
                             <div
@@ -854,9 +854,9 @@
                                 <div
                                     class="product-image-wrap tw-relative tw-bg-gray-50 tw-h-[9rem] sm:tw-h-[12rem] tw-overflow-hidden">
                                     <a href="#" class="show-product-details tw-block tw-w-full tw-h-full"
-                                        aria-label="{{ $product->name }}"
+                                        aria-label="{{ \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, false) }}"
                                         data-href="{{action([\Modules\ProductCatalogue\Http\Controllers\ProductCatalogueController::class, 'show'], [$business->id, $product->id])}}?location_id={{$business_location->id}}">
-                                        <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy"
+                                        <img src="{{ $product->image_url }}" alt="{{ \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, false) }}" loading="lazy"
                                             onerror="this.onerror=null;this.src='{{ asset('/img/default.png') }}';"
                                             style="max-height: 100%; max-width: 100%; object-fit: contain; width: auto; height: auto;"
                                             class="tw-block">
@@ -879,7 +879,7 @@
                                         <a href="#"
                                             class="show-product-details tw-text-gray-900 hover:tw-text-primary-600 tw-transition-all tw-duration-200 tw-no-underline tw-inline-block tw-transform hover:tw-translate-x-1"
                                             data-href="{{action([\Modules\ProductCatalogue\Http\Controllers\ProductCatalogueController::class, 'show'], [$business->id, $product->id])}}?location_id={{$business_location->id}}">
-                                            {{$product->name}}
+                                            {!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!}
                                         </a>
                                     </h2>
 
@@ -967,7 +967,7 @@
                                                     <input type="number"
                                                         class="product-quantity tw-w-12 tw-h-9 sm:tw-w-14 sm:tw-h-10 tw-text-center tw-font-semibold tw-text-gray-900 tw-bg-transparent tw-border-x tw-border-gray-200 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-primary-500 focus:tw-ring-offset-1 tw-text-sm tw-appearance-none tw-flex-shrink-0 tw-transition"
                                                         value="0" min="0" inputmode="numeric" data-product-id="{{$product->id}}"
-                                                        data-variation-id="{{$variation->id}}" data-product-name="{{$product->name}}"
+                                                        data-variation-id="{{$variation->id}}" data-product-name="{{ \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, false) }}"
                                                         data-variation-name="" data-price="{{$variation->sell_price_inc_tax}}"
                                                         data-image="{{$product->image_url}}" data-sku="{{$variation->sub_sku}}"
                                                         @if($is_out_of_stock) disabled @endif>

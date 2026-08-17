@@ -462,7 +462,7 @@
 										&nbsp;
 									</td>
 									<td>
-			                            {{$modifier['name']}} {{$modifier['variation']}} 
+			                            {!! $modifier['name'] !!} {{$modifier['variation']}} 
 			                            @if(!empty($modifier['sub_sku'])), {{$modifier['sub_sku']}} @endif @if(!empty($modifier['cat_code'])), {{$modifier['cat_code']}}@endif
 			                            @if(!empty($modifier['sell_line_note']))({!!$modifier['sell_line_note']!!}) @endif 
 			                        </td>

@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
+<link rel="stylesheet" href="{{ public_path('css/app.css') }}">
 <style type="text/css">
     .box {
         /* border: 1px solid; */

@@ -201,7 +201,8 @@
                         isOutOfStock = parseFloat(item.qty_available) <= 0 || item.qty_available == null;
                     }
 
-                    var string = '<div>' + item.name;
+                    var pName = item.formatted_name ? item.formatted_name : item.name;
+                    var string = '<div>' + pName;
                     if (item.type == 'variable') {
                         string += '-' + item.variation;
                     }

@@ -59,7 +59,7 @@
                 @endif
                 @if(!empty($order->modifiers) && count($order->modifiers) > 0)
                       @foreach($order->modifiers as $key => $modifier)
-                            <br>{{$modifier->product->name ?? ''}}
+                            <br>{!! \App\Utils\ProductUtil::getFormattedProductName($modifier->product->name ?? '', $modifier->product->secondary_name ?? null, true) !!}
                             @if(!empty($modifier->variations))
                                   - {{$modifier->variations->name ?? ''}}
                                   @if(!empty($modifier->variations->sub_sku))

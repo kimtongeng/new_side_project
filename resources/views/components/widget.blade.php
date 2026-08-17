@@ -5,7 +5,7 @@
             @if (!empty($title) || !empty($tool))
                 <div class="box-header">
                     {!! $icon ?? '' !!}
-                    <h3 class="box-title">{{ $title ?? '' }}</h3>
+                    <h3 class="box-title">{!! $title ?? '' !!}</h3>
                     {!! $tool ?? '' !!}
 
                     @if (isset($help_text))

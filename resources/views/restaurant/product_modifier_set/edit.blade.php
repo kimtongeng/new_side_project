@@ -29,7 +29,7 @@
             <tbody>
               @foreach($modifer_set->modifier_products as $product)
                 <tr>
-                  <td>{{$product->name}} ({{$product->sku}})</td>
+                  <td>{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} ({{$product->sku}})</td>
                   <input type="hidden" name="products[]" value="{{$product->id}}">
                   <td><button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-error remove_modifier_product"><i class="fa fa-times"></i></button></td>
                 </tr>
@@ -79,7 +79,8 @@
       }
   })
   .autocomplete( "instance" )._renderItem = function( ul, item ) {
-    var string =  "<div>" + item.name;
+    var pName = item.formatted_name ? item.formatted_name : item.name;
+    var string =  "<div>" + pName;
     string += ' (' + item.sku + ')' + "</div>";
     return $( "<li>" ).append(string).appendTo( ul );
   };

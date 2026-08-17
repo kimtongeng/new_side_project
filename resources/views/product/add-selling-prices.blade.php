@@ -16,7 +16,7 @@
 		<div class="col-xs-12">
 		<div class="box box-solid">
 			<div class="box-header">
-	            <h3 class="box-title">@lang('sale.product'): {{$product->name}} ({{$product->sku}})</h3>
+	            <h3 class="box-title">@lang('sale.product'): {!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} ({{$product->sku}})</h3>
 	        </div>
 			<div class="box-body">
 				<div class="row">

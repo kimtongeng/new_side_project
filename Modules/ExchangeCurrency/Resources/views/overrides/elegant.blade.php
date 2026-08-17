@@ -440,7 +440,7 @@
 							@if(!empty($line['image']))
 								<img src="{{$line['image']}}" alt="Image" width="50" style="float: left; margin-right: 8px;">
 							@endif
-                            {{$line['name']}} {{$line['product_variation']}} {{$line['variation']}} 
+                            {!! $line['name'] !!} {{$line['product_variation']}} {{$line['variation']}} 
                             @if(!empty($line['sub_sku'])), {{$line['sub_sku']}} @endif @if(!empty($line['brand'])), {{$line['brand']}} @endif
                             @if(!empty($line['product_custom_fields'])), {{$line['product_custom_fields']}} @endif
                             @if(!empty($line['product_description']))
@@ -511,7 +511,7 @@
 									&nbsp;
 								</td>
 								<td>
-		                            {{$modifier['name']}} {{$modifier['variation']}} 
+		                            {!! $modifier['name'] !!} {{$modifier['variation']}} 
 		                            @if(!empty($modifier['sub_sku'])), {{$modifier['sub_sku']}} @endif 
 		                            @if(!empty($modifier['sell_line_note']))({!!$modifier['sell_line_note']!!}) @endif 
 		                        </td>

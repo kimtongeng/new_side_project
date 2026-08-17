@@ -362,7 +362,7 @@
 	                        <td class="description">
 	                        	<div style="display:flex; width: 100%;">
 	                        		<p class="m-0 mt-5" style="white-space: nowrap;">#{{$loop->iteration}}.&nbsp;</p>
-	                        		<p class="text-left m-0 mt-5 pull-left">{{$line['name']}}  
+	                        		<p class="text-left m-0 mt-5 pull-left">{!! $line['name'] !!}  
 			                        	@if(!empty($line['sub_sku'])), {{$line['sub_sku']}} @endif @if(!empty($line['brand'])), {{$line['brand']}} @endif @if(!empty($line['cat_code'])), {{$line['cat_code']}}@endif
 			                        	@if(!empty($line['product_custom_fields'])), {{$line['product_custom_fields']}} @endif
 			                        	@if(!empty($line['product_description']))
@@ -432,7 +432,7 @@
 	                        				<p style="width: 28px;" class="m-0">
 	                        				</p>
 	                        				<p class="text-left width-60 m-0" style="margin:0;">
-	                        					{{$modifier['name']}} 
+	                        					{!! $modifier['name'] !!} 
 	                        					@if(!empty($modifier['sub_sku'])), {{$modifier['sub_sku']}} @endif @if(!empty($modifier['cat_code'])), {{$modifier['cat_code']}}@endif
 			                            		@if(!empty($modifier['sell_line_note']))({!!$modifier['sell_line_note']!!}) @endif
 	                        				</p>

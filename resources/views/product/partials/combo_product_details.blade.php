@@ -27,7 +27,7 @@
 				@foreach($combo_variations as $variation)
 				<tr>
 					<td>
-						{{$variation['variation']['product']->name}} 
+						{!! \App\Utils\ProductUtil::getFormattedProductName($variation['variation']['product']->name, $variation['variation']['product']->secondary_name, true) !!} 
 
 						@if($variation['variation']['product']->type == 'variable')
 							- {{$variation['variation']->name}}

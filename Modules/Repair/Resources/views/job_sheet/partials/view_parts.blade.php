@@ -175,12 +175,12 @@
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <div
                                         style="width: 48px; height: 48px; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; flex-shrink: 0; background: #f8f8f8; display: flex; align-items: center; justify-content: center;">
-                                        <img src="{{ $part['product_image'] }}" alt="{{ $part['variation_name'] }}"
+                                        <img src="{{ $part['product_image'] }}" alt="{{ strip_tags($part['variation_name']) }}"
                                             style="width: 100%; height: 100%; object-fit: contain;"
                                             onerror="this.src='{{ asset('/img/default.png') }}'">
                                     </div>
                                     <div>
-                                        <div style="font-weight: 600; font-size: 14px;">{{ $part['variation_name'] }}
+                                        <div style="font-weight: 600; font-size: 14px;">{!! $part['variation_name'] !!}
                                         @if(!empty($part['enable_stock']))
                                             <div style="font-size: 12px; color: #888;">
                                                 {{ number_format($part['current_stock'], 2) }} {{ $part['unit'] }}(s) in

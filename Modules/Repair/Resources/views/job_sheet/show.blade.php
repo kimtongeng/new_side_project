@@ -374,7 +374,7 @@
                                             @foreach ($parts as $part)
                                                 @if ($part['status'] == 'confirmed')
                                                     <tr>
-                                                        <td>{{ $part['variation_name'] }}: &nbsp;</td>
+                                                        <td>{!! $part['variation_name'] !!}: &nbsp;</td>
                                                         <td>{{ $part['quantity'] }} {{ $part['unit'] }}</td>
                                                     </tr>
                                                 @endif

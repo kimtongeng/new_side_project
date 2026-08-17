@@ -21,12 +21,12 @@
 	            			<td>{{$product->sku}}</td>
 	            			<td>
 	            				@php
-	            				$name = $product->product;
+	            				$name = \App\Utils\ProductUtil::getFormattedProductName($product->product, $product->secondary_name ?? null, true);
 			                    if ($product->type == 'variable') {
 			                        $name .= ' - ' . $product->product_variation . '-' . $product->variation_name;
 			                    }
 			                    @endphp
-			                    {{$name}}
+			                    {!! $name !!}
 	            			</td>
 	            			<td>{{$product->location_name}}</td>
 	            			<td>

@@ -129,7 +129,7 @@
             <tr>
                 <td>&nbsp;</td>
                 <td>
-                    {{ $modifier->product->name }} - {{ $modifier->variations->name ?? ''}},
+                    {!! \App\Utils\ProductUtil::getFormattedProductName($modifier->product->name, $modifier->product->secondary_name, true) !!} - {{ $modifier->variations->name ?? ''}},
                     {{ $modifier->variations->sub_sku ?? ''}}
                 </td>
                 @if( session()->get('business.enable_lot_number') == 1)

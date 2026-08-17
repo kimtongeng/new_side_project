@@ -554,7 +554,7 @@
                                                     &nbsp;
                                                 </td>
                                                 <td>
-                                                    {{ $modifier['name'] }} {{ $modifier['variation'] }}
+                                                    {!! $modifier['name'] !!} {{ $modifier['variation'] }}
                                                     @if (!empty($modifier['sub_sku']))
                                                         , {{ $modifier['sub_sku'] }}
                                                     @endif

@@ -1433,7 +1433,8 @@ class JobSheetController extends Controller
             }
             // ─────────────────────────────────────────────
 
-            $variation_name = $product->product_name . ' - ' . $product->sub_sku;
+            $formatted_pname = \App\Utils\ProductUtil::getFormattedProductName($product->product_actual_name ?? $product->product_name, $product->secondary_name, true);
+            $variation_name = ($product->is_dummy == 0 ? $formatted_pname . ' (' . $product->product_variation_name . ':' . $product->variation_name . ')' : $formatted_pname) . ' - ' . $product->sub_sku;
             $variation_id   = $product->variation_id;
             $current_stock  = (!empty($product->enable_stock) && $product->enable_stock == 1) ? $this->productUtil->getCurrentStock($product->variation_id, $location_id) : null;
             $quantity       = 1;

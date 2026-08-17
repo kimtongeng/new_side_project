@@ -2462,8 +2462,12 @@ class TransactionUtil extends Util
             ->where('transactions.business_id', $business_id)
             ->where('transactions.id', $transaction_id)
             ->where('transactions.type', 'purchase')
-            ->select('p.id as product_id', 'p.name as product_name', 'v.id as variation_id', 'v.name as variation_name', 'pl.quantity as quantity', 'pl.exp_date', 'pl.lot_number')
+            ->select('p.id as product_id', 'p.name as product_name', 'p.secondary_name as secondary_name', 'v.id as variation_id', 'v.name as variation_name', 'pl.quantity as quantity', 'pl.exp_date', 'pl.lot_number')
             ->get();
+
+        foreach ($products as $p) {
+            $p->product_name = ProductUtil::getFormattedProductName($p->product_name, $p->secondary_name, true);
+        }
 
         return $products;
     }

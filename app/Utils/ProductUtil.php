@@ -833,6 +833,7 @@ class ProductUtil extends Util
         $products = $query->select(
             DB::raw('(SUM(tsl.quantity) - COALESCE(SUM(tsl.quantity_returned), 0)) as total_unit_sold'),
             'p.name as product',
+            'p.secondary_name as secondary_name',
             'u.short_name as unit',
             'p.sku'
         )->whereNull('tsl.parent_sell_line_id')
@@ -866,10 +867,15 @@ class ProductUtil extends Util
         $products = $product->select(
             'products.id as product_id',
             'products.name as product_name',
+            'products.secondary_name as secondary_name',
             'v.id as variation_id',
             'v.name as variation_name'
         )
                     ->get();
+
+        foreach ($products as $p) {
+            $p->product_name = self::getFormattedProductName($p->product_name, $p->secondary_name, true);
+        }
 
         return $products;
     }
@@ -2067,6 +2073,7 @@ class ProductUtil extends Util
                         DB::raw("SUM(IF(t.type='purchase_transfer', pl.quantity, 0)) as total_purchase_transfer"),
                         'variations.sub_sku as sub_sku',
                         'p.name as product',
+                        'p.secondary_name as secondary_name',
                         'p.type',
                         'p.sku',
                         'p.id as product_id',
@@ -2097,10 +2104,13 @@ class ProductUtil extends Util
                                         ->where('location_id', $location_id)
                                         ->first();
 
+        $secondary_name = (auth()->user()->can('product.secondary_name') || auth()->user()->can('product.view')) ? ($purchase_details->secondary_name ?? null) : null;
+        $formatted_product = ProductUtil::getFormattedProductName($purchase_details->product, $secondary_name, true);
+
         if ($purchase_details->type == 'variable') {
-            $product_name = $purchase_details->product.' - '.$purchase_details->product_variation.' - '.$purchase_details->variation_name.' ('.$purchase_details->sub_sku.')';
+            $product_name = $formatted_product.' - '.$purchase_details->product_variation.' - '.$purchase_details->variation_name.' ('.$purchase_details->sub_sku.')';
         } else {
-            $product_name = $purchase_details->product.' ('.$purchase_details->sku.')';
+            $product_name = $formatted_product.' ('.$purchase_details->sku.')';
         }
 
         $output = [

@@ -75,7 +75,8 @@
 	                addProductRow(ui.item.product_id);
 	            },
 	        }).autocomplete('instance')._renderItem = function(ul, item) {
-		        var string = '<li>' + item.name + ' (' + item.sku + ')' + '</li>';
+		        var pName = item.formatted_name ? item.formatted_name : item.name;
+		        var string = '<li>' + pName + ' (' + item.sku + ')' + '</li>';
 	            return $(string).appendTo(ul);
 	        }
 	    }

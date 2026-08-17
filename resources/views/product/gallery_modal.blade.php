@@ -12,7 +12,7 @@
                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
                         <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
-                    <span>{{$product->name}} - @lang('lang_v1.product_gallery')</span>
+                    <span>{!! \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true) !!} - @lang('lang_v1.product_gallery')</span>
                 </h4>
                 <div style="display: flex; align-items: center; gap: 12px;">
                     @if(auth()->user()->can('product.update') || auth()->user()->can('product.upload_image') || auth()->user()->can('product.create'))

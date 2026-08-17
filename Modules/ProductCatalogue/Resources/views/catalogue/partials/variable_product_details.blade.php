@@ -77,7 +77,7 @@
 												   inputmode="numeric"
 												   data-product-id="{{$product->id}}" 
 												   data-variation-id="{{$variation->id}}" 
-												   data-product-name="{{$product->name}}" 
+												   data-product-name="{{ \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, false) }}" 
 												   data-variation-name="{{$variation->product_variation->name}} - {{$variation->name}}" 
 												   data-price="{{$variation->sell_price_inc_tax}}" 
 												   data-image="{{$variation_image}}" 

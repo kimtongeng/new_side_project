@@ -12,11 +12,11 @@
 <section class="content">
 <div class="row">
     <div class="col-md-12">
-    @component('components.widget', ['title' => $product->name])
+    @component('components.widget', ['title' => \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, true)])
         <div class="col-md-6">
             <div class="form-group">
                 {!! Form::label('product_id',  __('sale.product') . ':') !!}
-                {!! Form::select('product_id', [$product->id=>$product->name . ' - ' . $product->sku], $product->id, ['class' => 'form-control', 'style' => 'width:100%']); !!}
+                {!! Form::select('product_id', [$product->id => \App\Utils\ProductUtil::getFormattedProductName($product->name, $product->secondary_name, false) . ' - ' . $product->sku], $product->id, ['class' => 'form-control', 'style' => 'width:100%']); !!}
             </div>
         </div>
         <div class="col-md-3">

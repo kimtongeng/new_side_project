@@ -3,7 +3,7 @@
 @endphp
 <div class="row">
 	<div class="col-md-12">
-		<h4>{{$stock_details['variation']}}</h4>
+		<h4>{!! $stock_details['variation'] !!}</h4>
 	</div>
 	<div class="col-md-4 col-xs-4">
 		<strong>@lang('lang_v1.quantities_in')</strong>

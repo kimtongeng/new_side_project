@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
+<link rel="stylesheet" href="{{ public_path('css/app.css') }}">
 <style type="text/css">
 	.box {
 		border: 1px solid;
@@ -55,8 +55,8 @@
 @endphp
 <div class="width-100 box mb-10">
 	<div class="width-50 f-left" align="center">
-		@if(!empty(Session::get('business.logo')))
-          <img src="{{ asset( 'uploads/business_logos/' . Session::get('business.logo') ) }}" alt="Logo" style="width: auto; max-height: 90px; margin: auto;">
+		@if(!empty(Session::get('business.logo')) && file_exists(public_path('uploads/business_logos/' . Session::get('business.logo'))))
+          <img src="{{ public_path('uploads/business_logos/' . Session::get('business.logo')) }}" alt="Logo" style="width: auto; max-height: 90px; margin: auto;">
         @endif
 	</div>
 	<div class="width-50 f-left" align="center">
@@ -343,10 +343,10 @@
 					@foreach($parts as $part)
 					@if ($part['status'] == 'confirmed')
 						<tr>
-							<td>{{$part['variation_name']}}: &nbsp;</td>
+							<td>{!! $part['variation_name'] !!}: &nbsp;</td>
 							<td>{{$part['quantity']}} {{$part['unit']}}</td>
 						</tr>
-					@endif)
+					@endif
 						
 					@endforeach
 				</table>

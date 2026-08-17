@@ -28,7 +28,7 @@
                     {!! $icon !!}
                 @else
                     <i class="fa fa-filter" aria-hidden="true"></i>
-                @endif {{ $title ?? '' }}
+                @endif {!! $title ?? '' !!}
             </a>
         </h3>
     </div>

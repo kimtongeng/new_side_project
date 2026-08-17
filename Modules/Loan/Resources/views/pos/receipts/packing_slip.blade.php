@@ -94,7 +94,7 @@
             <tbody>
                 @foreach ($receipt_details->lines as $line)
                     <tr>
-                        <td>{{ $line['name'] }} {{ $line['variation'] }}
+                        <td>{!! $line['name'] !!} {{ $line['variation'] }}
                             @if (!empty($line['sub_sku']))
                                 <br><small>@lang('lang_v1.sku'): {{ $line['sub_sku'] }}</small>
                             @endif

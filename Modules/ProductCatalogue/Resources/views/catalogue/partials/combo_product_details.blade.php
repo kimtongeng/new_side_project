@@ -12,7 +12,7 @@
 						<img src="{{$product->image_url}}" alt="Product image" class="attachment-img">
 					@endif
 	                <div class="attachment-pushed">
-	                  <h4 class="attachment-heading">{{$variation['variation']['product']->name}} 
+	                  <h4 class="attachment-heading">{!! \App\Utils\ProductUtil::getFormattedProductName($variation['variation']['product']->name, $variation['variation']['product']->secondary_name, true) !!} 
 
 						@if($variation['variation']['product']->type == 'variable')
 							- {{$variation['variation']->name}}

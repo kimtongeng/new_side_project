@@ -19,3 +19,15 @@ When asked to create a ZIP file of updated/modified project code:
    `C:\side project\new side\update_ai\`
 
 Refer to the `custom-zip-exporter` skill instructions in `.agents/skills/custom-zip-exporter/SKILL.md` for full implementation details.
+
+## Obsidian Vault Integration Rule
+When asked to create, edit, or sync notes to Obsidian:
+1. The default Obsidian Vault path is fixed at:
+   `C:\Users\kimtong\Documents\Obsidian Vault\`
+2. Default project notes subfolder:
+   `C:\Users\kimtong\Documents\Obsidian Vault\side project\`
+3. Do not run search commands to look for vault paths; write directly to this folder location immediately.
+4. Always provide a clickable link using `file:///C:/Users/kimtong/Documents/Obsidian%20Vault/side%20project/<Filename>` format so the note opens directly.
+
+
+

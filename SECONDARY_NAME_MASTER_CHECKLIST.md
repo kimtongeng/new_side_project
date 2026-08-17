@@ -25,29 +25,60 @@
 ## 🗂️ Module-by-Module Breakdown
 
 ```mermaid
-mindmap
-  root((Secondary Name Coverage))
-    POS & Sales
-      POS Screen & Quick Grid
-      Invoice Receipts All Layouts
-      Digital Catalogue QR
-      Sale View Details
-    Inventory & Logistics
-      Barcode Labels
-      Stock Transfers
-      Physical Stock Count
-      Stock History Timeline
-    Business Intelligence & Reports
-      Item Sales Report
-      Product Purchase Report
-      Detailed Sell Report
-      Stock Valuation Report
-      Profit & Loss by Product
-    Specialized Modules
-      Repair Job Sheets
-      Kitchen Display System
-      Product Modifiers
-      Contact Ledger & Expenses
+graph TD
+    Root["🌐 Secondary Name Coverage"]
+
+    Root --> POS["🛒 POS & Sales"]
+    POS --> P1["POS Screen & Quick Grid"]
+    POS --> P2["Invoice Receipts (All Layouts)"]
+    POS --> P3["Digital Catalogue QR"]
+    POS --> P4["Sale View Details"]
+
+    Root --> INV["📦 Inventory & Logistics"]
+    INV --> I1["Barcode Labels"]
+    INV --> I2["Stock Transfers"]
+    INV --> I3["Physical Stock Count"]
+    INV --> I4["Stock History Timeline"]
+
+    Root --> BI["📊 Business Intelligence & Reports"]
+    BI --> B1["Item Sales Report"]
+    BI --> B2["Product Purchase Report"]
+    BI --> B3["Detailed Sell Report"]
+    BI --> B4["Stock Valuation Report"]
+    BI --> B5["Profit & Loss by Product"]
+
+    Root --> SPEC["🔧 Specialized Modules"]
+    SPEC --> S1["Repair Job Sheets"]
+    SPEC --> S2["Kitchen Display System"]
+    SPEC --> S3["Product Modifiers"]
+    SPEC --> S4["Contact Ledger & Expenses"]
+
+    style Root fill:#4f46e5,stroke:#818cf8,stroke-width:2px,color:#ffffff
+    style POS fill:#0284c7,stroke:#38bdf8,stroke-width:2px,color:#ffffff
+    style INV fill:#059669,stroke:#34d399,stroke-width:2px,color:#ffffff
+    style BI fill:#7c3aed,stroke:#a78bfa,stroke-width:2px,color:#ffffff
+    style SPEC fill:#db2777,stroke:#f472b6,stroke-width:2px,color:#ffffff
+
+    style P1 fill:#1e293b,stroke:#38bdf8,color:#ffffff
+    style P2 fill:#1e293b,stroke:#38bdf8,color:#ffffff
+    style P3 fill:#1e293b,stroke:#38bdf8,color:#ffffff
+    style P4 fill:#1e293b,stroke:#38bdf8,color:#ffffff
+
+    style I1 fill:#1e293b,stroke:#34d399,color:#ffffff
+    style I2 fill:#1e293b,stroke:#34d399,color:#ffffff
+    style I3 fill:#1e293b,stroke:#34d399,color:#ffffff
+    style I4 fill:#1e293b,stroke:#34d399,color:#ffffff
+
+    style B1 fill:#1e293b,stroke:#a78bfa,color:#ffffff
+    style B2 fill:#1e293b,stroke:#a78bfa,color:#ffffff
+    style B3 fill:#1e293b,stroke:#a78bfa,color:#ffffff
+    style B4 fill:#1e293b,stroke:#a78bfa,color:#ffffff
+    style B5 fill:#1e293b,stroke:#a78bfa,color:#ffffff
+
+    style S1 fill:#1e293b,stroke:#f472b6,color:#ffffff
+    style S2 fill:#1e293b,stroke:#f472b6,color:#ffffff
+    style S3 fill:#1e293b,stroke:#f472b6,color:#ffffff
+    style S4 fill:#1e293b,stroke:#f472b6,color:#ffffff
 ```
 
 ---

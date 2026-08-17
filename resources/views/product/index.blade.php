@@ -170,36 +170,35 @@
                         </ul>
 
                         <div class="tab-content">
-                            <div class="tab-pane active " id="product_list_tab">
-                                @if ($is_admin)
-
-                                    <a class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full pull-right tw-m-2"
-                                        href="{{ action([\App\Http\Controllers\ProductController::class, 'downloadExcel']) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            class="icon icon-tabler icons-tabler-outline icon-tabler-download">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
-                                            <path d="M7 11l5 5l5 -5" />
-                                            <path d="M12 4l0 12" />
-                                        </svg> @lang('lang_v1.download_excel')
-                                    </a>
-                                @endif
-                                @can('product.create')
-
-                                    <a class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full pull-right tw-m-2"
-                                        href="{{ action([\App\Http\Controllers\ProductController::class, 'create']) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-plus">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                            <path d="M12 5l0 14" />
-                                            <path d="M5 12l14 0" />
-                                        </svg> @lang('messages.add')
-                                    </a>
-                                    <br><br>
-                                @endcan
+                            <div class="tab-pane active" id="product_list_tab">
+                                <div class="tw-flex tw-items-center tw-justify-end tw-gap-2 tw-mb-3">
+                                    @if ($is_admin)
+                                        <a class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full tw-dw-btn-sm tw-whitespace-nowrap"
+                                            href="{{ action([\App\Http\Controllers\ProductController::class, 'downloadExcel']) }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                class="icon icon-tabler icons-tabler-outline icon-tabler-download">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+                                                <path d="M7 11l5 5l5 -5" />
+                                                <path d="M12 4l0 12" />
+                                            </svg> @lang('lang_v1.download_excel')
+                                        </a>
+                                    @endif
+                                    @can('product.create')
+                                        <a class="tw-dw-btn tw-bg-gradient-to-r tw-from-indigo-600 tw-to-blue-500 tw-font-bold tw-text-white tw-border-none tw-rounded-full tw-dw-btn-sm tw-whitespace-nowrap"
+                                            href="{{ action([\App\Http\Controllers\ProductController::class, 'create']) }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-plus">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                <path d="M12 5l0 14" />
+                                                <path d="M5 12l14 0" />
+                                            </svg> @lang('messages.add')
+                                        </a>
+                                    @endcan
+                                </div>
                                 @include('product.partials.product_list')
                             </div>
                             @can('stock_report.view')
@@ -463,6 +462,15 @@
                 },
                 fnDrawCallback: function (oSettings) {
                     __currency_convert_recursively($('#product_table'));
+                },
+                initComplete: function (settings, json) {
+                    if ($('#product_table_top_actions').length) {
+                        if ($('#product_table_wrapper .dataTables_scroll').length) {
+                            $('#product_table_top_actions').detach().insertBefore('#product_table_wrapper .dataTables_scroll');
+                        } else {
+                            $('#product_table_top_actions').detach().insertBefore('#product_table');
+                        }
+                    }
                 },
             });
             // Array to track the ids of the details displayed rows

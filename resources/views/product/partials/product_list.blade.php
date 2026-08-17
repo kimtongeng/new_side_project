@@ -2,32 +2,33 @@
     $colspan = 16;
     $custom_labels = json_decode(session('business.custom_labels'), true);
 @endphp
-<div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;" class="tw-mb-3 tw-flex tw-flex-wrap tw-gap-2 tw-items-center">
+<div id="product_table_top_actions" class="tw-flex tw-items-center tw-gap-2 tw-overflow-x-auto tw-flex-nowrap tw-my-2 tw-pb-1" style="display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; align-items: center; white-space: nowrap; -webkit-overflow-scrolling: touch; width: 100%;">
     @can('product.delete')
-        {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'massDestroy']), 'method' => 'post', 'id' => 'mass_delete_form_top', 'style' => 'display:inline-block;' ]) !!}
+        {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'massDestroy']), 'method' => 'post', 'id' => 'mass_delete_form_top', 'style' => 'display:inline-block; margin:0; flex-shrink:0;' ]) !!}
         {!! Form::hidden('selected_rows', null, ['id' => 'selected_rows_top']); !!}
-        {!! Form::submit(__('lang_v1.delete_selected'), array('class' => 'tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error delete-selected-btn', 'id' => 'delete-selected-top')) !!}
+        {!! Form::submit(__('lang_v1.delete_selected'), array('class' => 'tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error delete-selected-btn tw-whitespace-nowrap', 'id' => 'delete-selected-top')) !!}
         {!! Form::close() !!}
     @endcan
 
     @can('product.update')
         @if(config('constants.enable_product_bulk_edit'))
-            {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'bulkEdit']), 'method' => 'post', 'id' => 'bulk_edit_form_top', 'style' => 'display:inline-block;' ]) !!}
+            {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'bulkEdit']), 'method' => 'post', 'id' => 'bulk_edit_form_top', 'style' => 'display:inline-block; margin:0; flex-shrink:0;' ]) !!}
             {!! Form::hidden('selected_products', null, ['id' => 'selected_products_for_edit_top']); !!}
-            <button type="submit" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary edit-selected-btn" id="edit-selected-top"> <i class="fa fa-edit"></i>{{__('lang_v1.bulk_edit')}}</button>
+            <button type="submit" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary edit-selected-btn tw-whitespace-nowrap tw-flex-shrink-0" id="edit-selected-top"> <i class="fa fa-edit"></i>{{__('lang_v1.bulk_edit')}}</button>
             {!! Form::close() !!}
         @endif
-        <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-accent update_product_location" data-type="add">@lang('lang_v1.add_to_location')</button>
-        <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-neutral update_product_location" data-type="remove">@lang('lang_v1.remove_from_location')</button>
+        <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-accent update_product_location tw-whitespace-nowrap tw-flex-shrink-0" data-type="add">@lang('lang_v1.add_to_location')</button>
+        <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-neutral update_product_location tw-whitespace-nowrap tw-flex-shrink-0" data-type="remove">@lang('lang_v1.remove_from_location')</button>
     @endcan
 
-    {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'massDeactivate']), 'method' => 'post', 'id' => 'mass_deactivate_form_top', 'style' => 'display:inline-block;' ]) !!}
+    {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'massDeactivate']), 'method' => 'post', 'id' => 'mass_deactivate_form_top', 'style' => 'display:inline-block; margin:0; flex-shrink:0;' ]) !!}
     {!! Form::hidden('selected_products', null, ['id' => 'selected_products_top']); !!}
-    {!! Form::submit(__('lang_v1.deactivate_selected'), array('class' => 'tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning deactivate-selected-btn', 'id' => 'deactivate-selected-top')) !!}
-    {!! Form::close() !!} @show_tooltip(__('lang_v1.deactive_product_tooltip'))
+    {!! Form::submit(__('lang_v1.deactivate_selected'), array('class' => 'tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning deactivate-selected-btn tw-whitespace-nowrap', 'id' => 'deactivate-selected-top')) !!}
+    {!! Form::close() !!}
+    <span class="tw-flex-shrink-0" style="display:inline-flex; align-items:center;">@show_tooltip(__('lang_v1.deactive_product_tooltip'))</span>
 
     @if($is_woocommerce)
-        <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning toggle_woocomerce_sync">
+        <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning toggle_woocomerce_sync tw-whitespace-nowrap tw-flex-shrink-0">
             @lang('lang_v1.woocommerce_sync')
         </button>
     @endif
@@ -69,42 +70,37 @@
     <tfoot>
         <tr>
             <td colspan="{{$colspan}}">
-            <div style="display: flex; width: 100%;">
+            <div class="tw-flex tw-items-center tw-gap-2 tw-overflow-x-auto tw-flex-nowrap tw-pb-1" style="display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; align-items: center; white-space: nowrap; -webkit-overflow-scrolling: touch; width: 100%;">
                 @can('product.delete')
-                    {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'massDestroy']), 'method' => 'post', 'id' => 'mass_delete_form' ]) !!}
+                    {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'massDestroy']), 'method' => 'post', 'id' => 'mass_delete_form', 'style' => 'display:inline-block; margin:0; flex-shrink:0;' ]) !!}
                     {!! Form::hidden('selected_rows', null, ['id' => 'selected_rows']); !!}
-                    {!! Form::submit(__('lang_v1.delete_selected'), array('class' => 'tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error', 'id' => 'delete-selected')) !!}
+                    {!! Form::submit(__('lang_v1.delete_selected'), array('class' => 'tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error delete-selected-btn tw-whitespace-nowrap', 'id' => 'delete-selected')) !!}
                     {!! Form::close() !!}
                 @endcan
 
-                
-                    @can('product.update')
-                    
-                        @if(config('constants.enable_product_bulk_edit'))
-                            &nbsp;
-                            {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'bulkEdit']), 'method' => 'post', 'id' => 'bulk_edit_form' ]) !!}
-                            {!! Form::hidden('selected_products', null, ['id' => 'selected_products_for_edit']); !!}
-                            <button type="submit" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary" id="edit-selected"> <i class="fa fa-edit"></i>{{__('lang_v1.bulk_edit')}}</button>
-                            {!! Form::close() !!}
-                        @endif
-                        &nbsp;
-                        <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-accent  update_product_location" data-type="add">@lang('lang_v1.add_to_location')</button>
-                        &nbsp;
-                        <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-neutral update_product_location" data-type="remove">@lang('lang_v1.remove_from_location')</button>
-                    @endcan
-                
-                &nbsp;
-                {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'massDeactivate']), 'method' => 'post', 'id' => 'mass_deactivate_form' ]) !!}
+                @can('product.update')
+                    @if(config('constants.enable_product_bulk_edit'))
+                        {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'bulkEdit']), 'method' => 'post', 'id' => 'bulk_edit_form', 'style' => 'display:inline-block; margin:0; flex-shrink:0;' ]) !!}
+                        {!! Form::hidden('selected_products', null, ['id' => 'selected_products_for_edit']); !!}
+                        <button type="submit" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary edit-selected-btn tw-whitespace-nowrap tw-flex-shrink-0" id="edit-selected"> <i class="fa fa-edit"></i>{{__('lang_v1.bulk_edit')}}</button>
+                        {!! Form::close() !!}
+                    @endif
+                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-accent update_product_location tw-whitespace-nowrap tw-flex-shrink-0" data-type="add">@lang('lang_v1.add_to_location')</button>
+                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-neutral update_product_location tw-whitespace-nowrap tw-flex-shrink-0" data-type="remove">@lang('lang_v1.remove_from_location')</button>
+                @endcan
+
+                {!! Form::open(['url' => action([\App\Http\Controllers\ProductController::class, 'massDeactivate']), 'method' => 'post', 'id' => 'mass_deactivate_form', 'style' => 'display:inline-block; margin:0; flex-shrink:0;' ]) !!}
                 {!! Form::hidden('selected_products', null, ['id' => 'selected_products']); !!}
-                {!! Form::submit(__('lang_v1.deactivate_selected'), array('class' => 'tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning', 'id' => 'deactivate-selected')) !!}
-                {!! Form::close() !!} @show_tooltip(__('lang_v1.deactive_product_tooltip'))
-                &nbsp;
+                {!! Form::submit(__('lang_v1.deactivate_selected'), array('class' => 'tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning deactivate-selected-btn tw-whitespace-nowrap', 'id' => 'deactivate-selected')) !!}
+                {!! Form::close() !!}
+                <span class="tw-flex-shrink-0" style="display:inline-flex; align-items:center;">@show_tooltip(__('lang_v1.deactive_product_tooltip'))</span>
+
                 @if($is_woocommerce)
-                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning toggle_woocomerce_sync">
+                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning toggle_woocomerce_sync tw-whitespace-nowrap tw-flex-shrink-0">
                         @lang('lang_v1.woocommerce_sync')
                     </button>
                 @endif
-                </div>
+            </div>
             </td>
         </tr>
     </tfoot>

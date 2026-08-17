@@ -27,6 +27,8 @@ $(document).ready(function () {
         if ($('#opening_stock_button').length) {
             $('#opening_stock_button').attr('disabled', true);
         }
+    });
+
     $(document).on('click', '#select_all_locations, #select_all_modal_locations, .select-all', function (e) {
         var target = $(this).closest('.form-group').find('select');
         if (!target.length) {

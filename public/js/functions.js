@@ -235,8 +235,33 @@ function round_to_iraqi_dinnar(value) {
 }
 
 function __select2(selector) {
-    if ($('html').attr('dir') == 'rtl') selector.select2({ dir: 'rtl' });
-    else selector.select2();
+    var options = {
+        templateResult: function (data) {
+            if (!data.id) {
+                return data.text;
+            }
+            if (data.element && data.element.innerHTML && data.element.innerHTML.indexOf('<') !== -1) {
+                return $(data.element.innerHTML.indexOf('<span') === 0 || data.element.innerHTML.indexOf('<div>') === 0 ? data.element.innerHTML : '<span>' + data.element.innerHTML + '</span>');
+            }
+            return data.text;
+        },
+        templateSelection: function (data) {
+            if (!data.id) {
+                return data.text;
+            }
+            if (data.element && data.element.innerHTML && data.element.innerHTML.indexOf('<') !== -1) {
+                return $(data.element.innerHTML.indexOf('<span') === 0 || data.element.innerHTML.indexOf('<div>') === 0 ? data.element.innerHTML : '<span>' + data.element.innerHTML + '</span>');
+            }
+            return data.text;
+        },
+        escapeMarkup: function (m) {
+            return m;
+        }
+    };
+    if ($('html').attr('dir') == 'rtl') {
+        options.dir = 'rtl';
+    }
+    selector.select2(options);
 }
 
 function update_font_size() {

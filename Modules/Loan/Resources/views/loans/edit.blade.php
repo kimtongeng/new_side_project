@@ -404,21 +404,34 @@
                             }
                             $acc.empty();
                             var items = [];
-                            $.each(accounts, function(key, value) {
-                                items.push({ id: key, name: value });
-                            });
-                            items.sort(function(a, b) {
-                                if (a.id === '' || a.id === null) return -1;
-                                if (b.id === '' || b.id === null) return 1;
-                                return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true });
-                            });
+                            if (Array.isArray(accounts)) {
+                                $.each(accounts, function(i, item) {
+                                    if (typeof item === 'object' && item !== null && item.hasOwnProperty('name')) {
+                                        items.push({ id: item.id, name: item.name });
+                                    } else {
+                                        items.push({ id: i, name: item });
+                                    }
+                                });
+                            } else if (typeof accounts === 'object' && accounts !== null) {
+                                $.each(accounts, function(key, value) {
+                                    if (typeof value === 'object' && value !== null && value.hasOwnProperty('name')) {
+                                        items.push({ id: value.id, name: value.name });
+                                    } else {
+                                        items.push({ id: key, name: value });
+                                    }
+                                });
+                            }
+                            var has_current = false;
                             $.each(items, function(i, item) {
                                 $acc.append($('<option>', {
                                     value: item.id,
                                     text: item.name
                                 }));
+                                if (current_account && item.id == current_account) {
+                                    has_current = true;
+                                }
                             });
-                            if (current_account && accounts.hasOwnProperty(current_account)) {
+                            if (has_current) {
                                 $acc.val(current_account);
                             }
                             $acc.select2();

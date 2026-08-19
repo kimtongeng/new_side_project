@@ -81,14 +81,23 @@ $(document).ready(function () {
                         }
                         $acc_dropdown.empty();
                         var items = [];
-                        $.each(accounts, function(key, value) {
-                            items.push({ id: key, name: value });
-                        });
-                        items.sort(function(a, b) {
-                            if (a.id === '' || a.id === null) return -1;
-                            if (b.id === '' || b.id === null) return 1;
-                            return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true });
-                        });
+                        if (Array.isArray(accounts)) {
+                            $.each(accounts, function(i, item) {
+                                if (typeof item === 'object' && item !== null && item.hasOwnProperty('name')) {
+                                    items.push({ id: item.id, name: item.name });
+                                } else {
+                                    items.push({ id: i, name: item });
+                                }
+                            });
+                        } else if (typeof accounts === 'object' && accounts !== null) {
+                            $.each(accounts, function(key, value) {
+                                if (typeof value === 'object' && value !== null && value.hasOwnProperty('name')) {
+                                    items.push({ id: value.id, name: value.name });
+                                } else {
+                                    items.push({ id: key, name: value });
+                                }
+                            });
+                        }
                         $.each(items, function(i, item) {
                             $acc_dropdown.append($('<option>', {
                                 value: item.id,

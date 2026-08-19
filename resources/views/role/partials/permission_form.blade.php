@@ -1488,12 +1488,12 @@
         </div>
         <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
           <div class="checkbox" style="margin-top: 0;">
-            <label>{!! Form::checkbox('permissions[]', 'account.enable_pending_transfer', in_array('account.enable_pending_transfer', $role_permissions), ['class' => 'input-icheck', 'data-exclusive-group' => 'account_pending_transfer']); !!} {{ __('account.enable_pending_transfer') }}</label>
+            <label>{!! Form::radio('radio_option[account_pending_transfer]', 'account.enable_pending_transfer', in_array('account.enable_pending_transfer', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.enable_pending_transfer') }}</label>
           </div>
         </div>
         <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">
           <div class="checkbox" style="margin-top: 0;">
-            <label>{!! Form::checkbox('permissions[]', 'account.enable_immediate_credit_pending_transfer', in_array('account.enable_immediate_credit_pending_transfer', $role_permissions), ['class' => 'input-icheck', 'data-exclusive-group' => 'account_pending_transfer']); !!} {{ __('account.enable_immediate_credit_pending_transfer') }}</label>
+            <label>{!! Form::radio('radio_option[account_pending_transfer]', 'account.enable_immediate_credit_pending_transfer', in_array('account.enable_immediate_credit_pending_transfer', $role_permissions), ['class' => 'input-icheck']); !!} {{ __('account.enable_immediate_credit_pending_transfer') }}</label>
           </div>
         </div>
         <div class="col-md-4 col-sm-6 permission-item-wrapper" style="margin-bottom: 8px;">

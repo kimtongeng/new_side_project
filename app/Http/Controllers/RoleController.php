@@ -136,7 +136,7 @@ class RoleController extends Controller
                 ]);
 
                 //Include selling price group permissions
-                $spg_permissions = $request->input('radio_option');
+                $spg_permissions = $request->input('spg_permissions');
                 if (! empty($spg_permissions)) {
                     foreach ($spg_permissions as $spg_permission) {
                         $permissions[] = $spg_permission;

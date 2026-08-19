@@ -527,7 +527,12 @@ class AccountController extends Controller
         $business_id = session()->get('user.business_id');
         $accounts = $this->moduleUtil->accountsDropdown($business_id, true, false, false, $location_id ?: null);
 
-        return response()->json($accounts);
+        $formatted = [];
+        foreach ($accounts as $id => $name) {
+            $formatted[] = ['id' => (string)$id, 'name' => $name];
+        }
+
+        return response()->json($formatted);
     }
 
     /**

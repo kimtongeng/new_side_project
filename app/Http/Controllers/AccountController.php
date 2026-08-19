@@ -1128,8 +1128,10 @@ class AccountController extends Controller
                 }
             }
 
+            $is_admin = $this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('superadmin');
+
             return view('account.transfer')
-                ->with(compact('from_account', 'to_accounts', 'all_accounts_dropdown', 'accounts_data'));
+                ->with(compact('from_account', 'to_accounts', 'all_accounts_dropdown', 'accounts_data', 'is_admin'));
         }
     }
 
@@ -1165,7 +1167,40 @@ class AccountController extends Controller
                 }
             }
 
+            $user = auth()->user();
+            $is_admin = $this->commonUtil->is_admin($user, $business_id) || ($user && $user->can('superadmin'));
+
+            $has_pending_transfer = false;
+            $has_immediate_credit = false;
+
+            if ($user) {
+                $user_roles = $user->roles()->with('permissions')->get();
+                foreach ($user_roles as $role) {
+                    $p_names = $role->permissions->pluck('name')->toArray();
+                    if (in_array('account.enable_pending_transfer', $p_names)) {
+                        $has_pending_transfer = true;
+                    }
+                    if (in_array('account.enable_immediate_credit_pending_transfer', $p_names)) {
+                        $has_immediate_credit = true;
+                    }
+                }
+                $direct_p_names = $user->permissions->pluck('name')->toArray();
+                if (in_array('account.enable_pending_transfer', $direct_p_names)) {
+                    $has_pending_transfer = true;
+                }
+                if (in_array('account.enable_immediate_credit_pending_transfer', $direct_p_names)) {
+                    $has_immediate_credit = true;
+                }
+            }
+
             $transfer_type = $request->input('transfer_type');
+
+            if ($has_immediate_credit) {
+                $transfer_type = 'immediate_credit_pending';
+            } elseif ($has_pending_transfer) {
+                $transfer_type = 'pending_transfer';
+            }
+
             $debit_status = 'final';
             $credit_status = 'final';
 
@@ -1866,20 +1901,19 @@ class AccountController extends Controller
      */
     public function editAccountTransaction($id)
     {
-        if (! auth()->user()->can('edit_account_transaction')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $business_id = request()->session()->get('user.business_id');
         $account_transaction = AccountTransaction::with(['account', 'transfer_transaction'])->findOrFail($id);
 
         $is_pending = ($account_transaction->status == 'pending') || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->status == 'pending');
-        $is_admin = $this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('superadmin');
-        $current_user_id = auth()->id();
-        $is_creator = ($account_transaction->created_by == $current_user_id) || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->created_by == $current_user_id);
 
-        if ($is_pending && $is_creator && ! $is_admin) {
-            abort(403, __('account.creator_cannot_approve'));
+        if ($is_pending) {
+            if (! auth()->user()->can('account.edit_pending_transfer') && ! auth()->user()->can('superadmin')) {
+                abort(403, 'Unauthorized action.');
+            }
+        } else {
+            if (! auth()->user()->can('edit_account_transaction') && ! auth()->user()->can('superadmin')) {
+                abort(403, 'Unauthorized action.');
+            }
         }
 
         $accounts = Account::where('business_id', $business_id)
@@ -1892,34 +1926,39 @@ class AccountController extends Controller
 
     public function updateAccountTransaction(Request $request, $id)
     {
-        if (! auth()->user()->can('edit_account_transaction')) {
-            abort(403, 'Unauthorized action.');
+        $business_id = request()->session()->get('user.business_id');
+        $account_transaction = AccountTransaction::with(['transfer_transaction'])->findOrFail($id);
+
+        $is_pending = ($account_transaction->status == 'pending') || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->status == 'pending');
+
+        if ($is_pending) {
+            if (! auth()->user()->can('account.edit_pending_transfer') && ! auth()->user()->can('superadmin')) {
+                abort(403, 'Unauthorized action.');
+            }
+        } else {
+            if (! auth()->user()->can('edit_account_transaction') && ! auth()->user()->can('superadmin')) {
+                abort(403, 'Unauthorized action.');
+            }
         }
 
         try {
-            $business_id = request()->session()->get('user.business_id');
-            $account_transaction = AccountTransaction::with(['transfer_transaction'])->findOrFail($id);
-
-            $is_pending = ($account_transaction->status == 'pending') || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->status == 'pending');
-            $is_admin = $this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('superadmin');
             $current_user_id = auth()->id();
-            $is_creator = ($account_transaction->created_by == $current_user_id) || (! empty($account_transaction->transfer_transaction) && $account_transaction->transfer_transaction->created_by == $current_user_id);
-
-            if ($is_pending && $is_creator && ! $is_admin) {
-                return [
-                    'success' => false,
-                    'msg' => __('account.creator_cannot_approve'),
-                ];
-            }
 
             DB::beginTransaction();
 
             $amount = $this->commonUtil->num_uf($request->input('amount'));
             $note = $request->input('note');
 
-            $account_transaction->amount = $this->commonUtil->num_uf($request->input('amount'));
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('account_transactions', 'last_edited_by')) {
+                \Illuminate\Support\Facades\Schema::table('account_transactions', function ($table) {
+                    $table->integer('last_edited_by')->nullable()->after('created_by');
+                });
+            }
+
+            $account_transaction->amount = $amount;
             $account_transaction->operation_date = $this->commonUtil->uf_date($request->input('operation_date'), true);
-            $account_transaction->note = $request->input('note');
+            $account_transaction->note = $note;
+            $account_transaction->last_edited_by = $current_user_id;
 
             if ($request->input('account_id')) {
                 $account_transaction->account_id = $request->input('account_id');
@@ -1933,6 +1972,7 @@ class AccountController extends Controller
                 $transfer_transaction->amount = $amount;
                 $transfer_transaction->operation_date = $account_transaction->operation_date;
                 $transfer_transaction->note = $account_transaction->note;
+                $transfer_transaction->last_edited_by = $current_user_id;
 
                 if ($account_transaction->sub_type == 'deposit') {
                     $transfer_transaction->account_id = $request->input('from_account');
@@ -1982,7 +2022,7 @@ class AccountController extends Controller
         $pending_transactions = AccountTransaction::where('account_id', $id)
             ->where('status', 'pending')
             ->whereNull('deleted_at')
-            ->with(['transfer_transaction', 'transfer_transaction.account', 'user'])
+            ->with(['transfer_transaction', 'transfer_transaction.account', 'user', 'last_editor', 'transfer_transaction.last_editor'])
             ->orderBy('operation_date', 'desc')
             ->get();
 
@@ -1999,13 +2039,22 @@ class AccountController extends Controller
      */
     public function changeTransferStatus(Request $request, $id)
     {
-        if (! auth()->user()->can('account.fund_transfer') && ! auth()->user()->can('fund_transfer') && ! auth()->user()->can('superadmin')) {
+        $status = $request->input('status');
+
+        if ($status == 'final') {
+            if (! auth()->user()->can('account.accept_pending_transfer') && ! auth()->user()->can('superadmin')) {
+                abort(403, 'Unauthorized action.');
+            }
+        } elseif ($status == 'rejected') {
+            if (! auth()->user()->can('account.reject_pending_transfer') && ! auth()->user()->can('superadmin')) {
+                abort(403, 'Unauthorized action.');
+            }
+        } else {
             abort(403, 'Unauthorized action.');
         }
 
         try {
             $business_id = session()->get('user.business_id');
-            $status = $request->input('status');
 
             if (! in_array($status, ['final', 'rejected'])) {
                 return [
@@ -2019,14 +2068,21 @@ class AccountController extends Controller
             $transaction = AccountTransaction::with(['transfer_transaction'])->findOrFail($id);
 
             $is_pending = ($transaction->status == 'pending') || (! empty($transaction->transfer_transaction) && $transaction->transfer_transaction->status == 'pending');
-            $is_admin = $this->commonUtil->is_admin(auth()->user(), $business_id) || auth()->user()->can('superadmin');
             $current_user_id = auth()->id();
             $is_creator = ($transaction->created_by == $current_user_id) || (! empty($transaction->transfer_transaction) && $transaction->transfer_transaction->created_by == $current_user_id);
+            $is_last_editor = (! empty($transaction->last_edited_by) && $transaction->last_edited_by == $current_user_id) || (! empty($transaction->transfer_transaction) && ! empty($transaction->transfer_transaction->last_edited_by) && $transaction->transfer_transaction->last_edited_by == $current_user_id);
 
-            if ($is_pending && $is_creator && ! $is_admin) {
+            if ($is_pending && $is_creator) {
                 return [
                     'success' => false,
                     'msg' => __('account.creator_cannot_approve'),
+                ];
+            }
+
+            if ($is_pending && $is_last_editor) {
+                return [
+                    'success' => false,
+                    'msg' => __('account.editor_cannot_approve'),
                 ];
             }
 

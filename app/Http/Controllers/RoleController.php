@@ -153,6 +153,9 @@ class RoleController extends Controller
                 $this->__createPermissionIfNotExists($permissions);
 
                 if (! empty($permissions)) {
+                    if (in_array('account.enable_pending_transfer', $permissions) && in_array('account.enable_immediate_credit_pending_transfer', $permissions)) {
+                        $permissions = array_values(array_diff($permissions, ['account.enable_immediate_credit_pending_transfer']));
+                    }
                     $role->syncPermissions($permissions);
                 }
                 $output = ['success' => 1,
@@ -274,6 +277,9 @@ class RoleController extends Controller
                     $this->__createPermissionIfNotExists($permissions);
 
                     if (! empty($permissions)) {
+                        if (in_array('account.enable_pending_transfer', $permissions) && in_array('account.enable_immediate_credit_pending_transfer', $permissions)) {
+                            $permissions = array_values(array_diff($permissions, ['account.enable_immediate_credit_pending_transfer']));
+                        }
                         $role->syncPermissions($permissions);
                     }
 

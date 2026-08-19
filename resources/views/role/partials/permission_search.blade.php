@@ -68,6 +68,47 @@ $(document).ready(function() {
 
     var isProgrammaticCheckAll = false;
 
+    // Helper: calculate total selectable options in a group (accounting for radio groups and exclusive checkbox groups)
+    function getMaxSelectableCount($groupRow) {
+        var $items = $groupRow.find('.input-icheck').not('.check_all');
+        if (!$items.length) return 0;
+
+        var normalCount = 0;
+        var radioGroups = {};
+        var exclusiveGroups = {};
+
+        $items.each(function() {
+            var $el = $(this);
+            var exclGroup = $el.attr('data-exclusive-group');
+            var isRadio = $el.is(':radio');
+            var radioName = $el.attr('name');
+
+            if (exclGroup) {
+                exclusiveGroups[exclGroup] = true;
+            } else if (isRadio && radioName) {
+                radioGroups[radioName] = true;
+            } else {
+                normalCount++;
+            }
+        });
+
+        return normalCount + Object.keys(radioGroups).length + Object.keys(exclusiveGroups).length;
+    }
+
+    // Helper: enforce at most one checked item per data-exclusive-group
+    function enforceExclusiveGroups($container) {
+        $container = $container || $(document);
+        var seenGroups = {};
+        $container.find('input[data-exclusive-group]:checked').each(function() {
+            var grp = $(this).attr('data-exclusive-group');
+            if (seenGroups[grp]) {
+                $(this).iCheck('uncheck');
+            } else {
+                seenGroups[grp] = true;
+            }
+        });
+    }
+
     // Custom check_all click handlers for permission groups
     $(document).on('ifChecked', '.permission_group .check_all', function() {
         if (isProgrammaticCheckAll) return;
@@ -75,6 +116,7 @@ $(document).ready(function() {
         var $group = $(this).closest('.permission_group');
         isProgrammaticCheckAll = true;
         $group.find('.input-icheck').not('.check_all').iCheck('check');
+        enforceExclusiveGroups($group);
         isProgrammaticCheckAll = false;
 
         updateSelectedBadges();
@@ -95,12 +137,12 @@ $(document).ready(function() {
     function updateSelectedBadges() {
         $('.permission_group').each(function() {
             var $group = $(this);
-            var total = $group.find('.input-icheck:not(.check_all)').length;
+            var maxSelectable = getMaxSelectableCount($group);
             var checked = $group.find('.input-icheck:not(.check_all):checked').length;
             var $badge = $group.find('.selected-count-badge');
 
             if (checked > 0) {
-                $badge.text(checked + ' / ' + total + ' selected')
+                $badge.text(checked + ' / ' + maxSelectable + ' selected')
                       .removeClass('bg-gray')
                       .addClass('bg-blue');
             } else {
@@ -116,18 +158,11 @@ $(document).ready(function() {
         var $checkAll = $groupRow.find('.check_all');
         if (!$checkAll.length) return;
 
-        var $items = $groupRow.find('.input-icheck').not('.check_all');
-        var totalCount = $items.length;
-        var checkedCount = 0;
-
-        $items.each(function() {
-            if ($(this).is(':checked')) {
-                checkedCount++;
-            }
-        });
+        var maxSelectable = getMaxSelectableCount($groupRow);
+        var checkedCount = $groupRow.find('.input-icheck:not(.check_all):checked').length;
 
         isProgrammaticCheckAll = true;
-        if (totalCount > 0 && checkedCount === totalCount) {
+        if (maxSelectable > 0 && checkedCount >= maxSelectable) {
             $checkAll.iCheck('check');
         } else {
             $checkAll.iCheck('uncheck');
@@ -141,7 +176,23 @@ $(document).ready(function() {
         });
     }
 
-    // Initial setup of badges and check_all checkboxes
+    // Mutual exclusivity handler for checkboxes in data-exclusive-group
+    $(document).on('ifChecked', 'input[data-exclusive-group]', function() {
+        if (isProgrammaticCheckAll) return;
+        var group = $(this).attr('data-exclusive-group');
+        var current = this;
+
+        isProgrammaticCheckAll = true;
+        $('input[data-exclusive-group="' + group + '"]').not(current).iCheck('uncheck');
+        isProgrammaticCheckAll = false;
+
+        var $groupRow = $(this).closest('.permission_group');
+        updateCheckAllStatusForGroup($groupRow);
+        updateSelectedBadges();
+    });
+
+    // Initial setup: enforce exclusivity on load, then calculate badges and check_all
+    enforceExclusiveGroups($(document));
     updateAllCheckAllStatuses();
     updateSelectedBadges();
 
@@ -332,6 +383,7 @@ $(document).ready(function() {
     $(document).on('click', '.preset-option', function(e) {
         e.preventDefault();
         var preset = $(this).data('preset');
+        isProgrammaticCheckAll = true;
 
         $('.permission_group').each(function() {
             var $groupRow = $(this);
@@ -376,8 +428,11 @@ $(document).ready(function() {
                         break;
                 }
             });
+
+            enforceExclusiveGroups($groupRow);
         });
 
+        isProgrammaticCheckAll = false;
         updateAllCheckAllStatuses();
         updateSelectedBadges();
         if ($('#filter_permission_status').val() !== 'all') {

@@ -1582,7 +1582,7 @@ return [
     'display_screen' => 'Display Screen',
     'enable_customer_display_screen' => 'Enable Customer display screen',
     'customer_display_instraction' => "For customer display screen to work, make sure it's opened in same browser as POS screen in new tab. And that tab is mirrored to another customer-facing display monitor.",
-    "edit_rename" => "Edit Rename",
+    "edit_rename" => "Rename",
     "selling_price" => "Selling price",
     "edit_selling_price" => "Edit Selling Price",
     "selling_price_less_than_cost_price" => "Selling price cannot be less than cost price",

@@ -132,4 +132,9 @@ class AccountTransaction extends Model
     {
         return $this->belongsTo(\App\User::class, 'created_by');
     }
+
+    public function last_editor()
+    {
+        return $this->belongsTo(\App\User::class, 'last_edited_by');
+    }
 }

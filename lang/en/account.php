@@ -62,6 +62,12 @@ return [
     'transfer_rejected_success' => 'Transfer rejected successfully',
     'pending_transfers' => 'Pending Transfers',
     'accept' => 'Accept',
-    'creator_cannot_approve' => 'Creator cannot accept, reject, or edit their own pending transfer.',
+    'accept_pending_transfer' => 'Accept Pending Transfer',
+    'reject_pending_transfer' => 'Reject Pending Transfer',
+    'edit_pending_transfer' => 'Edit Pending Transfer',
+    'creator_cannot_approve' => 'Creator cannot accept or reject their own pending transfer.',
+    'editor_cannot_approve' => 'Last editor cannot accept or reject their own edited pending transfer.',
+    'created_by_you' => 'Created by you',
+    'edited_by_you' => 'Edited by you',
 ];
 

@@ -37,7 +37,13 @@
                             @foreach($pending_transactions as $trans)
                                 @php
                                     $is_creator = ($trans->created_by == $current_user_id) || (!empty($trans->transfer_transaction) && $trans->transfer_transaction->created_by == $current_user_id);
-                                    $can_manage = $is_admin || !$is_creator;
+                                    $is_last_editor = (!empty($trans->last_edited_by) && $trans->last_edited_by == $current_user_id) || (!empty($trans->transfer_transaction) && !empty($trans->transfer_transaction->last_edited_by) && $trans->transfer_transaction->last_edited_by == $current_user_id);
+
+                                    $can_approve = !$is_creator && !$is_last_editor && (auth()->user()->can('account.accept_pending_transfer') || auth()->user()->can('superadmin'));
+                                    $can_reject  = !$is_creator && !$is_last_editor && (auth()->user()->can('account.reject_pending_transfer') || auth()->user()->can('superadmin'));
+                                    $can_edit    = auth()->user()->can('account.edit_pending_transfer') || auth()->user()->can('superadmin');
+
+                                    $last_editor_user = !empty($trans->last_editor) ? $trans->last_editor : (!empty($trans->transfer_transaction) && !empty($trans->transfer_transaction->last_editor) ? $trans->transfer_transaction->last_editor : null);
                                 @endphp
                                 <tr>
                                     <td style="vertical-align: middle; white-space: nowrap;">{{ @format_datetime($trans->operation_date) }}</td>
@@ -69,41 +75,54 @@
                                         </span>
                                     </td>
                                     <td style="vertical-align: middle;">{{ $trans->note ?: '-' }}</td>
-                                    <td style="vertical-align: middle;">{{ $trans->user->user_full_name ?? '-' }}</td>
+                                    <td style="vertical-align: middle;">
+                                        <div>{{ $trans->user->user_full_name ?? '-' }}</div>
+                                        @if(!empty($last_editor_user))
+                                            <div class="text-muted" style="font-size: 11px; margin-top: 3px;">
+                                                <i class="fa fa-edit"></i> @lang('lang_v1.edited_by'): {{ $last_editor_user->user_full_name }}
+                                            </div>
+                                        @endif
+                                    </td>
                                     <td style="vertical-align: middle;">
                                         <div class="tw-flex tw-items-center tw-gap-1 tw-flex-wrap" style="white-space: nowrap;">
-                                            @if($can_manage)
-                                                @if(auth()->user()->can('account.fund_transfer') || auth()->user()->can('fund_transfer') || auth()->user()->can('superadmin'))
-                                                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success change_transfer_status" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$trans->id]) }}?status=final" title="@lang('account.accept')" style="display: inline-flex; align-items: center; gap: 4px;">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                            <path d="M5 12l5 5l10 -10" />
-                                                        </svg>
-                                                        <span>@lang('account.accept')</span>
-                                                    </button>
-                                                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error change_transfer_status" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$trans->id]) }}?status=rejected" title="@lang('account.reject')" style="display: inline-flex; align-items: center; gap: 4px;">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                            <path d="M18 6l-12 12" />
-                                                            <path d="M6 6l12 12" />
-                                                        </svg>
-                                                        <span>@lang('account.reject')</span>
-                                                    </button>
-                                                @endif
-                                                @if(auth()->user()->can('edit_account_transaction'))
-                                                    <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$trans->id]) }}" title="@lang('messages.edit')" style="display: inline-flex; align-items: center; gap: 4px;">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
-                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                            <path d="M9 7h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3" />
-                                                            <path d="M9 15h3l8.5 -8.5a1.5 1.5 0 0 0 -3 -3l-8.5 8.5v3" />
-                                                            <line x1="16" y1="5" x2="19" y2="8" />
-                                                        </svg>
-                                                        <span>@lang('messages.edit')</span>
-                                                    </button>
-                                                @endif
-                                            @else
-                                                <span class="label bg-gray" style="font-size: 11px; padding: 3px 8px; border-radius: 4px;" title="@lang('account.creator_cannot_approve')">
-                                                    <i class="fa fa-lock"></i> @lang('account.creator_cannot_approve')
+                                            @if($can_approve)
+                                                <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success change_transfer_status" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$trans->id]) }}?status=final" title="@lang('account.accept')" style="display: inline-flex; align-items: center; gap: 4px;">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                        <path d="M5 12l5 5l10 -10" />
+                                                    </svg>
+                                                    <span>@lang('account.accept')</span>
+                                                </button>
+                                            @endif
+                                            @if($can_reject)
+                                                <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error change_transfer_status" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'changeTransferStatus'], [$trans->id]) }}?status=rejected" title="@lang('account.reject')" style="display: inline-flex; align-items: center; gap: 4px;">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                        <path d="M18 6l-12 12" />
+                                                        <path d="M6 6l12 12" />
+                                                    </svg>
+                                                    <span>@lang('account.reject')</span>
+                                                </button>
+                                            @endif
+                                            @if($can_edit)
+                                                <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary btn-modal" data-container="#edit_account_transaction" data-href="{{ action([\App\Http\Controllers\AccountController::class, 'editAccountTransaction'], [$trans->id]) }}" title="@lang('messages.edit')" style="display: inline-flex; align-items: center; gap: 4px;">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                        <path d="M9 7h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3" />
+                                                        <path d="M9 15h3l8.5 -8.5a1.5 1.5 0 0 0 -3 -3l-8.5 8.5v3" />
+                                                        <line x1="16" y1="5" x2="19" y2="8" />
+                                                    </svg>
+                                                    <span>@lang('messages.edit')</span>
+                                                </button>
+                                            @endif
+
+                                            @if($is_creator)
+                                                <span class="label bg-gray" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" title="@lang('account.creator_cannot_approve')">
+                                                    <i class="fa fa-lock"></i> @lang('account.created_by_you')
+                                                </span>
+                                            @elseif($is_last_editor)
+                                                <span class="label bg-gray" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" title="@lang('account.editor_cannot_approve')">
+                                                    <i class="fa fa-lock"></i> @lang('account.edited_by_you')
                                                 </span>
                                             @endif
                                         </div>

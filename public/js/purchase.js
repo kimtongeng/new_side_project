@@ -1343,10 +1343,19 @@ $(document).on('change', 'select#location_id', function() {
                         $acc_dropdown.select2('destroy');
                     }
                     $acc_dropdown.empty();
+                    var items = [];
                     $.each(accounts, function(key, value) {
+                        items.push({ id: key, name: value });
+                    });
+                    items.sort(function(a, b) {
+                        if (a.id === '' || a.id === null) return -1;
+                        if (b.id === '' || b.id === null) return 1;
+                        return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true });
+                    });
+                    $.each(items, function(i, item) {
                         $acc_dropdown.append($('<option>', {
-                            value: key,
-                            text: value
+                            value: item.id,
+                            text: item.name
                         }));
                     });
                     $acc_dropdown.select2();

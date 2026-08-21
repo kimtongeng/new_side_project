@@ -616,12 +616,7 @@ $(document).on('click', '#print_ledger_pdf', function() {
             if ($(this).val() == 'all') {
                 $('.receive-qty-input').prop('disabled', true);
             } else {
-                $('.receive-qty-input').each(function() {
-                    var max = parseFloat($(this).attr('max')) || 0;
-                    if (max > 0) {
-                        $(this).prop('disabled', false);
-                    }
-                });
+                $('.receive-qty-input').prop('disabled', false);
             }
         });
 
@@ -642,7 +637,9 @@ $(document).on('click', '#print_ledger_pdf', function() {
                     if (result.success == true) {
                         $('.receive_product_modal').modal('hide');
                         toastr.success(result.msg);
-                        purchase_table.ajax.reload();
+                        if (typeof purchase_table !== 'undefined' && purchase_table) {
+                            purchase_table.ajax.reload();
+                        }
                     } else {
                         toastr.error(result.msg);
                         form.find('button[type="submit"]').attr('disabled', false);
@@ -668,7 +665,9 @@ $(document).on('click', '#print_ledger_pdf', function() {
                         if (result.success == true) {
                             $('.receive_product_modal').modal('hide');
                             toastr.success(result.msg);
-                            purchase_table.ajax.reload();
+                            if (typeof purchase_table !== 'undefined' && purchase_table) {
+                                purchase_table.ajax.reload();
+                            }
                         } else {
                             toastr.error(result.msg);
                         }

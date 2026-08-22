@@ -143,20 +143,27 @@
 
     function filterToAccounts() {
       var fromId = $('#from_account').val();
-      var fromLocs = (accountsData[fromId] && accountsData[fromId].location_ids) ? accountsData[fromId].location_ids : null;
+      var fromAccount = null;
+      if (Array.isArray(accountsData)) {
+        fromAccount = accountsData.find(function(a) { return a.id == fromId; });
+      } else if (accountsData && accountsData[fromId]) {
+        fromAccount = accountsData[fromId];
+      }
+      var fromLocs = (fromAccount && fromAccount.location_ids) ? fromAccount.location_ids : null;
 
       var selectedTo = $('#to_account').val();
       $('#to_account').empty();
       $('#to_account').append(new Option("@lang('messages.please_select')", "", false, false));
 
-      $.each(accountsData, function(id, acc) {
+      $.each(accountsData, function(i, acc) {
+        var accId = acc.id !== undefined ? acc.id : i;
         var accLocs = acc.location_ids;
         var isCompatible = false;
 
         if (!fromLocs || !accLocs) {
           isCompatible = true;
         } else {
-          $.each(fromLocs, function(i, fLoc) {
+          $.each(fromLocs, function(j, fLoc) {
             if (accLocs.indexOf(fLoc) !== -1 || accLocs.indexOf(parseInt(fLoc)) !== -1 || accLocs.indexOf(String(fLoc)) !== -1) {
               isCompatible = true;
               return false;
@@ -165,8 +172,8 @@
         }
 
         if (isCompatible) {
-          var isSelected = (id == selectedTo);
-          $('#to_account').append(new Option(acc.name, id, false, isSelected));
+          var isSelected = (accId == selectedTo);
+          $('#to_account').append(new Option(acc.name, accId, false, isSelected));
         }
       });
 

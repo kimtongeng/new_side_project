@@ -1093,7 +1093,7 @@ class AccountController extends Controller
                 });
             }
 
-            $accounts = $accounts_query->get();
+            $accounts = $accounts_query->orderBy('name', 'asc')->get();
 
             $accounts_data = [];
             $all_accounts_dropdown = [];
@@ -1103,20 +1103,25 @@ class AccountController extends Controller
                 if (!is_array($locs) && !empty($locs)) {
                     $locs = json_decode($locs, true) ?: [$locs];
                 }
-                $accounts_data[$acc->id] = [
+                $accounts_data[] = [
                     'id'           => $acc->id,
                     'name'         => $acc->name,
                     'location_ids' => !empty($locs) ? array_map('strval', (array)$locs) : null,
                 ];
             }
 
-            $from_locs = !empty($accounts_data[$from_account->id]['location_ids'])
-                ? $accounts_data[$from_account->id]['location_ids']
-                : null;
+            $from_locs = null;
+            if (!empty($from_account)) {
+                $f_locs = $from_account->location_id;
+                if (!is_array($f_locs) && !empty($f_locs)) {
+                    $f_locs = json_decode($f_locs, true) ?: [$f_locs];
+                }
+                $from_locs = !empty($f_locs) ? array_map('strval', (array)$f_locs) : null;
+            }
 
             $to_accounts = [];
-            foreach ($accounts as $acc) {
-                $acc_locs = $accounts_data[$acc->id]['location_ids'];
+            foreach ($accounts_data as $acc) {
+                $acc_locs = $acc['location_ids'];
 
                 $is_compatible = false;
                 if (empty($from_locs) || empty($acc_locs)) {
@@ -1129,7 +1134,7 @@ class AccountController extends Controller
                 }
 
                 if ($is_compatible) {
-                    $to_accounts[$acc->id] = $acc->name;
+                    $to_accounts[$acc['id']] = $acc['name'];
                 }
             }
 
@@ -1923,6 +1928,7 @@ class AccountController extends Controller
 
         $accounts = Account::where('business_id', $business_id)
             ->NotClosed()
+            ->orderBy('name', 'asc')
             ->pluck('name', 'id');
 
         return view('account.edit_account_transaction')

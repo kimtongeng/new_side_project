@@ -14,7 +14,7 @@
           {!! Form::select('rooms[]', $rooms, '', [
               'class' => 'form-control select2',
               'required',
-              'style' => 'width:100%'
+              'style' => 'width:100%',
               'multiple',
           ]) !!}
         </div>

@@ -1691,12 +1691,14 @@ class Util
             }
         }
 
-        if (empty($user_details['allow_login']) || ! $user_details['allow_login']) {
+        if (empty($user_details['allow_login']) || ! $user_details['allow_login'] || $user_details['status'] == 'inactive') {
             unset($user_details['username']);
             unset($user_details['password']);
             $user_details['allow_login'] = 0;
+            $user_details['status'] = 'inactive';
         } else {
             $user_details['allow_login'] = 1;
+            $user_details['status'] = 'active';
         }
 
         $user_details['selected_contacts'] = isset($user_details['selected_contacts']) ? $user_details['selected_contacts'] : 0;

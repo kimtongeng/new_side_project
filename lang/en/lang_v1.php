@@ -1032,6 +1032,8 @@ return [
     'view_own_purchase' => 'View own purchase only',
     'view_own_expense' => 'View own expense only',
     'allow_login' => 'Allow login',
+    'enable_login' => 'Enable Login',
+    'disable_login' => 'Disable Login',
     'login_not_allowed' => 'Login not allowed',
     'labels_for_contact_custom_fields' => 'Labels for contact custom fields',
     'labels_for_product_custom_fields' => 'Labels for product custom fields',

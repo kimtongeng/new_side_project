@@ -1,6 +1,59 @@
 @extends('layouts.app')
 @section('title', __( 'user.users' ))
 
+@section('css')
+<style type="text/css">
+    .daterangepicker {
+        color-scheme: light !important;
+    }
+    .daterangepicker select.monthselect,
+    .daterangepicker select.yearselect,
+    .daterangepicker select.hourselect,
+    .daterangepicker select.minuteselect,
+    .daterangepicker select.secondselect,
+    .daterangepicker select.ampmselect {
+        color-scheme: light !important;
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        padding: 3px 6px !important;
+        height: 30px !important;
+        margin: 0 2px !important;
+        cursor: pointer !important;
+        outline: none !important;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+        -webkit-appearance: menulist !important;
+        -moz-appearance: menulist !important;
+        appearance: menulist !important;
+    }
+    .daterangepicker select.monthselect:focus,
+    .daterangepicker select.yearselect:focus,
+    .daterangepicker select.monthselect:hover,
+    .daterangepicker select.yearselect:hover {
+        border-color: #3b82f6 !important;
+        background-color: #ffffff !important;
+        color: #111827 !important;
+        outline: none !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+    }
+    .daterangepicker select.monthselect option,
+    .daterangepicker select.yearselect option,
+    .daterangepicker select.hourselect option,
+    .daterangepicker select.minuteselect option,
+    .daterangepicker select.secondselect option,
+    .daterangepicker select.ampmselect option {
+        color-scheme: light !important;
+        background-color: #ffffff !important;
+        color: #1f2937 !important;
+        font-size: 13px !important;
+        padding: 4px 8px !important;
+    }
+</style>
+@endsection
+
 @section('content')
 
 <!-- Content Header (Page header) -->
@@ -16,6 +69,101 @@
 
 <!-- Main content -->
 <section class="content">
+    @component('components.filters', ['title' => __('report.filters')])
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('user_list_filter_location_id', __('business.business_location') . ':') !!}
+                {!! Form::select('user_list_filter_location_id', $business_locations, null, [
+                    'class' => 'form-control select2',
+                    'style' => 'width:100%',
+                    'placeholder' => __('lang_v1.all'),
+                    'id' => 'user_list_filter_location_id',
+                ]) !!}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('user_list_filter_username', __('business.username') . ':') !!}
+                {!! Form::select('user_list_filter_username', $users_filter, null, [
+                    'class' => 'form-control select2',
+                    'style' => 'width:100%',
+                    'placeholder' => __('lang_v1.all'),
+                    'id' => 'user_list_filter_username',
+                ]) !!}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('user_list_filter_role_id', __('user.role') . ':') !!}
+                {!! Form::select('user_list_filter_role_id', $roles, null, [
+                    'class' => 'form-control select2',
+                    'style' => 'width:100%',
+                    'placeholder' => __('lang_v1.all'),
+                    'id' => 'user_list_filter_role_id',
+                ]) !!}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('user_list_filter_status', __('sale.status') . ':') !!}
+                {!! Form::select(
+                    'user_list_filter_status',
+                    ['active' => __('business.is_active'), 'inactive' => __('lang_v1.inactive')],
+                    null,
+                    ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'user_list_filter_status', 'placeholder' => __('lang_v1.all')],
+                ) !!}
+            </div>
+        </div>
+        <div class="clearfix"></div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('user_list_filter_dob', __('lang_v1.dob') . ':') !!}
+                <div class="input-group">
+                    <span class="input-group-addon">
+                        <i class="fa fa-calendar"></i>
+                    </span>
+                    {!! Form::text('user_list_filter_dob', null, [
+                        'class' => 'form-control',
+                        'id' => 'user_list_filter_dob',
+                        'placeholder' => __('lang_v1.dob'),
+                        'readonly',
+                    ]) !!}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('user_list_filter_gender', __('lang_v1.gender') . ':') !!}
+                {!! Form::select(
+                    'user_list_filter_gender',
+                    ['male' => __('lang_v1.male'), 'female' => __('lang_v1.female'), 'others' => __('lang_v1.others')],
+                    null,
+                    ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'user_list_filter_gender', 'placeholder' => __('lang_v1.all')],
+                ) !!}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('user_list_filter_department', __('lang_v1.department') . ':') !!}
+                {!! Form::text('user_list_filter_department', null, [
+                    'class' => 'form-control',
+                    'id' => 'user_list_filter_department',
+                    'placeholder' => __('lang_v1.department'),
+                ]) !!}
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                {!! Form::label('user_list_filter_designation', __('lang_v1.designation') . ':') !!}
+                {!! Form::text('user_list_filter_designation', null, [
+                    'class' => 'form-control',
+                    'id' => 'user_list_filter_designation',
+                    'placeholder' => __('lang_v1.designation'),
+                ]) !!}
+            </div>
+        </div>
+    @endcomponent
+
     @component('components.widget', ['class' => 'box-primary', 'title' => __( 'user.all_users' )])
         @can('user.create')
             @slot('tool')
@@ -58,7 +206,25 @@
                     processing: true,
                     serverSide: true,
                     fixedHeader:false,
-                    ajax: '/users',
+                    ajax: {
+                        url: '/users',
+                        data: function(d) {
+                            d.location_id = $('#user_list_filter_location_id').val();
+                            d.username = $('#user_list_filter_username').val();
+                            d.role_id = $('#user_list_filter_role_id').val();
+                            d.status = $('#user_list_filter_status').val();
+                            d.gender = $('#user_list_filter_gender').val();
+                            d.department = $('#user_list_filter_department').val();
+                            d.designation = $('#user_list_filter_designation').val();
+
+                            if ($('#user_list_filter_dob').val()) {
+                                var start = $('#user_list_filter_dob').data('daterangepicker').startDate.format('YYYY-MM-DD');
+                                var end = $('#user_list_filter_dob').data('daterangepicker').endDate.format('YYYY-MM-DD');
+                                d.dob_start_date = start;
+                                d.dob_end_date = end;
+                            }
+                        }
+                    },
                     columnDefs: [ {
                         "targets": [4],
                         "orderable": false,
@@ -72,6 +238,29 @@
                         {"data":"action"}
                     ]
                 });
+
+        $('#user_list_filter_location_id, #user_list_filter_username, #user_list_filter_role_id, #user_list_filter_status, #user_list_filter_gender').change(function() {
+            users_table.ajax.reload();
+        });
+
+        $('#user_list_filter_department, #user_list_filter_designation').keyup(function() {
+            users_table.ajax.reload();
+        });
+
+        $('#user_list_filter_dob').daterangepicker(
+            $.extend(true, {}, dateRangeSettings, {
+                autoUpdateInput: false,
+            })
+        );
+        $('#user_list_filter_dob').on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format(moment_date_format) + ' ~ ' + picker.endDate.format(moment_date_format));
+            users_table.ajax.reload();
+        });
+        $('#user_list_filter_dob').on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+            users_table.ajax.reload();
+        });
+
         $(document).on('click', 'button.delete_user_button', function(){
             swal({
               title: LANG.sure,
@@ -100,9 +289,24 @@
                 }
              });
         });
-        
+
+        $(document).on('click', 'a.update_user_status', function(e){
+            e.preventDefault();
+            var href = $(this).attr('href');
+            $.ajax({
+                method: "GET",
+                url: href,
+                dataType: "json",
+                success: function(result){
+                    if(result.success == true){
+                        toastr.success(result.msg);
+                        users_table.ajax.reload();
+                    } else {
+                        toastr.error(result.msg);
+                    }
+                }
+            });
+        });
     });
-    
-    
 </script>
 @endsection

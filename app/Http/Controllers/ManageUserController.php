@@ -46,10 +46,86 @@ class ManageUserController extends Controller
                         ->user()
                         ->where('is_cmmsn_agnt', 0)
                         ->select(['id', 'username',
-                            DB::raw("CONCAT(COALESCE(surname, ''), ' ', COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) as full_name"), 'email', 'allow_login', ]);
+                            DB::raw("CONCAT(COALESCE(surname, ''), ' ', COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) as full_name"), 'email', 'allow_login', 'status']);
+
+            if (! empty(request()->input('location_id'))) {
+                $location_id = request()->input('location_id');
+                $users->permission(['location.' . $location_id, 'access_all_locations']);
+            }
+
+            if (! empty(request()->input('username'))) {
+                $users->where('users.username', request()->input('username'));
+            }
+
+            if (! empty(request()->input('role_id'))) {
+                $role_id = request()->input('role_id');
+                $users->whereHas('roles', function ($q) use ($role_id) {
+                    $q->where('roles.id', $role_id);
+                });
+            }
+
+            if (! empty(request()->input('status'))) {
+                $status = request()->input('status');
+                if ($status == 'active') {
+                    $users->where('users.status', 'active')->where('users.allow_login', 1);
+                } elseif ($status == 'inactive') {
+                    $users->where(function ($q) {
+                        $q->where('users.status', 'inactive')->orWhere('users.allow_login', 0);
+                    });
+                }
+            }
+
+            if (! empty(request()->input('dob_start_date')) && ! empty(request()->input('dob_end_date'))) {
+                $dob_start = request()->input('dob_start_date');
+                $dob_end = request()->input('dob_end_date');
+                $users->whereDate('users.dob', '>=', $dob_start)
+                      ->whereDate('users.dob', '<=', $dob_end);
+            } elseif (! empty(request()->input('dob'))) {
+                $dob = $this->moduleUtil->uf_date(request()->input('dob'));
+                $users->whereDate('users.dob', $dob);
+            }
+
+            if (! empty(request()->input('gender'))) {
+                $users->where('users.gender', request()->input('gender'));
+            }
+
+            if (! empty(request()->input('department'))) {
+                $department = request()->input('department');
+                $users->where(function ($q) use ($department) {
+                    if (\Schema::hasColumn('users', 'department')) {
+                        $q->where('users.department', 'like', "%{$department}%");
+                    }
+                    $q->orWhere('users.custom_field_1', 'like', "%{$department}%")
+                      ->orWhere('users.custom_field_2', 'like', "%{$department}%")
+                      ->orWhere('users.custom_field_3', 'like', "%{$department}%")
+                      ->orWhere('users.custom_field_4', 'like', "%{$department}%");
+                });
+            }
+
+            if (! empty(request()->input('designation'))) {
+                $designation = request()->input('designation');
+                $users->where(function ($q) use ($designation) {
+                    if (\Schema::hasColumn('users', 'designation')) {
+                        $q->where('users.designation', 'like', "%{$designation}%");
+                    }
+                    $q->orWhere('users.custom_field_1', 'like', "%{$designation}%")
+                      ->orWhere('users.custom_field_2', 'like', "%{$designation}%")
+                      ->orWhere('users.custom_field_3', 'like', "%{$designation}%")
+                      ->orWhere('users.custom_field_4', 'like', "%{$designation}%");
+                });
+            }
 
             return Datatables::of($users)
-                ->editColumn('username', '{{$username}} @if(empty($allow_login)) <span class="label bg-gray">@lang("lang_v1.login_not_allowed")</span>@endif')
+                ->editColumn('username', function ($row) {
+                    $html = $row->username;
+                    if (empty($row->allow_login) || $row->status == 'inactive') {
+                        $html .= ' <span class="label bg-gray">'.__('lang_v1.inactive').'</span>';
+                    } else {
+                        $html .= ' <span class="label bg-green">'.__('business.is_active').'</span>';
+                    }
+
+                    return $html;
+                })
                 ->addColumn(
                     'role',
                     function ($row) {
@@ -60,17 +136,28 @@ class ManageUserController extends Controller
                 )
                 ->addColumn(
                     'action',
-                    '@can("user.update")
-                        <a href="{{action(\'App\Http\Controllers\ManageUserController@edit\', [$id])}}" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary"><i class="glyphicon glyphicon-edit"></i> @lang("messages.edit")</a>
-                        &nbsp;
-                    @endcan
-                    @can("user.view")
-                    <a href="{{action(\'App\Http\Controllers\ManageUserController@show\', [$id])}}" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline  tw-dw-btn-info"><i class="fa fa-eye"></i> @lang("messages.view")</a>
-                    &nbsp;
-                    @endcan
-                    @can("user.delete")
-                        <button data-href="{{action(\'App\Http\Controllers\ManageUserController@destroy\', [$id])}}" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error delete_user_button"><i class="glyphicon glyphicon-trash"></i> @lang("messages.delete")</button>
-                    @endcan'
+                    function ($row) {
+                        $html = '';
+                        if (auth()->user()->can('user.update')) {
+                            $html .= '<a href="'.action([\App\Http\Controllers\ManageUserController::class, 'edit'], [$row->id]).'" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-primary"><i class="glyphicon glyphicon-edit"></i> '.__('messages.edit').'</a>&nbsp;';
+
+                            if ($row->id != auth()->user()->id) {
+                                if ($row->status == 'active' && $row->allow_login == 1) {
+                                    $html .= '<a href="'.action([\App\Http\Controllers\ManageUserController::class, 'updateStatus'], [$row->id]).'" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-warning update_user_status" title="'.__('lang_v1.disable_login').'"><i class="fa fa-user-times"></i> '.__('lang_v1.disable_login').'</a>&nbsp;';
+                                } else {
+                                    $html .= '<a href="'.action([\App\Http\Controllers\ManageUserController::class, 'updateStatus'], [$row->id]).'" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-success update_user_status" title="'.__('lang_v1.enable_login').'"><i class="fa fa-user-check"></i> '.__('lang_v1.enable_login').'</a>&nbsp;';
+                                }
+                            }
+                        }
+                        if (auth()->user()->can('user.view')) {
+                            $html .= '<a href="'.action([\App\Http\Controllers\ManageUserController::class, 'show'], [$row->id]).'" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-info"><i class="fa fa-eye"></i> '.__('messages.view').'</a>&nbsp;';
+                        }
+                        if (auth()->user()->can('user.delete')) {
+                            $html .= '<button data-href="'.action([\App\Http\Controllers\ManageUserController::class, 'destroy'], [$row->id]).'" class="tw-dw-btn tw-dw-btn-outline tw-dw-btn-xs tw-dw-btn-error delete_user_button"><i class="glyphicon glyphicon-trash"></i> '.__('messages.delete').'</button>';
+                        }
+
+                        return $html;
+                    }
                 )
                 ->filterColumn('full_name', function ($query, $keyword) {
                     $query->whereRaw("CONCAT(COALESCE(surname, ''), ' ', COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) like ?", ["%{$keyword}%"]);
@@ -80,7 +167,17 @@ class ManageUserController extends Controller
                 ->make(true);
         }
 
-        return view('manage_user.index');
+        $business_id = request()->session()->get('user.business_id');
+        $roles = $this->getRolesArray($business_id);
+        $business_locations = BusinessLocation::forDropdown($business_id, true);
+        $users_filter = User::where('business_id', $business_id)
+                            ->user()
+                            ->where('is_cmmsn_agnt', 0)
+                            ->whereNotNull('username')
+                            ->where('username', '!=', '')
+                            ->pluck('username', 'username');
+
+        return view('manage_user.index')->with(compact('roles', 'business_locations', 'users_filter'));
     }
 
     /**
@@ -262,12 +359,14 @@ class ManageUserController extends Controller
                 $user_data['selected_contacts'] = 0;
             }
 
-            if (empty($request->input('allow_login'))) {
+            if (empty($request->input('allow_login')) || $user_data['status'] == 'inactive') {
                 $user_data['username'] = null;
                 $user_data['password'] = null;
                 $user_data['allow_login'] = 0;
+                $user_data['status'] = 'inactive';
             } else {
                 $user_data['allow_login'] = 1;
+                $user_data['status'] = 'active';
             }
 
             if (! empty($request->input('password'))) {
@@ -464,5 +563,91 @@ class ManageUserController extends Controller
         Auth::loginUsingId($id);
 
         return redirect()->route('home');
+    }
+
+    /**
+     * Toggles user status between active (allow_login=1) and inactive (allow_login=0).
+     *
+     * @param  int  $id
+     * @return array
+     */
+    public function updateStatus($id)
+    {
+        //Disable in demo
+        $notAllowed = $this->moduleUtil->notAllowedInDemo();
+        if (! empty($notAllowed)) {
+            return $notAllowed;
+        }
+
+        if (! auth()->user()->can('user.update')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        if (request()->ajax()) {
+            try {
+                $business_id = request()->session()->get('user.business_id');
+                $user = User::where('business_id', $business_id)->findOrFail($id);
+
+                // Prevent self-deactivation
+                if ($user->id == auth()->user()->id) {
+                    return [
+                        'success' => false,
+                        'msg' => __('messages.something_went_wrong'),
+                    ];
+                }
+
+                $is_admin = $this->moduleUtil->is_admin($user);
+                $all_admins = $this->getAdmins();
+                if ($is_admin && count($all_admins) <= 1 && ($user->status == 'active' && $user->allow_login == 1)) {
+                    return [
+                        'success' => false,
+                        'msg' => __('lang_v1.cannot_change_role'),
+                    ];
+                }
+
+                $new_status = ($user->status == 'active' && $user->allow_login == 1) ? 'inactive' : 'active';
+
+                // Check quota if activating
+                if ($new_status == 'active') {
+                    if (! $this->moduleUtil->isQuotaAvailable('users', $business_id)) {
+                        return [
+                            'success' => false,
+                            'msg' => __('messages.max_users_reached') ?? 'Max users limit reached.',
+                        ];
+                    }
+                }
+
+                $user->status = $new_status;
+                $user->allow_login = ($new_status == 'active') ? 1 : 0;
+
+                if ($new_status == 'active' && empty($user->username)) {
+                    $ref_count = $this->moduleUtil->setAndGetReferenceCount('username');
+                    $user->username = $this->moduleUtil->generateReferenceNumber('username', $ref_count);
+                    $username_ext = $this->moduleUtil->getUsernameExtension();
+                    if (! empty($username_ext)) {
+                        $user->username .= $username_ext;
+                    }
+                }
+
+                $user->save();
+
+                $this->moduleUtil->activityLog($user, 'status_updated', null, ['name' => $user->user_full_name, 'status' => $new_status]);
+                event(new UserCreatedOrModified($user, 'updated'));
+
+                $output = [
+                    'success' => true,
+                    'msg' => __('user.user_update_success'),
+                ];
+            } catch (\Exception $e) {
+                \Log::emergency('File:'.$e->getFile().'Line:'.$e->getLine().'Message:'.$e->getMessage());
+
+                $output = [
+                    'success' => false,
+                    'msg' => __('messages.something_went_wrong'),
+                ];
+            }
+
+            return $output;
+        }
     }
 }

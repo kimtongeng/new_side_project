@@ -262,6 +262,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 
     Route::resource('roles', RoleController::class);
 
+    Route::get('/users/update-status/{id}', [ManageUserController::class, 'updateStatus']);
     Route::resource('users', ManageUserController::class);
 
     Route::resource('group-taxes', GroupTaxController::class);

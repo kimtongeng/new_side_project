@@ -46,7 +46,7 @@
                   <div class="checkbox">
                     <br>
                     <label>
-                         {!! Form::checkbox('is_active', $user->status, $is_checked_checkbox, ['class' => 'input-icheck status']); !!} {{ __('lang_v1.status_for_user') }}
+                         {!! Form::checkbox('is_active', 'active', $is_checked_checkbox, ['class' => 'input-icheck status', 'id' => 'user_is_active']); !!} {{ __('lang_v1.status_for_user') }}
                     </label>
                     @show_tooltip(__('lang_v1.tooltip_enable_user_active'))
                   </div>
@@ -231,9 +231,18 @@
 
     $('#allow_login').on('ifChecked', function(event){
       $('div.user_auth_fields').removeClass('hide');
+      $('#user_is_active').iCheck('check');
     });
     $('#allow_login').on('ifUnchecked', function(event){
       $('div.user_auth_fields').addClass('hide');
+      $('#user_is_active').iCheck('uncheck');
+    });
+
+    $('#user_is_active').on('ifChecked', function(event){
+      $('#allow_login').iCheck('check');
+    });
+    $('#user_is_active').on('ifUnchecked', function(event){
+      $('#allow_login').iCheck('uncheck');
     });
 
     $('#user_allowed_contacts').select2({

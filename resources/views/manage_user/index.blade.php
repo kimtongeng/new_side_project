@@ -144,23 +144,31 @@
         </div>
         <div class="col-md-3">
             <div class="form-group">
-                {!! Form::label('user_list_filter_department', __('lang_v1.department') . ':') !!}
-                {!! Form::text('user_list_filter_department', null, [
-                    'class' => 'form-control',
-                    'id' => 'user_list_filter_department',
-                    'placeholder' => __('lang_v1.department'),
+                {!! Form::label('user_list_filter_department_id', __('lang_v1.department') . ':') !!}
+                {!! Form::select('user_list_filter_department_id', $departments, null, [
+                    'class' => 'form-control select2',
+                    'style' => 'width:100%',
+                    'placeholder' => __('lang_v1.all'),
+                    'id' => 'user_list_filter_department_id',
                 ]) !!}
             </div>
         </div>
         <div class="col-md-3">
             <div class="form-group">
-                {!! Form::label('user_list_filter_designation', __('lang_v1.designation') . ':') !!}
-                {!! Form::text('user_list_filter_designation', null, [
-                    'class' => 'form-control',
-                    'id' => 'user_list_filter_designation',
-                    'placeholder' => __('lang_v1.designation'),
+                {!! Form::label('user_list_filter_designation_id', __('lang_v1.designation') . ':') !!}
+                {!! Form::select('user_list_filter_designation_id', $designations, null, [
+                    'class' => 'form-control select2',
+                    'style' => 'width:100%',
+                    'placeholder' => __('lang_v1.all'),
+                    'id' => 'user_list_filter_designation_id',
                 ]) !!}
             </div>
+        </div>
+        <div class="clearfix"></div>
+        <div class="col-md-12 text-right">
+            <button type="button" class="tw-dw-btn tw-dw-btn-xs tw-dw-btn-outline tw-dw-btn-error" id="reset_user_filters">
+                <i class="fa fa-undo"></i> @lang('report.reset_filters')
+            </button>
         </div>
     @endcomponent
 
@@ -214,8 +222,8 @@
                             d.role_id = $('#user_list_filter_role_id').val();
                             d.status = $('#user_list_filter_status').val();
                             d.gender = $('#user_list_filter_gender').val();
-                            d.department = $('#user_list_filter_department').val();
-                            d.designation = $('#user_list_filter_designation').val();
+                            d.department_id = $('#user_list_filter_department_id').val();
+                            d.designation_id = $('#user_list_filter_designation_id').val();
 
                             if ($('#user_list_filter_dob').val()) {
                                 var start = $('#user_list_filter_dob').data('daterangepicker').startDate.format('YYYY-MM-DD');
@@ -239,11 +247,7 @@
                     ]
                 });
 
-        $('#user_list_filter_location_id, #user_list_filter_username, #user_list_filter_role_id, #user_list_filter_status, #user_list_filter_gender').change(function() {
-            users_table.ajax.reload();
-        });
-
-        $('#user_list_filter_department, #user_list_filter_designation').keyup(function() {
+        $('#user_list_filter_location_id, #user_list_filter_username, #user_list_filter_role_id, #user_list_filter_status, #user_list_filter_gender, #user_list_filter_department_id, #user_list_filter_designation_id').change(function() {
             users_table.ajax.reload();
         });
 
@@ -258,6 +262,18 @@
         });
         $('#user_list_filter_dob').on('cancel.daterangepicker', function(ev, picker) {
             $(this).val('');
+            users_table.ajax.reload();
+        });
+
+        $(document).on('click', '#reset_user_filters', function() {
+            $('#user_list_filter_location_id').val('').trigger('change');
+            $('#user_list_filter_username').val('').trigger('change');
+            $('#user_list_filter_role_id').val('').trigger('change');
+            $('#user_list_filter_status').val('').trigger('change');
+            $('#user_list_filter_gender').val('').trigger('change');
+            $('#user_list_filter_department_id').val('').trigger('change');
+            $('#user_list_filter_designation_id').val('').trigger('change');
+            $('#user_list_filter_dob').val('');
             users_table.ajax.reload();
         });
 

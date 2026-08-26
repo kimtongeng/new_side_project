@@ -40,6 +40,7 @@ return [
     'tax_overall' => 'Overall (Input - Output)',
     'trending_products' => 'Trending Products',
     'apply_filters' => 'Apply Filters',
+    'reset_filters' => 'Reset Filters',
     'filters' => 'Filters',
     'expense_report' => 'Expense Report',
     'total_expense' => 'Total Expense',

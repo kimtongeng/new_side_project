@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\BusinessLocation;
+use App\Category;
 use App\User;
 use App\Utils\ModuleUtil;
 use DB;
@@ -89,29 +90,35 @@ class ManageUserController extends Controller
                 $users->where('users.gender', request()->input('gender'));
             }
 
-            if (! empty(request()->input('department'))) {
-                $department = request()->input('department');
-                $users->where(function ($q) use ($department) {
-                    if (\Schema::hasColumn('users', 'department')) {
-                        $q->where('users.department', 'like', "%{$department}%");
+            if (! empty(request()->input('department_id'))) {
+                $department_id = request()->input('department_id');
+                $users->where(function ($q) use ($department_id, $business_id) {
+                    if (\Schema::hasColumn('users', 'essentials_department_id')) {
+                        $q->where('users.essentials_department_id', $department_id);
                     }
-                    $q->orWhere('users.custom_field_1', 'like', "%{$department}%")
-                      ->orWhere('users.custom_field_2', 'like', "%{$department}%")
-                      ->orWhere('users.custom_field_3', 'like', "%{$department}%")
-                      ->orWhere('users.custom_field_4', 'like', "%{$department}%");
+                    $dept_name = Category::where('business_id', $business_id)->where('id', $department_id)->value('name');
+                    if ($dept_name) {
+                        $q->orWhere('users.custom_field_1', 'like', "%{$dept_name}%")
+                          ->orWhere('users.custom_field_2', 'like', "%{$dept_name}%")
+                          ->orWhere('users.custom_field_3', 'like', "%{$dept_name}%")
+                          ->orWhere('users.custom_field_4', 'like', "%{$dept_name}%");
+                    }
                 });
             }
 
-            if (! empty(request()->input('designation'))) {
-                $designation = request()->input('designation');
-                $users->where(function ($q) use ($designation) {
-                    if (\Schema::hasColumn('users', 'designation')) {
-                        $q->where('users.designation', 'like', "%{$designation}%");
+            if (! empty(request()->input('designation_id'))) {
+                $designation_id = request()->input('designation_id');
+                $users->where(function ($q) use ($designation_id, $business_id) {
+                    if (\Schema::hasColumn('users', 'essentials_designation_id')) {
+                        $q->where('users.essentials_designation_id', $designation_id);
                     }
-                    $q->orWhere('users.custom_field_1', 'like', "%{$designation}%")
-                      ->orWhere('users.custom_field_2', 'like', "%{$designation}%")
-                      ->orWhere('users.custom_field_3', 'like', "%{$designation}%")
-                      ->orWhere('users.custom_field_4', 'like', "%{$designation}%");
+                    $desig_name = Category::where('business_id', $business_id)->where('id', $designation_id)->value('name');
+                    if ($desig_name) {
+                        $q->orWhere('users.custom_field_1', 'like', "%{$desig_name}%")
+                          ->orWhere('users.custom_field_2', 'like', "%{$desig_name}%")
+                          ->orWhere('users.custom_field_3', 'like', "%{$desig_name}%")
+                          ->orWhere('users.custom_field_4', 'like', "%{$desig_name}%");
+                    }
                 });
             }
 
@@ -169,7 +176,7 @@ class ManageUserController extends Controller
 
         $business_id = request()->session()->get('user.business_id');
         $roles = $this->getRolesArray($business_id);
-        $business_locations = BusinessLocation::forDropdown($business_id, true);
+        $business_locations = BusinessLocation::forDropdown($business_id);
         $users_filter = User::where('business_id', $business_id)
                             ->user()
                             ->where('is_cmmsn_agnt', 0)
@@ -177,7 +184,10 @@ class ManageUserController extends Controller
                             ->where('username', '!=', '')
                             ->pluck('username', 'username');
 
-        return view('manage_user.index')->with(compact('roles', 'business_locations', 'users_filter'));
+        $departments = Category::forDropdown($business_id, 'hrm_department');
+        $designations = Category::forDropdown($business_id, 'hrm_designation');
+
+        return view('manage_user.index')->with(compact('roles', 'business_locations', 'users_filter', 'departments', 'designations'));
     }
 
     /**

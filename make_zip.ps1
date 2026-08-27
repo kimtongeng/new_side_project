@@ -1,5 +1,6 @@
 param (
-    [string]$CommitHash = ""
+    [string]$StartCommit = "",
+    [string]$EndCommit = ""
 )
 
 $destDir = "C:\side project\new side\update_ai"
@@ -9,9 +10,12 @@ if (!(Test-Path $destDir)) {
 
 $files = @()
 
-if ($CommitHash -ne "") {
-    Write-Host "Inspecting files from commit: $CommitHash..." -ForegroundColor Cyan
-    $files = git show --name-only --format="" $CommitHash
+if ($StartCommit -ne "" -and $EndCommit -ne "") {
+    Write-Host "Inspecting files in commit range: $StartCommit to $EndCommit (inclusive)..." -ForegroundColor Cyan
+    $files = git diff --name-only "$($StartCommit)~1..$EndCommit"
+} elseif ($StartCommit -ne "") {
+    Write-Host "Inspecting files from commit: $StartCommit..." -ForegroundColor Cyan
+    $files = git show --name-only --format="" $StartCommit
 } else {
     $statusLines = git status --short
     foreach ($line in $statusLines) {
@@ -37,48 +41,32 @@ if ($files.Count -eq 0) {
     exit 1
 }
 
-$zipName = "Updated_Project_Files_Export.zip"
-if ($CommitHash -ne "") {
-    $shortHash = $CommitHash.Substring(0, [Math]::Min(8, $CommitHash.Length))
-    $zipName = "Commit_${shortHash}_Updates.zip"
+$baseName = "Updated_Project_Files_Export"
+if ($StartCommit -ne "" -and $EndCommit -ne "") {
+    $s1 = $StartCommit.Substring(0, [Math]::Min(7, $StartCommit.Length))
+    $s2 = $EndCommit.Substring(0, [Math]::Min(7, $EndCommit.Length))
+    $baseName = "Updates_${s1}_to_${s2}"
+} elseif ($StartCommit -ne "") {
+    $shortHash = $StartCommit.Substring(0, [Math]::Min(8, $StartCommit.Length))
+    $baseName = "Commit_${shortHash}_Updates"
 }
 
-$zipPath = Join-Path $destDir $zipName
-$tempDir = Join-Path $env:TEMP "zip_export_temp"
+$targetFolder = Join-Path $destDir $baseName
+$zipPath = Join-Path $destDir "$baseName.zip"
 
-if (Test-Path $tempDir) { Remove-Item $tempDir -Recurse -Force }
-if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-
-New-Item -ItemType Directory -Path $tempDir | Out-Null
+if (!(Test-Path $targetFolder)) {
+    New-Item -ItemType Directory -Path $targetFolder -Force | Out-Null
+}
 
 $baseDir = Get-Location
 
-Write-Host "`nStaging files into category structure:" -ForegroundColor Cyan
-Write-Host "========================================"
+Write-Host "`nExporting files maintaining exact project directory structure:" -ForegroundColor Cyan
+Write-Host "=============================================================="
 
 foreach ($relPath in $files) {
-    $normPath = $relPath.Replace('\', '/')
-    $fileName = Split-Path $normPath -Leaf
-    $zipInsidePath = $normPath
-
-    if ($normPath -match "^app/Http/Controllers/") {
-        $zipInsidePath = "app/Http/Controllers/$fileName"
-    } elseif ($normPath -match "^app/Utils/") {
-        $zipInsidePath = "app/Utils/$fileName"
-    } elseif ($normPath -match "^app/") {
-        $zipInsidePath = "app/$fileName"
-    } elseif ($normPath -match "^database/migrations/") {
-        $zipInsidePath = "migrations/$fileName"
-    } elseif ($normPath -match "^public/js/") {
-        $zipInsidePath = "js/$fileName"
-    } elseif ($normPath -match "^resources/views/account/") {
-        $zipInsidePath = "account/$fileName"
-    } elseif ($normPath -match "^resources/views/sell/") {
-        $zipInsidePath = "sell/$fileName"
-    }
-
+    $normPath = $relPath.Replace('/', '\')
     $srcFile = Join-Path $baseDir $relPath
-    $destFile = Join-Path $tempDir ($zipInsidePath.Replace('/', '\'))
+    $destFile = Join-Path $targetFolder $normPath
     $parentDir = Split-Path $destFile
 
     if (!(Test-Path $parentDir)) {
@@ -86,12 +74,14 @@ foreach ($relPath in $files) {
     }
 
     Copy-Item $srcFile $destFile -Force
-    Write-Host "  [+] $normPath  =>  $zipInsidePath"
+    Write-Host "  [+] $relPath"
 }
 
-Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -Force
-Remove-Item $tempDir -Recurse -Force
+if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+Compress-Archive -Path "$targetFolder\*" -DestinationPath $zipPath -Force
 
-Write-Host "========================================"
-Write-Host "`nSuccessfully created ZIP file at:" -ForegroundColor Green
-Write-Host $zipPath -ForegroundColor Yellow
+Write-Host "=============================================================="
+Write-Host "`nSuccessfully exported $($files.Count) files!" -ForegroundColor Green
+Write-Host "Folder: $targetFolder" -ForegroundColor Yellow
+Write-Host "ZIP:    $zipPath" -ForegroundColor Yellow
+

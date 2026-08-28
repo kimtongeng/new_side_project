@@ -191,6 +191,7 @@
                             <th>@lang( 'user.name' )</th>
                             <th>@lang( 'user.role' )</th>
                             <th>@lang( 'business.email' )</th>
+                            <th>@lang( 'business.business_location' )</th>
                             <th>@lang( 'messages.action' )</th>
                         </tr>
                     </thead>
@@ -234,7 +235,7 @@
                         }
                     },
                     columnDefs: [ {
-                        "targets": [4],
+                        "targets": [4, 5],
                         "orderable": false,
                         "searchable": false
                     } ],
@@ -243,6 +244,7 @@
                         {"data":"full_name"},
                         {"data":"role"},
                         {"data":"email"},
+                        {"data":"business_location"},
                         {"data":"action"}
                     ]
                 });

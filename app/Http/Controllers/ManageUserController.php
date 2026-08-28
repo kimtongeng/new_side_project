@@ -43,9 +43,12 @@ class ManageUserController extends Controller
             $business_id = request()->session()->get('user.business_id');
             $user_id = request()->session()->get('user.id');
 
+            $all_business_locations = BusinessLocation::where('business_id', $business_id)->pluck('name', 'id')->toArray();
+
             $users = User::where('business_id', $business_id)
                         ->user()
                         ->where('is_cmmsn_agnt', 0)
+                        ->with(['permissions', 'roles.permissions'])
                         ->select(['id', 'username',
                             DB::raw("CONCAT(COALESCE(surname, ''), ' ', COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) as full_name"), 'email', 'allow_login', 'status']);
 
@@ -142,6 +145,28 @@ class ManageUserController extends Controller
                     }
                 )
                 ->addColumn(
+                    'business_location',
+                    function ($row) use ($all_business_locations, $business_id) {
+                        if ($row->can('access_all_locations')) {
+                            return __('role.all_locations');
+                        }
+
+                        $permitted_locations = [];
+                        $user_permissions = $row->getAllPermissions()->pluck('name')->all();
+                        foreach ($all_business_locations as $id => $name) {
+                            if (in_array('location.' . $id, $user_permissions)) {
+                                $permitted_locations[] = $name;
+                            }
+                        }
+
+                        if (! empty($permitted_locations)) {
+                            return implode(', ', $permitted_locations);
+                        }
+
+                        return __('lang_v1.none');
+                    }
+                )
+                ->addColumn(
                     'action',
                     function ($row) {
                         $html = '';
@@ -170,7 +195,7 @@ class ManageUserController extends Controller
                     $query->whereRaw("CONCAT(COALESCE(surname, ''), ' ', COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) like ?", ["%{$keyword}%"]);
                 })
                 ->removeColumn('id')
-                ->rawColumns(['action', 'username'])
+                ->rawColumns(['action', 'username', 'business_location'])
                 ->make(true);
         }
 

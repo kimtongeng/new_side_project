@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UltimatePOS Upgrade & Feature Release Guide</title>
+<style>
+    @page {
+        size: A4 portrait;
+        margin: 14mm 12mm 14mm 12mm;
+    }
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.55;
+        color: #1e293b;
+        background: #ffffff;
+        padding: 0;
+    }
+    .header-banner {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+        color: #ffffff;
+        padding: 24px 28px;
+        border-radius: 12px;
+        margin-bottom: 22px;
+        box-shadow: 0 4px 12px rgba(67, 56, 202, 0.15);
+    }
+    .header-banner h1 {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 6px;
+        color: #ffffff;
+    }
+    .header-banner p {
+        font-size: 13px;
+        color: #e0e7ff;
+        margin-bottom: 12px;
+    }
+    .meta-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .meta-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #ffffff;
+    }
+    .section-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 18px 20px;
+        margin-bottom: 18px;
+        page-break-inside: avoid;
+    }
+    .section-card h2 {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 2px solid #f1f5f9;
+        padding-bottom: 8px;
+    }
+    .section-card h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        margin: 12px 0 6px 0;
+    }
+    .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background: #4f46e5;
+        color: white;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+        font-size: 12px;
+    }
+    th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 1px solid #cbd5e1;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        vertical-align: top;
+    }
+    tr:nth-child(even) td {
+        background-color: #fcfdfe;
+    }
+    .badge {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 10.5px;
+        font-weight: 600;
+    }
+    .badge-primary { background: #e0e7ff; color: #3730a3; }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-info { background: #e0f2fe; color: #075985; }
+    .alert-box {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        padding: 10px 14px;
+        border-radius: 0 6px 6px 0;
+        margin: 10px 0;
+        font-size: 12px;
+        color: #1e40af;
+    }
+    .alert-warning {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        color: #92400e;
+    }
+    .code-block {
+        background: #0f172a;
+        color: #f8fafc;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-family: "Consolas", "Courier New", monospace;
+        font-size: 11.5px;
+        line-height: 1.45;
+        margin: 8px 0;
+        overflow-x: auto;
+    }
+    .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 10px;
+    }
+    .feature-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 10px 12px;
+    }
+    .feature-item strong {
+        color: #0f172a;
+        font-size: 12.5px;
+        display: block;
+        margin-bottom: 4px;
+    }
+    .feature-item p {
+        font-size: 11.5px;
+        color: #64748b;
+        line-height: 1.4;
+    }
+    ul, ol {
+        padding-left: 20px;
+        margin: 6px 0;
+    }
+    li {
+        margin-bottom: 4px;
+        font-size: 12px;
+    }
+    .footer {
+        margin-top: 24px;
+        text-align: center;
+        font-size: 11px;
+        color: #94a3b8;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 12px;
+    }
+</style>
+</head>
+<body>
+
+<div class="header-banner">
+    <h1>🚀 UltimatePOS System Upgrade Guide</h1>
+    <p>Comprehensive installation and update documentation for commit release <strong>a6ae9cb</strong> &rarr; <strong>7a87b36</strong></p>
+    <div class="meta-badges">
+        <span class="meta-badge">📦 Package: User_Management_Filters_And_Essentials_Module_Updates.zip</span>
+        <span class="meta-badge">📅 Date: August 2026</span>
+        <span class="meta-badge">🏷️ Range: a6ae9cb5d... &rarr; 7a87b36b6...</span>
+        <span class="meta-badge">📊 Total Files: 446</span>
+    </div>
+</div>
+
+<div class="section-card">
+    <h2><span class="step-number">★</span> Release Summary & Key Highlights</h2>
+    <div class="feature-grid">
+        <div class="feature-item">
+            <strong>🎯 User Management Advanced Filtering</strong>
+            <p>8 comprehensive filters on User List: Business Location, Username, Role, Status, DOB Date Range picker, Gender, Department, and Designation, with a one-click Reset button.</p>
+        </div>
+        <div class="feature-item">
+            <strong>⚡ Live AJAX User Status Toggle</strong>
+            <p>Direct active/inactive status switching directly from the user table actions without reloading the page, backed by a dedicated route and controller handler.</p>
+        </div>
+        <div class="feature-item">
+            <strong>🏢 Full Essentials & HRM Module</strong>
+            <p>Complete enterprise HRM suite including Attendance tracking with shift assignments, Clock-in/out, Payroll generation & payments, Leaves, Tasks/To-Dos, Memos, and Knowledge Base.</p>
+        </div>
+        <div class="feature-item">
+            <strong>📱 Responsive UI & Language Support</strong>
+            <p>Enhanced responsive design styling in layouts for mobile/desktop interfaces, and added translation keys in English and 16 international languages.</p>
+        </div>
+    </div>
+</div>
+
+<div class="section-card">
+    <h2><span class="step-number">1</span> STEP 1: Full System Backup (Crucial)</h2>
+    <div class="alert-box alert-warning">
+        <strong>Important:</strong> Always create a full backup of both your MySQL database and existing codebase before applying any update.
+    </div>
+    <ul>
+        <li><strong>Database Backup:</strong> Export database via phpMyAdmin or SSH:
+            <div class="code-block">mysqldump -u [db_user] -p [db_name] > backup_before_update_$(date +%F).sql</div>
+        </li>
+        <li><strong>Files Backup:</strong> Create an archive of your current project root directory.</li>
+    </ul>
+</div>
+
+<div class="section-card">
+    <h2><span class="step-number">2</span> STEP 2: File Replacement & Directory Mapping</h2>
+    <p>Extract <code>User_Management_Filters_And_Essentials_Module_Updates.zip</code> directly into your UltimatePOS root installation directory. Choose <strong>"Replace / Overwrite Existing Files"</strong> when prompted.</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Directory</th>
+                <th>Target Project Path</th>
+                <th>Action</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>app/Http/Controllers</strong></td>
+                <td><code>app/Http/Controllers/</code></td>
+                <td><span class="badge badge-warning">Replace</span></td>
+                <td><code>ManageUserController.php</code>, <code>UserController.php</code></td>
+            </tr>
+            <tr>
+                <td><strong>app/Utils</strong></td>
+                <td><code>app/Utils/</code></td>
+                <td><span class="badge badge-warning">Replace</span></td>
+                <td><code>Util.php</code> helper functions</td>
+            </tr>
+            <tr>
+                <td><strong>Modules/Essentials</strong></td>
+                <td><code>Modules/Essentials/</code></td>
+                <td><span class="badge badge-success">Add / Replace</span></td>
+                <td>Complete HRM & Essentials Module (436 files)</td>
+            </tr>
+            <tr>
+                <td><strong>resources/views</strong></td>
+                <td><code>resources/views/</code></td>
+                <td><span class="badge badge-warning">Replace</span></td>
+                <td>User manage views (<code>index</code>, <code>create</code>, <code>edit</code>) & CSS partial</td>
+            </tr>
+            <tr>
+                <td><strong>lang/en</strong></td>
+                <td><code>lang/en/</code></td>
+                <td><span class="badge badge-info">Update</span></td>
+                <td><code>lang_v1.php</code>, <code>report.php</code> translations</td>
+            </tr>
+            <tr>
+                <td><strong>routes</strong></td>
+                <td><code>routes/</code></td>
+                <td><span class="badge badge-warning">Replace</span></td>
+                <td><code>web.php</code> (Added user status update route)</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="section-card">
+    <h2><span class="step-number">3</span> STEP 3: Database Migrations (For Essentials Module)</h2>
+    <p>Execute module migrations to create tables for Essentials (Attendance, Payroll, Leaves, Reminders, Knowledge Base, Tasks, Settings):</p>
+    <ul>
+        <li><strong>Via Terminal / SSH (Recommended):</strong>
+            <div class="code-block">php artisan migrate --force</div>
+        </li>
+        <li><strong>Via Web Browser:</strong>
+            <p>Log in as Superadmin and visit: <code>https://yourdomain.com/run-migrations</code> or <code>https://yourdomain.com/install/update</code></p>
+        </li>
+    </ul>
+</div>
+
+<div class="section-card">
+    <h2><span class="step-number">4</span> STEP 4: Clear Laravel System Caches</h2>
+    <p>Clear compiled caches so Laravel immediately loads all updated routes, controllers, and Blade templates:</p>
+    <div class="code-block">php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+php artisan route:clear</div>
+    <p style="margin-top: 6px; font-size: 11.5px; color: #64748b;"><em>Note for Shared Hosting (without SSH): Go to Admin Panel &rarr; Settings &rarr; Clear Cache.</em></p>
+</div>
+
+<div class="section-card">
+    <h2><span class="step-number">5</span> STEP 5: Roles & Module Permissions Configuration</h2>
+    <ol>
+        <li>Go to <strong>User Management &rarr; Roles</strong> &rarr; Click <strong>Edit</strong> on Admin / Manager roles.</li>
+        <li>Configure permissions for:
+            <ul>
+                <li><strong>User Management:</strong> Verify user view, create, edit, and status update access.</li>
+                <li><strong>Essentials & HRM:</strong> Enable permissions for Attendance, Leaves, Payroll, To-Do Tasks, Knowledge Base, and Reminders as needed per role.</li>
+            </ul>
+        </li>
+        <li>Click <strong>Update</strong> to save role changes.</li>
+    </ol>
+</div>
+
+<div class="section-card">
+    <h2><span class="step-number">6</span> STEP 6: Cashier & Client Browser Refresh</h2>
+    <p>Perform a hard browser reload to ensure the new filter scripts, DataTables bindings, and CSS styles load immediately:</p>
+    <ul>
+        <li><strong>Windows / Linux:</strong> Press <code>Ctrl + F5</code> or <code>Ctrl + Shift + R</code></li>
+        <li><strong>Mac:</strong> Press <code>Cmd + Shift + R</code></li>
+    </ul>
+</div>
+
+<div class="section-card">
+    <h2><span class="step-number">🔄</span> Rollback Procedure</h2>
+    <p>In the unlikely event of an issue:</p>
+    <ol>
+        <li>Restore the database from your pre-update <code>.sql</code> backup.</li>
+        <li>Restore previous project files from your backup zip.</li>
+        <li>Run <code>php artisan cache:clear && php artisan view:clear</code>.</li>
+    </ol>
+</div>
+
+<div class="footer">
+    UltimatePOS Upgrade Documentation &bull; Generated for commit range <strong>a6ae9cb5d3daaf88f488d189fa841e5520c52ece &rarr; 7a87b36b69fcc91f404fe0112a7ac6e40840b1c9</strong> &bull; Confidential & Proprietary
+</div>
+
+</body>
+</html>
